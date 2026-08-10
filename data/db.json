@@ -1,0 +1,27 @@
+{
+  "registrations": [
+    {
+      "id": "reg_8gsnn2omsmnxcrt",
+      "name": "chandumattyb",
+      "email": "chandumattyb@gmail.com",
+      "avatar": "https://images.unsplash.com/photo-1534528742232?q=80&w=400&auto=format&fit=crop",
+      "timestamp": "08:49 am",
+      "status": "approved"
+    }
+  ],
+  "approvedEmails": [
+    "akshaycricketer1230@gmail.com",
+    "akshay@interstellers.space",
+    "akshay@gmail.com",
+    "akshay",
+    "chandumattyb@gmail.com"
+  ],
+  "verificationCodes": {
+    "likhith127127@gmail.com": {
+      "code": "838792",
+      "expiresAt": 1786332384959,
+      "name": "Likhith Kumar",
+      "createdAt": 1786331784960
+    }
+  }
+}

@@ -1,0 +1,92 @@
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: "class",
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        "primary": "#630ed4",
+        "primary-hover": "#5209b5",
+        "primary-container": "#7c3aed",
+        "primary-fixed": "#eaddff",
+        "primary-fixed-dim": "#d2bbff",
+        "on-primary": "#ffffff",
+        "on-primary-container": "#ede0ff",
+        "on-primary-fixed": "#25005a",
+        "surface": "#faf8ff",
+        "surface-bright": "#faf8ff",
+        "surface-dim": "#d2d9f4",
+        "surface-variant": "#dae2fd",
+        "surface-container-lowest": "#ffffff",
+        "surface-container-low": "#f2f3ff",
+        "surface-container": "#eaedff",
+        "surface-container-high": "#e2e7ff",
+        "surface-container-highest": "#dae2fd",
+        "on-surface": "#131b2e",
+        "on-surface-variant": "#4a4455",
+        "outline": "#7b7487",
+        "outline-variant": "#ccc3d8",
+        "secondary": "#5d5d67",
+        "secondary-container": "#e3e1ed",
+        "on-secondary-container": "#64636d",
+        "tertiary": "#005b3d",
+        "tertiary-container": "#007650",
+        "on-tertiary-container": "#76ffc2",
+        "error": "#ba1a1a",
+        "error-container": "#ffdad6",
+        "on-error": "#ffffff",
+        "on-error-container": "#93000a",
+        "social-blue": "#1877f2",
+        "online": "#42b72a",
+        "background": "#faf8ff",
+        "on-background": "#131b2e",
+        "inverse-surface": "#283044",
+        "inverse-on-surface": "#eef0ff",
+      },
+      fontFamily: {
+        sans: ["'Be Vietnam Pro'", "Inter", "system-ui", "sans-serif"],
+        heading: ["'Be Vietnam Pro'", "sans-serif"],
+      },
+      boxShadow: {
+        "ambient": "0px 1px 3px rgba(0, 0, 0, 0.05), 0px 10px 20px -5px rgba(99, 14, 212, 0.05)",
+        "card": "0 2px 8px -2px rgba(19, 27, 46, 0.06), 0 1px 4px -1px rgba(19, 27, 46, 0.04)",
+        "card-hover": "0 12px 24px -4px rgba(99, 14, 212, 0.12), 0 4px 12px -2px rgba(19, 27, 46, 0.06)",
+        "floating": "0px 12px 28px rgba(0, 0, 0, 0.12)",
+        "glow": "0 0 25px rgba(124, 58, 237, 0.35)",
+        "glow-lg": "0 0 50px rgba(99, 14, 212, 0.25)",
+      },
+      borderRadius: {
+        DEFAULT: "0.5rem",
+        "sm": "0.25rem",
+        "md": "0.75rem",
+        "lg": "1rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "full": "9999px",
+      },
+      animation: {
+        "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "float": "float 6s ease-in-out infinite",
+        "shimmer": "shimmer 2s infinite linear",
+      },
+      keyframes: {
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+      },
+    },
+  },
+  plugins: [],
+};
+
+export default config;
