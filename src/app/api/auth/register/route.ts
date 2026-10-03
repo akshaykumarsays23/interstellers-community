@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const db = getDb();
 
     // Check if host Akshay
-    if (cleanEmail.includes('akshay') || cleanName.toLowerCase().includes('akshay')) {
+    if (cleanEmail.includes('akshay') || cleanName.toLowerCase().includes('akshay') || cleanEmail === 'akshaycricketer1230@gmail.com') {
       if (!db.approvedEmails.includes(cleanEmail)) {
         db.approvedEmails.push(cleanEmail);
         saveDb(db);
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
       name: cleanName,
       email: cleanEmail,
-      avatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 500)}?q=80&w=400&auto=format&fit=crop`,
+      avatar: '',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'pending',
     };

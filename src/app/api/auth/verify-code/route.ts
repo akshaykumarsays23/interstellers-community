@@ -18,8 +18,8 @@ export async function POST(request: Request) {
     const db = getDb();
     const entry = db.verificationCodes?.[cleanEmail];
 
-    // Master passcode for host Akshay or valid generated code
-    const isMasterCode = cleanCode === '777888' || cleanCode === '123456';
+    // Master passcode for host Akshay (1230) or valid generated code
+    const isMasterCode = cleanCode === '1230' || cleanCode === '777888' || cleanCode === '123456';
     const isCodeValid = (entry && entry.code === cleanCode && Date.now() < entry.expiresAt) || isMasterCode;
 
     if (!isCodeValid) {
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Check if Host Akshay
-    if (cleanEmail.includes('akshay') || cleanEmail === 'akshay@interstellers.space' || cleanEmail === 'akshay@gmail.com') {
+    if (cleanEmail.includes('akshay') || cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space' || cleanEmail === 'akshay@gmail.com') {
       if (!db.approvedEmails.includes(cleanEmail)) {
         db.approvedEmails.push(cleanEmail);
       }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
         name: cleanName,
         email: cleanEmail,
-        avatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 500)}?q=80&w=400&auto=format&fit=crop`,
+        avatar: '',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: 'pending',
       };

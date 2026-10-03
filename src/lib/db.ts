@@ -6,6 +6,7 @@ export interface DbRegistration {
   name: string;
   email: string;
   avatar?: string;
+  isAvatarLocked?: boolean;
   timestamp: string;
   status: 'pending' | 'approved' | 'rejected';
 }
@@ -21,6 +22,7 @@ export interface DbData {
   registrations: DbRegistration[];
   approvedEmails: string[];
   verificationCodes?: Record<string, VerificationCodeEntry>;
+  posts?: any[];
 }
 
 const DB_DIR = path.join(process.cwd(), 'data');
@@ -30,6 +32,7 @@ const INITIAL_DB: DbData = {
   registrations: [],
   approvedEmails: ['akshaycricketer1230@gmail.com', 'akshay@interstellers.space', 'akshay@gmail.com', 'akshay'],
   verificationCodes: {},
+  posts: [],
 };
 
 export function getDb(): DbData {

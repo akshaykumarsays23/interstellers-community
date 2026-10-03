@@ -10,6 +10,7 @@ export interface User {
   status: 'online' | 'offline' | 'away' | 'busy';
   customStatus?: string;
   isVerified?: boolean;
+  isAvatarLocked?: boolean;
 }
 
 export interface RegistrationRequest {
@@ -17,6 +18,7 @@ export interface RegistrationRequest {
   name: string;
   email: string;
   avatar?: string;
+  isAvatarLocked?: boolean;
   timestamp: string;
   status: 'pending' | 'approved' | 'rejected';
 }
@@ -127,6 +129,7 @@ export interface UserSettings {
   handle: string;
   bio: string;
   avatar: string;
+  isAvatarLocked?: boolean;
   email: string;
   role: string;
   pushNotifications: boolean;

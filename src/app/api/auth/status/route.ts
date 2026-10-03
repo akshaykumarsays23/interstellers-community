@@ -16,8 +16,18 @@ export async function GET(request: Request) {
     const db = getDb();
 
     // Check if host Akshay
-    if (cleanEmail.includes('akshay') || cleanEmail === 'akshay@interstellers.space') {
-      return NextResponse.json({ status: 'approved', role: 'admin' });
+    if (cleanEmail.includes('akshay') || cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space') {
+      const reg = db.registrations.find((r) => r.email.toLowerCase().includes('akshay') && r.avatar);
+      return NextResponse.json({
+        status: 'approved',
+        role: 'admin',
+        user: {
+          name: 'Akshay Kumar',
+          email: cleanEmail,
+          avatar: reg?.avatar || '/avatar.png',
+          isAvatarLocked: reg?.isAvatarLocked || Boolean(reg?.avatar && reg.avatar !== '/avatar.png'),
+        },
+      });
     }
 
     // Check approved list
@@ -25,7 +35,9 @@ export async function GET(request: Request) {
       const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
       return NextResponse.json({
         status: 'approved',
-        user: reg ? { name: reg.name, email: reg.email } : { name: cleanEmail.split('@')[0], email: cleanEmail },
+        user: reg 
+          ? { name: reg.name, email: reg.email, avatar: reg.avatar || '/avatar.png', isAvatarLocked: reg.isAvatarLocked || Boolean(reg.avatar && reg.avatar !== '/avatar.png') } 
+          : { name: cleanEmail.split('@')[0], email: cleanEmail, avatar: '/avatar.png', isAvatarLocked: false },
       });
     }
 
@@ -34,7 +46,12 @@ export async function GET(request: Request) {
     if (reg) {
       return NextResponse.json({
         status: reg.status,
-        user: { name: reg.name, email: reg.email },
+        user: { 
+          name: reg.name, 
+          email: reg.email, 
+          avatar: reg.avatar || '/avatar.png', 
+          isAvatarLocked: reg.isAvatarLocked || Boolean(reg.avatar && reg.avatar !== '/avatar.png') 
+        },
       });
     }
 

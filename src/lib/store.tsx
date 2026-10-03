@@ -166,32 +166,122 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = currentUser.handle === 'akshay' || currentUser.id === 'user_host';
 
-  // Load session from localStorage on start
+  // Load session & saved server profile on start
+  // Load session, saved server profile & saved posts on start
   useEffect(() => {
     try {
+      // 1. Load posts from localStorage and API server
+      const localSavedPosts = localStorage.getItem('interstellers_saved_posts');
+      let initialPostList: Post[] = INITIAL_POSTS;
+      if (localSavedPosts) {
+        try {
+          const parsed = JSON.parse(localSavedPosts);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            initialPostList = parsed;
+          }
+        } catch (_) {}
+      }
+
+      fetch('/api/posts')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.posts && Array.isArray(data.posts) && data.posts.length > 0) {
+            const combinedMap = new Map<string, Post>();
+            data.posts.forEach((p: Post) => combinedMap.set(p.id, p));
+            initialPostList.forEach((p: Post) => {
+              if (!combinedMap.has(p.id)) {
+                combinedMap.set(p.id, p);
+              }
+            });
+            INITIAL_POSTS.forEach((p: Post) => {
+              if (!combinedMap.has(p.id)) {
+                combinedMap.set(p.id, p);
+              }
+            });
+            const mergedList = Array.from(combinedMap.values());
+            setPosts(mergedList);
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('interstellers_saved_posts', JSON.stringify(mergedList));
+              } catch (_) {}
+            }
+          } else if (localSavedPosts) {
+            setPosts(initialPostList);
+          }
+        })
+        .catch(() => {
+          if (localSavedPosts) {
+            setPosts(initialPostList);
+          }
+        });
+
       const savedPending = localStorage.getItem('interstellers_pending_user');
       if (savedPending) {
         setPendingApprovalUser(JSON.parse(savedPending));
       }
       const savedUser = localStorage.getItem('interstellers_current_user');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        if (parsed.email) {
-          fetch(`/api/auth/status?email=${encodeURIComponent(parsed.email)}`)
-            .then((r) => r.json())
-            .then((data) => {
-              if (data.status === 'approved') {
-                setCurrentUser(parsed);
-                setIsAuthenticated(true);
-                setPendingApprovalUser(null);
-              } else if (data.status === 'pending') {
-                setIsAuthenticated(false);
-                setPendingApprovalUser({ name: parsed.name, email: parsed.email });
-              }
-            })
-            .catch(() => {});
-        }
-      }
+      const savedAvatar = localStorage.getItem('interstellers_saved_avatar');
+      const savedLocked = localStorage.getItem('interstellers_avatar_locked');
+      
+      const emailToCheck = savedUser ? (JSON.parse(savedUser).email || 'akshaycricketer1230@gmail.com') : 'akshaycricketer1230@gmail.com';
+
+      fetch(`/api/auth/status?email=${encodeURIComponent(emailToCheck)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.status === 'approved') {
+            const parsed = savedUser ? JSON.parse(savedUser) : HOST_USER;
+            let finalAvatar: string = savedAvatar || '';
+            if (!finalAvatar || finalAvatar === '/avatar.png') {
+              finalAvatar = (data.user?.avatar && data.user.avatar !== '/avatar.png') 
+                ? data.user.avatar 
+                : (parsed.avatar || '/avatar.png');
+            }
+            if (!finalAvatar) {
+              finalAvatar = '/avatar.png';
+            }
+
+            const isLocked: boolean = savedLocked === 'true' || 
+              Boolean(data.user?.isAvatarLocked) || 
+              Boolean(parsed.isAvatarLocked) || 
+              Boolean(finalAvatar && finalAvatar !== '/avatar.png' && finalAvatar !== '');
+
+            const updatedUser: User = {
+              ...HOST_USER,
+              ...parsed,
+              avatar: finalAvatar,
+              isAvatarLocked: isLocked,
+            };
+            setCurrentUser(updatedUser);
+            setSettings((prev) => ({
+              ...prev,
+              displayName: updatedUser.name,
+              bio: updatedUser.bio,
+              role: updatedUser.role,
+              avatar: finalAvatar,
+              isAvatarLocked: isLocked,
+            }));
+            setIsAuthenticated(true);
+            setPendingApprovalUser(null);
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('interstellers_current_user', JSON.stringify(updatedUser));
+                if (finalAvatar) {
+                  localStorage.setItem('interstellers_saved_avatar', finalAvatar);
+                }
+                if (isLocked) {
+                  localStorage.setItem('interstellers_avatar_locked', 'true');
+                }
+              } catch (_) {}
+            }
+          } else if (data.status === 'pending') {
+            setIsAuthenticated(false);
+            if (savedUser) {
+              const parsed = JSON.parse(savedUser);
+              setPendingApprovalUser({ name: parsed.name, email: parsed.email });
+            }
+          }
+        })
+        .catch(() => {});
     } catch (_) {}
   }, []);
 
@@ -231,7 +321,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 id: 'user_' + generateId(),
                 name: pendingApprovalUser.name,
                 handle: pendingApprovalUser.name.toLowerCase().replace(/\s+/g, '_'),
-                avatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 500)}?q=80&w=400&auto=format&fit=crop`,
+                avatar: '',
                 bio: 'Verified Member at Interstellers.',
                 role: 'Community Member',
                 status: 'online',
@@ -315,7 +405,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               id: 'user_' + generateId(),
               name: data.user?.name || cleanName,
               handle: (data.user?.name || cleanName).toLowerCase().replace(/\s+/g, '_'),
-              avatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 500)}?q=80&w=400&auto=format&fit=crop`,
+              avatar: data.user?.avatar || '',
               bio: 'Verified Member at Interstellers.',
               role: 'Community Member',
               status: 'online',
@@ -385,13 +475,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const login = async (email?: string, name?: string) => {
     const cleanEmail = (email || '').toLowerCase().trim();
 
-    if (cleanEmail.includes('akshay') || cleanEmail === 'akshay@interstellers.space' || cleanEmail === 'akshay@gmail.com') {
-      setCurrentUser(HOST_USER);
-      setSettings(DEFAULT_SETTINGS);
+    if (cleanEmail.includes('akshay') || cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space' || cleanEmail === 'akshay@gmail.com') {
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('interstellers_current_user') : null;
+      const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem('interstellers_saved_avatar') : null;
+      let hostUserToSet = { ...HOST_USER };
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          hostUserToSet = { ...hostUserToSet, ...parsed };
+        } catch (_) {}
+      }
+      if (savedAvatar) {
+        hostUserToSet.avatar = savedAvatar;
+      }
+      setCurrentUser(hostUserToSet);
+      setSettings((prev) => ({
+        ...prev,
+        displayName: hostUserToSet.name,
+        bio: hostUserToSet.bio,
+        role: hostUserToSet.role,
+        avatar: hostUserToSet.avatar,
+      }));
       setIsAuthenticated(true);
       setPendingApprovalUser(null);
-      localStorage.setItem('interstellers_current_user', JSON.stringify(HOST_USER));
-      localStorage.removeItem('interstellers_pending_user');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('interstellers_current_user', JSON.stringify(hostUserToSet));
+        localStorage.removeItem('interstellers_pending_user');
+      }
       return { success: true };
     }
 
@@ -404,7 +514,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id: 'user_' + generateId(),
           name: data.user?.name || name || cleanEmail.split('@')[0],
           handle: (data.user?.name || name || cleanEmail.split('@')[0]).toLowerCase().replace(/\s+/g, '_'),
-          avatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 500)}?q=80&w=400&auto=format&fit=crop`,
+          avatar: data.user?.avatar || '',
           bio: 'Verified Member at Interstellers.',
           role: 'Community Member',
           status: 'online',
@@ -446,7 +556,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             id: 'user_' + generateId(),
             name: pendingApprovalUser.name,
             handle: pendingApprovalUser.name.toLowerCase().replace(/\s+/g, '_'),
-            avatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 500)}?q=80&w=400&auto=format&fit=crop`,
+            avatar: data.user?.avatar || '',
             bio: 'Verified Member at Interstellers.',
             role: 'Community Member',
             status: 'online',
@@ -544,20 +654,107 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProfile = ({ name, bio, role, avatar }: { name: string; bio: string; role: string; avatar?: string }) => {
-    setCurrentUser((prev) => ({
-      ...prev,
+    const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem('interstellers_saved_avatar') || '' : '';
+    const currentLocked = currentUser.isAvatarLocked || (typeof window !== 'undefined' && localStorage.getItem('interstellers_avatar_locked') === 'true');
+    
+    // If avatar is currently locked, keep existing locked avatar
+    let newAvatar = currentLocked && savedAvatar 
+      ? savedAvatar 
+      : (avatar !== undefined ? avatar : (currentUser.avatar || savedAvatar || ''));
+
+    // If a non-default custom avatar is set or saved, lock it permanently!
+    const isLocked = Boolean(currentLocked || (newAvatar && newAvatar !== '/avatar.png' && newAvatar !== ''));
+
+    const updatedUser: User = {
+      ...currentUser,
       name,
       bio,
       role,
-      avatar: avatar || prev.avatar,
-    }));
-    setSettings((prev) => ({
-      ...prev,
-      displayName: name,
-      bio,
-      role,
-      avatar: avatar || prev.avatar,
-    }));
+      avatar: newAvatar,
+      isAvatarLocked: isLocked,
+    };
+
+    setCurrentUser(updatedUser);
+
+    if (typeof window !== 'undefined') {
+      try {
+        if (newAvatar) {
+          localStorage.setItem('interstellers_saved_avatar', newAvatar);
+        }
+        if (isLocked) {
+          localStorage.setItem('interstellers_avatar_locked', 'true');
+        }
+        localStorage.setItem('interstellers_current_user', JSON.stringify(updatedUser));
+      } catch (e) {
+        console.warn('localStorage quota limit reached for current user:', e);
+      }
+    }
+
+    setSettings((prev) => {
+      const nextSettings: UserSettings = {
+        ...prev,
+        displayName: name,
+        bio,
+        role,
+        avatar: newAvatar,
+        isAvatarLocked: isLocked,
+      };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('interstellers_settings', JSON.stringify(nextSettings));
+        } catch (e) {
+          console.warn('localStorage quota limit reached for settings:', e);
+        }
+      }
+      return nextSettings;
+    });
+
+    // Save to server db.json persistently via API
+    try {
+      fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: settings.email || (currentUser.handle === 'akshay' ? 'akshaycricketer1230@gmail.com' : `${currentUser.handle}@gmail.com`),
+          name,
+          bio,
+          role,
+          avatar: newAvatar,
+          isAvatarLocked: isLocked,
+        }),
+      }).catch(() => {});
+    } catch (_) {}
+
+    // Helper to lock and persist posts to localStorage and server DB
+    const persistPosts = (updater: (prev: Post[]) => Post[]) => {
+      setPosts((prev) => {
+        const nextPosts = updater(prev);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('interstellers_saved_posts', JSON.stringify(nextPosts));
+          } catch (e) {
+            console.warn('localStorage quota limit for posts:', e);
+          }
+        }
+        try {
+          fetch('/api/posts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ posts: nextPosts }),
+          }).catch(() => {});
+        } catch (_) {}
+        return nextPosts;
+      });
+    };
+
+    // Update posts authored by current user
+    persistPosts((prevPosts) =>
+      prevPosts.map((p) =>
+        p.author.id === currentUser.id || p.author.handle === currentUser.handle
+          ? { ...p, author: updatedUser }
+          : p
+      )
+    );
   };
 
   // Posts Feed methods
@@ -578,13 +775,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       tags: tags && tags.length > 0 ? tags : ["#Interstellers"],
       comments: [],
     };
-    setPosts((prev) => [newPost, ...prev]);
+
+    // Lock and persist post
+    setPosts((prev) => {
+      const nextPosts = [newPost, ...prev];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('interstellers_saved_posts', JSON.stringify(nextPosts));
+        } catch (e) {
+          console.warn('localStorage quota limit for posts:', e);
+        }
+      }
+      try {
+        fetch('/api/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ post: newPost }),
+        }).catch(() => {});
+      } catch (_) {}
+      return nextPosts;
+    });
 
     const newNotif: AppNotification = {
       id: `notif_${generateId()}`,
       type: 'system',
-      title: 'Post Published',
-      message: 'Your update has been broadcasted across the galactic feed.',
+      title: 'Post Published & Locked',
+      message: 'Your update has been broadcasted and locked in the galactic feed.',
       timestamp: 'Just now',
       isRead: false,
     };
@@ -592,8 +808,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleLikePost = (postId: string) => {
-    setPosts((prev) =>
-      prev.map((post) => {
+    setPosts((prev) => {
+      const next = prev.map((post) => {
         if (post.id === postId) {
           const isLiked = !post.isLiked;
           return {
@@ -603,16 +819,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           };
         }
         return post;
-      })
-    );
+      });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
+        } catch (_) {}
+      }
+      return next;
+    });
   };
 
   const toggleBookmarkPost = (postId: string) => {
-    setPosts((prev) =>
-      prev.map((post) =>
+    setPosts((prev) => {
+      const next = prev.map((post) =>
         post.id === postId ? { ...post, isBookmarked: !post.isBookmarked } : post
-      )
-    );
+      );
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
+        } catch (_) {}
+      }
+      return next;
+    });
   };
 
   const addCommentToPost = (postId: string, content: string) => {
@@ -623,8 +851,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       timestamp: "Just now",
       likes: 0,
     };
-    setPosts((prev) =>
-      prev.map((post) => {
+    setPosts((prev) => {
+      const next = prev.map((post) => {
         if (post.id === postId) {
           return {
             ...post,
@@ -633,13 +861,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           };
         }
         return post;
-      })
-    );
+      });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
+        } catch (_) {}
+      }
+      try {
+        fetch('/api/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ posts: next }),
+        }).catch(() => {});
+      } catch (_) {}
+      return next;
+    });
   };
 
   const voteInPoll = (postId: string, optionId: string) => {
-    setPosts((prev) =>
-      prev.map((post) => {
+    setPosts((prev) => {
+      const next = prev.map((post) => {
         if (post.id === postId && post.poll && !post.poll.userVotedOptionId) {
           const updatedOptions = post.poll.options.map((opt) =>
             opt.id === optionId ? { ...opt, votes: opt.votes + 1 } : opt
@@ -655,12 +896,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           };
         }
         return post;
-      })
-    );
+      });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
+        } catch (_) {}
+      }
+      return next;
+    });
   };
 
   const deletePost = (postId: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    setPosts((prev) => {
+      const next = prev.filter((p) => p.id !== postId);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
+        } catch (_) {}
+      }
+      try {
+        fetch('/api/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ posts: next }),
+        }).catch(() => {});
+      } catch (_) {}
+      return next;
+    });
   };
 
   // Direct Messaging methods

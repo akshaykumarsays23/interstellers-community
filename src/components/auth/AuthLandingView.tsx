@@ -85,8 +85,8 @@ export const AuthLandingView: React.FC = () => {
     const cleanName = nameInput.trim() || cleanEmail.split('@')[0];
     const cleanCode = codeInput.trim();
 
-    if (cleanCode.length < 6) {
-      setAuthError('Please enter the complete 6-digit code');
+    if (cleanCode.length < 4) {
+      setAuthError('Please enter a valid verification code or PIN (e.g. 1230)');
       setIsLoading(false);
       return;
     }
@@ -101,11 +101,16 @@ export const AuthLandingView: React.FC = () => {
     }
   };
 
-  // Quick Host Login Shortcut for Akshay
-  const handleQuickHostLogin = async () => {
-    setIsLoading(true);
-    await login('akshay@interstellers.space', 'Akshay Kumar');
-    setIsLoading(false);
+  // Host Admin PIN Login for Akshay (requires PIN 1230)
+  const handleQuickHostLogin = () => {
+    setModalType('signin');
+    setEmailInput('akshaycricketer1230@gmail.com');
+    setNameInput('Akshay Kumar');
+    setAuthStep('code');
+    setAuthError(null);
+    setSuccessMessage(null);
+    setCodeInput('');
+    setShowModal(true);
   };
 
   // Check if pending user was approved by Akshay
@@ -437,7 +442,7 @@ export const AuthLandingView: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                    Enter 6-Digit Verification Code
+                    Enter Verification Code or Admin PIN
                   </label>
                   <input
                     type="text"
@@ -495,7 +500,7 @@ export const AuthLandingView: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={isLoading || codeInput.length < 6}
+                    disabled={isLoading || codeInput.length < 4}
                     className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-hover disabled:opacity-50 text-xs font-semibold text-on-primary flex items-center justify-center gap-1.5 shadow-xs transition-colors"
                   >
                     <span>{isLoading ? 'Verifying...' : 'Verify & Proceed'}</span>
