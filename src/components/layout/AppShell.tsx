@@ -10,6 +10,9 @@ import { CallModal } from '@/components/common/CallModal';
 import { ShareModal } from '@/components/common/ShareModal';
 import { ApprovalsModal } from '@/components/common/ApprovalsModal';
 import { AuthLandingView } from '@/components/auth/AuthLandingView';
+import { NovaVoiceModal } from '@/components/ai/NovaVoiceModal';
+import { GalaxyTelescopeModal } from '@/components/common/GalaxyTelescopeModal';
+import { TimeCapsuleModal } from '@/components/common/TimeCapsuleModal';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -25,6 +28,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   onNewPostClick,
 }) => {
   const { isAuthenticated } = useApp();
+  const [isTelescopeOpen, setIsTelescopeOpen] = React.useState<boolean>(false);
+  const [isCapsuleOpen, setIsCapsuleOpen] = React.useState<boolean>(false);
 
   if (!isAuthenticated) {
     return <AuthLandingView />;
@@ -38,7 +43,13 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-          <TopHeader title={title} subtitle={subtitle} onNewPostClick={onNewPostClick} />
+          <TopHeader
+            title={title}
+            subtitle={subtitle}
+            onNewPostClick={onNewPostClick}
+            onTelescopeClick={() => setIsTelescopeOpen(true)}
+            onCapsuleClick={() => setIsCapsuleOpen(true)}
+          />
 
           {/* Dynamic Route Canvas */}
           <main className="flex-1 overflow-y-auto pb-16 md:pb-0 custom-scrollbar bg-background">
@@ -56,11 +67,20 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* Active Audio/Video Call Overlay */}
       <CallModal />
 
+      {/* Nova AI Voice Mode Overlay (ChatGPT & Gemini Live Style) */}
+      <NovaVoiceModal />
+
       {/* Share / Invite Friends Modal */}
       <ShareModal />
 
       {/* Member Approvals Queue Modal (for Akshay) */}
       <ApprovalsModal />
+
+      {/* Galaxy Telescope Scanner Modal */}
+      <GalaxyTelescopeModal isOpen={isTelescopeOpen} onClose={() => setIsTelescopeOpen(false)} />
+
+      {/* Time Capsule Future Transmission Modal */}
+      <TimeCapsuleModal isOpen={isCapsuleOpen} onClose={() => setIsCapsuleOpen(false)} />
     </div>
   );
 };

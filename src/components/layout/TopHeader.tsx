@@ -6,16 +6,25 @@ import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
 import { INTERSTELLERS_LOGO } from '@/lib/data';
-import { Search, Bot, Moon, Sun, Sparkles, PlusCircle, Share2, ShieldCheck, UserCheck } from 'lucide-react';
+import { Search, Bot, Moon, Sun, Sparkles, PlusCircle, Share2, ShieldCheck, UserCheck, Telescope, Package, Play, Pause, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMusic } from '@/lib/MusicContext';
 
 interface TopHeaderProps {
   title?: string;
   subtitle?: string;
   onNewPostClick?: () => void;
+  onTelescopeClick?: () => void;
+  onCapsuleClick?: () => void;
 }
 
-export const TopHeader: React.FC<TopHeaderProps> = ({ title, subtitle, onNewPostClick }) => {
+export const TopHeader: React.FC<TopHeaderProps> = ({
+  title,
+  subtitle,
+  onNewPostClick,
+  onTelescopeClick,
+  onCapsuleClick,
+}) => {
   const {
     currentUser,
     settings,
@@ -27,8 +36,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ title, subtitle, onNewPost
     setIsShareModalOpen,
     setIsApprovalsModalOpen,
     pendingRegistrationsCount,
+    activeDevicesCount,
     isAdmin,
   } = useApp();
+  const { isPlaying, togglePlay } = useMusic();
 
   const toggleTheme = () => {
     const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
@@ -77,15 +88,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ title, subtitle, onNewPost
 
       {/* Right: Quick Action Controls */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Host Approvals Queue Trigger (for Akshay) */}
+        {/* Host Approvals & Live Devices Trigger (for Akshay) */}
         {isAdmin && (
           <button
             onClick={() => setIsApprovalsModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all relative"
-            title="Member Access Approvals"
+            title="Member Access Approvals & Connected Devices"
           >
             <UserCheck className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Approvals</span>
+            <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{activeDevicesCount} Online</span>
+            </span>
             {pendingRegistrationsCount > 0 && (
               <span className="w-4 h-4 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
                 {pendingRegistrationsCount}
@@ -93,6 +108,28 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ title, subtitle, onNewPost
             )}
           </button>
         )}
+
+        {/* Quick Theme Music Controller (Active Across All Tabs) */}
+        <button
+          onClick={togglePlay}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shadow-xs',
+            isPlaying
+              ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20'
+              : 'bg-surface-container text-on-surface-variant border-outline-variant/40 hover:text-on-surface'
+          )}
+          title={isPlaying ? 'Pause Forever Young (Website Theme)' : 'Play Forever Young (Website Theme)'}
+        >
+          {isPlaying ? (
+            <Pause className="w-3 h-3 fill-current text-primary" />
+          ) : (
+            <Play className="w-3 h-3 fill-current text-on-surface-variant ml-0.5" />
+          )}
+          <span className="hidden sm:inline font-medium text-[11px]">Forever Young</span>
+          {isPlaying && (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          )}
+        </button>
 
         {/* Share Link Button */}
         <button
@@ -103,6 +140,28 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ title, subtitle, onNewPost
           <Share2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Share Link</span>
         </button>
+
+        {onTelescopeClick && (
+          <button
+            onClick={onTelescopeClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-xs font-semibold hover:bg-cyan-500/20 transition-all"
+            title="Scan the Galaxy with Telescope"
+          >
+            <Telescope className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Telescope</span>
+          </button>
+        )}
+
+        {onCapsuleClick && (
+          <button
+            onClick={onCapsuleClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-500/20 transition-all"
+            title="Seal Time Capsule Transmission"
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Time Capsule</span>
+          </button>
+        )}
 
         {onNewPostClick && (
           <button

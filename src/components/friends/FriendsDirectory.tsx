@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
+import { User } from '@/lib/types';
 import { Avatar } from '@/components/common/Avatar';
-import { Badge } from '@/components/common/Badge';
 import {
   UserPlus,
   Users,
@@ -12,25 +12,37 @@ import {
   MessageSquare,
   Check,
   X,
-  Sparkles,
   Building,
   Share2,
   CheckCircle2,
+  Phone,
+  Video,
+  UserMinus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const FriendsDirectory: React.FC = () => {
+  const router = useRouter();
   const {
     connections,
+    currentUser,
+    isAdmin,
+    kickOutUser,
     friendRequests,
     acceptFriendRequest,
     declineFriendRequest,
-    setActiveChatId,
+    startChatWithUser,
+    startCall,
     setIsShareModalOpen,
   } = useApp();
 
   const [filter, setFilter] = useState<'all' | 'online'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const handleStartChat = (targetUser: User) => {
+    startChatWithUser(targetUser);
+    router.push('/messages');
+  };
 
   const filteredConnections = connections.filter((user) => {
     if (searchTerm) {
@@ -38,7 +50,8 @@ export const FriendsDirectory: React.FC = () => {
       const matchName = user.name.toLowerCase().includes(q);
       const matchRole = user.role.toLowerCase().includes(q);
       const matchCompany = user.company?.toLowerCase().includes(q);
-      if (!matchName && !matchRole && !matchCompany) return false;
+      const matchHandle = user.handle?.toLowerCase().includes(q);
+      if (!matchName && !matchRole && !matchCompany && !matchHandle) return false;
     }
 
     if (filter === 'online') return user.status === 'online';
@@ -109,14 +122,19 @@ export const FriendsDirectory: React.FC = () => {
         </section>
       )}
 
-      {/* All Connections Directory */}
+      {/* All Connections & Members Directory */}
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-outline-variant/40">
           <div>
-            <h2 className="font-heading font-bold text-lg sm:text-xl text-on-surface">
-              Connections ({connections.length})
+            <h2 className="font-heading font-bold text-lg sm:text-xl text-on-surface flex items-center gap-2">
+              <span>Friends & Directory</span>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                {connections.length} Members Registered
+              </span>
             </h2>
-            <p className="text-xs text-on-surface-variant">Your verified galactic network</p>
+            <p className="text-xs text-on-surface-variant">
+              Connect and chat directly with all registered community members across Interstellers
+            </p>
           </div>
 
           {/* Search, Filter, and Invite Button */}
@@ -171,9 +189,9 @@ export const FriendsDirectory: React.FC = () => {
         {filteredConnections.length === 0 ? (
           <div className="p-12 text-center bg-surface-container-lowest rounded-2xl border border-outline-variant/60 space-y-3">
             <Users className="w-10 h-10 text-primary/40 mx-auto" />
-            <h3 className="text-base font-semibold text-on-surface">No other connections yet</h3>
+            <h3 className="text-base font-semibold text-on-surface">No registered members found</h3>
             <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
-              Share your official Interstellers link with your friends so they can register and connect with you!
+              Share your official Interstellers link with your friends so they can register and join!
             </p>
             <button
               onClick={() => setIsShareModalOpen(true)}
@@ -185,59 +203,108 @@ export const FriendsDirectory: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredConnections.map((user) => (
-              <div
-                key={user.id}
-                className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between"
-              >
-                <div className="flex items-start gap-3.5 mb-3">
-                  <Avatar
-                    src={user.avatar}
-                    name={user.name}
-                    status={user.status}
-                    showStatus
-                    size="lg"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <h3 className="font-heading font-semibold text-sm text-on-surface truncate">
-                        {user.name}
-                      </h3>
-                      {user.isVerified && (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-social-blue fill-social-blue/20" />
-                      )}
+            {filteredConnections.map((user) => {
+              const isCurrentUser =
+                user.id === currentUser.id ||
+                user.handle === currentUser.handle;
+
+              return (
+                <div
+                  key={user.id}
+                  className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group"
+                >
+                  <div>
+                    <div className="flex items-start gap-3.5 mb-3">
+                      <Avatar
+                        src={user.avatar}
+                        name={user.name}
+                        status={user.status}
+                        showStatus
+                        size="lg"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-heading font-semibold text-sm text-on-surface truncate">
+                            {user.name}
+                          </h3>
+                          {user.isVerified && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-social-blue fill-social-blue/20 shrink-0" />
+                          )}
+                          {isCurrentUser && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
+                              You
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-on-surface-variant truncate">
+                          {user.role || `@${user.handle}`}
+                        </p>
+                        {user.company && (
+                          <p className="text-[11px] text-on-surface-variant/80 flex items-center gap-1 mt-0.5">
+                            <Building className="w-3 h-3 text-primary shrink-0" />
+                            <span className="truncate">{user.company}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-on-surface-variant truncate">{user.role}</p>
-                    {user.company && (
-                      <p className="text-[11px] text-on-surface-variant/80 flex items-center gap-1 mt-0.5">
-                        <Building className="w-3 h-3 text-primary" />
-                        <span>{user.company}</span>
+
+                    {user.bio && (
+                      <p className="text-xs text-on-surface-variant line-clamp-2 mb-4 leading-relaxed bg-surface-container-low/40 p-2.5 rounded-xl border border-outline-variant/30">
+                        {user.bio}
                       </p>
                     )}
                   </div>
+
+                  {/* Actions Bar */}
+                  <div className="pt-3 border-t border-outline-variant/30 flex items-center justify-between">
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Active Member
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      {!isCurrentUser && (
+                        <>
+                          <button
+                            onClick={() => startCall('audio', user)}
+                            className="p-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors"
+                            title={`Audio call ${user.name}`}
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => startCall('video', user)}
+                            className="p-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors"
+                            title={`Video call ${user.name}`}
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                          </button>
+
+                          {isAdmin && (
+                            <button
+                              onClick={() => kickOutUser(user.id || user.handle)}
+                              className="px-2.5 py-1.5 rounded-xl bg-error/15 hover:bg-error text-error hover:text-on-error font-semibold text-xs transition-all flex items-center gap-1 border border-error/30 shadow-xs"
+                              title={`Kick out ${user.name} and send back to Host Approvals queue`}
+                            >
+                              <UserMinus className="w-3.5 h-3.5" />
+                              <span>Kick Out</span>
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => handleStartChat(user)}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-on-primary hover:bg-primary-hover text-xs font-semibold shadow-xs transition-all"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>{isCurrentUser ? 'My Notes' : 'Message'}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-
-                {user.bio && (
-                  <p className="text-xs text-on-surface-variant line-clamp-2 mb-4 leading-relaxed bg-surface-container-low/40 p-2.5 rounded-xl border border-outline-variant/30">
-                    {user.bio}
-                  </p>
-                )}
-
-                <div className="pt-3 border-t border-outline-variant/30 flex items-center justify-between">
-                  <span className="text-[11px] text-on-surface-variant font-medium">
-                    Host Admin
-                  </span>
-
-                  <button
-                    onClick={() => setIsShareModalOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary text-xs font-semibold transition-colors"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>Invite</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

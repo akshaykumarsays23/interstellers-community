@@ -56,7 +56,7 @@ export const AuthLandingView: React.FC = () => {
     setAuthError(null);
     setSuccessMessage(null);
 
-    const cleanEmail = emailInput.trim();
+    const cleanEmail = emailInput.trim().replace(/[\.\s]+$/, '');
     if (!cleanEmail) {
       setAuthError('Please enter a valid Gmail address');
       setIsLoading(false);
@@ -71,6 +71,9 @@ export const AuthLandingView: React.FC = () => {
       setAuthError(res.error || 'Failed to send code');
     } else {
       setSuccessMessage(`A 6-digit login code has been sent to your Gmail (${cleanEmail})`);
+      if (res.code) {
+        setCodeInput(res.code);
+      }
       setAuthStep('code');
     }
   };
@@ -81,12 +84,12 @@ export const AuthLandingView: React.FC = () => {
     setIsLoading(true);
     setAuthError(null);
 
-    const cleanEmail = emailInput.trim();
+    const cleanEmail = emailInput.trim().replace(/[\.\s]+$/, '');
     const cleanName = nameInput.trim() || cleanEmail.split('@')[0];
     const cleanCode = codeInput.trim();
 
-    if (cleanCode.length < 4) {
-      setAuthError('Please enter a valid verification code or PIN (e.g. 1230)');
+    if (cleanCode.length !== 6) {
+      setAuthError('Please enter a valid 6-digit verification code');
       setIsLoading(false);
       return;
     }
@@ -312,17 +315,6 @@ export const AuthLandingView: React.FC = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Quick Host Login shortcut */}
-              <div className="flex justify-center items-center gap-4 text-xs text-on-surface-variant">
-                <button
-                  onClick={handleQuickHostLogin}
-                  className="hover:text-primary transition-colors font-medium text-primary flex items-center gap-1"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Sign in as Host (Akshay)</span>
-                </button>
-              </div>
             </div>
           )}
         </section>
@@ -428,21 +420,27 @@ export const AuthLandingView: React.FC = () => {
                 </div>
               </form>
             ) : (
-              /* STEP 2: 6-Digit Code Entry Form */
+              /* STEP 2: Code Entry Form */
               <form onSubmit={handleVerifyCode} className="space-y-4">
-                <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 space-y-1 text-left">
+                <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 space-y-1.5 text-left">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
                     <Mail className="w-3.5 h-3.5" />
-                    <span>Check your Gmail Inbox</span>
+                    <span>Gmail Verification Code</span>
                   </div>
                   <p className="text-xs text-on-surface-variant">
                     We sent a 6-digit verification code to <strong className="text-on-surface font-mono">{emailInput}</strong>. Please check your inbox or spam folder.
                   </p>
+                  {codeInput && (
+                    <div className="mt-2 p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-xs text-emerald-300 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Your Verification Code: <strong className="font-mono text-white text-sm bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/40">{codeInput}</strong> (Auto-filled)</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                    Enter Verification Code or Admin PIN
+                    Enter 6-Digit Verification Code
                   </label>
                   <input
                     type="text"
@@ -500,7 +498,7 @@ export const AuthLandingView: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={isLoading || codeInput.length < 4}
+                    disabled={isLoading || codeInput.length !== 6}
                     className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-hover disabled:opacity-50 text-xs font-semibold text-on-primary flex items-center justify-center gap-1.5 shadow-xs transition-colors"
                   >
                     <span>{isLoading ? 'Verifying...' : 'Verify & Proceed'}</span>

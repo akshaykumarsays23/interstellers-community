@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
+import { WallpaperModal } from '@/components/common/WallpaperModal';
 import {
   Hash,
   Users,
@@ -17,8 +18,9 @@ import {
   Smile,
   Shield,
   ChevronLeft,
+  Palette,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatMessageDate, formatDate } from '@/lib/utils';
 
 export const GroupChatHub: React.FC = () => {
   const {
@@ -34,6 +36,26 @@ export const GroupChatHub: React.FC = () => {
   const [messageText, setMessageText] = useState('');
   const [showRoster, setShowRoster] = useState(false);
   const [showMobileList, setShowMobileList] = useState(true);
+  const [chatWallpaper, setChatWallpaper] = useState<string>('');
+  const [isWallpaperModalOpen, setIsWallpaperModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedWp = localStorage.getItem('interstellers_chat_wallpaper');
+      if (savedWp) setChatWallpaper(savedWp);
+    }
+  }, []);
+
+  const handleSelectWallpaper = (url: string) => {
+    setChatWallpaper(url);
+    if (typeof window !== 'undefined') {
+      if (url) {
+        localStorage.setItem('interstellers_chat_wallpaper', url);
+      } else {
+        localStorage.removeItem('interstellers_chat_wallpaper');
+      }
+    }
+  };
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -170,6 +192,15 @@ export const GroupChatHub: React.FC = () => {
               </button>
 
               <button
+                onClick={() => setIsWallpaperModalOpen(true)}
+                className="p-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary transition-colors border border-outline-variant/40 flex items-center gap-1.5 text-xs font-semibold"
+                title="Change Chat Background / Wallpaper"
+              >
+                <Palette className="w-4 h-4 text-amber-500" />
+                <span className="hidden sm:inline">Wallpaper</span>
+              </button>
+
+              <button
                 onClick={() => setShowRoster(!showRoster)}
                 className={cn(
                   'p-2 rounded-xl hover:bg-surface-container text-on-surface-variant transition-colors',
@@ -199,7 +230,26 @@ export const GroupChatHub: React.FC = () => {
               )}
 
               {/* Message Stream */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
+              <div
+                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar transition-all"
+                style={
+                  chatWallpaper
+                    ? {
+                        backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.78)), url(${chatWallpaper})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundAttachment: 'fixed',
+                      }
+                    : undefined
+                }
+              >
+                {/* Date Divider */}
+                <div className="flex justify-center my-2">
+                  <span className="px-3 py-1 bg-surface-container/90 backdrop-blur-xs text-on-surface-variant text-[11px] font-semibold rounded-full shadow-xs border border-outline-variant/30">
+                    Today • {formatDate()}
+                  </span>
+                </div>
+
                 {activeGroup.messages.map((msg) => {
                   const isCurrentUser = msg.senderId === currentUser.id;
                   const senderUser =
@@ -227,7 +277,7 @@ export const GroupChatHub: React.FC = () => {
                             {senderUser?.name || 'Community Member'}
                           </span>
                           <span className="text-[10px] text-on-surface-variant">
-                            {msg.timestamp || msg.time}
+                            {formatMessageDate(msg.timestamp || msg.time)}
                           </span>
                         </div>
 
@@ -309,6 +359,13 @@ export const GroupChatHub: React.FC = () => {
           </div>
         </section>
       ) : null}
+
+      <WallpaperModal
+        isOpen={isWallpaperModalOpen}
+        currentWallpaper={chatWallpaper}
+        onSelectWallpaper={handleSelectWallpaper}
+        onClose={() => setIsWallpaperModalOpen(false)}
+      />
     </div>
   );
 };

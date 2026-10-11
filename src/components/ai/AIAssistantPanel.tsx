@@ -2,13 +2,78 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/lib/store';
-import { Bot, Send, Sparkles, X, RotateCcw, ArrowRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Bot, Send, Sparkles, X, RotateCcw, ArrowRight, Mic, AlertCircle } from 'lucide-react';
+import { cn, formatMessageDate } from '@/lib/utils';
+
+// Helper to format basic markdown (bold, inline code, bullet points) cleanly without bulky dependencies
+function FormattedText({ content }: { content: string }) {
+  const lines = content.split('\n');
+
+  return (
+    <div className="space-y-1.5 leading-relaxed break-words text-xs sm:text-sm">
+      {lines.map((line, idx) => {
+        // Bullet points
+        const isBullet = line.trim().startsWith('•') || line.trim().startsWith('- ') || line.trim().startsWith('* ');
+        const cleanLine = isBullet ? line.trim().replace(/^([•\-\*]\s*)/, '') : line;
+
+        // Process bold and inline code in line
+        const parts = cleanLine.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+
+        const renderedLine = parts.map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+              <strong key={pIdx} className="font-semibold text-on-surface">
+                {part.slice(2, -2)}
+              </strong>
+            );
+          }
+          if (part.startsWith('`') && part.endsWith('`')) {
+            return (
+              <code
+                key={pIdx}
+                className="px-1.5 py-0.5 rounded bg-surface-container-highest text-primary font-mono text-[11px]"
+              >
+                {part.slice(1, -1)}
+              </code>
+            );
+          }
+          return <span key={pIdx}>{part}</span>;
+        });
+
+        if (isBullet) {
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-1.5">
+              <span className="text-primary mt-1 text-[10px] select-none">•</span>
+              <div className="flex-1">{renderedLine}</div>
+            </div>
+          );
+        }
+
+        if (!cleanLine.trim()) {
+          return <div key={idx} className="h-1.5" />;
+        }
+
+        return <p key={idx}>{renderedLine}</p>;
+      })}
+    </div>
+  );
+}
 
 export const AIAssistantPanel: React.FC = () => {
-  const { aiMessages, isAITyping, sendAIMessage, clearAIChat, isAIPanelOpen, setIsAIPanelOpen } = useApp();
+  const {
+    aiMessages,
+    isAITyping,
+    sendAIMessage,
+    retryAIMessage,
+    clearAIChat,
+    isAIPanelOpen,
+    setIsAIPanelOpen,
+    setIsNovaVoiceOpen,
+  } = useApp();
+
   const [inputPrompt, setInputPrompt] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -16,18 +81,36 @@ export const AIAssistantPanel: React.FC = () => {
 
   if (!isAIPanelOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!inputPrompt.trim() || isAITyping) return;
-    sendAIMessage(inputPrompt);
+    const promptToSend = inputPrompt.trim();
     setInputPrompt('');
+    sendAIMessage(promptToSend);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputPrompt(e.target.value);
+    // Auto-expand textarea up to max-height
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
   };
 
   const quickPrompts = [
-    "Summarize unread community threads",
-    "Draft a new post for #design-sync",
-    "Find contacts in Orbital Systems",
-    "Review platform security guidelines",
+    'Explain the Space Rules 🌌',
+    'How does the Activity System work? 🛰️',
+    'What can you help me with? 📡',
+    'Explain artificial intelligence in simple words 🧠',
   ];
 
   return (
@@ -41,18 +124,26 @@ export const AIAssistantPanel: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="font-heading font-bold text-sm text-on-surface">Interstellar AI</h2>
-              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-800 rounded-full">
-                Nova v3
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full">
+                Nova AI
               </span>
             </div>
             <p className="text-[11px] text-on-surface-variant flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Connected to Galaxy Workspace
+              Autonomous Cosmic Assistant
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsNovaVoiceOpen(true)}
+            className="p-1.5 text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-lg transition-all flex items-center gap-1 text-xs font-bold shadow-xs animate-pulse"
+            title="Start Voice Live Mode"
+          >
+            <Mic className="w-4 h-4" />
+            <span className="hidden sm:inline">Voice</span>
+          </button>
           <button
             onClick={clearAIChat}
             className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg transition-colors"
@@ -82,16 +173,37 @@ export const AIAssistantPanel: React.FC = () => {
           >
             <div
               className={cn(
-                'p-3.5 rounded-2xl text-xs sm:text-sm shadow-xs leading-relaxed whitespace-pre-wrap',
+                'p-3.5 rounded-2xl text-xs sm:text-sm shadow-xs leading-relaxed',
                 msg.sender === 'user'
                   ? 'bg-primary text-on-primary rounded-br-none'
+                  : msg.isError
+                  ? 'bg-error-container/20 text-error border border-error/40 rounded-tl-none'
                   : 'bg-surface-container text-on-surface rounded-tl-none border border-outline-variant/30'
               )}
             >
-              {msg.text}
+              {msg.isError ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-error shrink-0 mt-0.5" />
+                    <span>{msg.text}</span>
+                  </div>
+                  {msg.failedPrompt && (
+                    <button
+                      onClick={() => retryAIMessage(msg.failedPrompt!)}
+                      disabled={isAITyping}
+                      className="self-start mt-1 px-3 py-1 text-xs font-semibold rounded-lg bg-error/20 hover:bg-error/30 text-error border border-error/30 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Retry Message
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <FormattedText content={msg.text} />
+              )}
             </div>
 
-            <span className="text-[10px] text-on-surface-variant/70 px-1">{msg.timestamp}</span>
+            <span className="text-[10px] text-on-surface-variant/70 px-1">{formatMessageDate(msg.timestamp)}</span>
 
             {/* Suggested prompt chips if present */}
             {msg.suggestedActions && msg.suggestedActions.length > 0 && (
@@ -104,7 +216,8 @@ export const AIAssistantPanel: React.FC = () => {
                   <button
                     key={idx}
                     onClick={() => sendAIMessage(action)}
-                    className="text-left text-xs p-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/40 text-on-surface transition-all flex items-center justify-between group"
+                    disabled={isAITyping}
+                    className="text-left text-xs p-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/40 text-on-surface transition-all flex items-center justify-between group disabled:opacity-50"
                   >
                     <span className="line-clamp-1">{action}</span>
                     <ArrowRight className="w-3.5 h-3.5 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-1" />
@@ -116,13 +229,13 @@ export const AIAssistantPanel: React.FC = () => {
         ))}
 
         {isAITyping && (
-          <div className="self-start flex items-center gap-2 p-3 bg-surface-container rounded-2xl rounded-tl-none text-xs text-on-surface-variant border border-outline-variant/30">
+          <div className="self-start flex items-center gap-2.5 p-3 bg-surface-container rounded-2xl rounded-tl-none text-xs text-on-surface-variant border border-outline-variant/30">
             <span className="flex gap-1 items-center">
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
             </span>
-            <span>Nova is formulating galaxy telemetry...</span>
+            <span className="font-medium text-on-surface-variant">Nova is thinking...</span>
           </div>
         )}
 
@@ -135,28 +248,32 @@ export const AIAssistantPanel: React.FC = () => {
           <button
             key={i}
             onClick={() => sendAIMessage(prompt)}
-            className="text-[11px] px-2.5 py-1 rounded-full bg-surface-container hover:bg-primary-container hover:text-on-primary-container text-on-surface-variant transition-colors shrink-0 border border-outline-variant/40"
+            disabled={isAITyping}
+            className="text-[11px] px-2.5 py-1 rounded-full bg-surface-container hover:bg-primary-container hover:text-on-primary-container text-on-surface-variant transition-colors shrink-0 border border-outline-variant/40 disabled:opacity-50"
           >
             {prompt}
           </button>
         ))}
       </div>
 
-      {/* Input Form */}
+      {/* Input Form with Enter to send and Shift+Enter for new lines */}
       <form onSubmit={handleSubmit} className="p-3 bg-surface-bright border-t border-outline-variant/60">
-        <div className="flex items-center gap-2 bg-surface-container rounded-full px-3 py-1.5 border border-transparent focus-within:border-primary focus-within:bg-surface-bright focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-          <input
-            type="text"
+        <div className="flex items-end gap-2 bg-surface-container rounded-2xl px-3 py-2 border border-transparent focus-within:border-primary focus-within:bg-surface-bright focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={inputPrompt}
-            onChange={(e) => setInputPrompt(e.target.value)}
-            placeholder="Ask Nova anything about the galaxy..."
-            className="flex-1 bg-transparent border-none text-xs sm:text-sm text-on-surface placeholder:text-on-surface-variant outline-none"
+            onChange={handleTextareaInput}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask Nova anything (Enter to send, Shift+Enter for newline)..."
+            className="flex-1 bg-transparent border-none text-xs sm:text-sm text-on-surface placeholder:text-on-surface-variant outline-none resize-none max-h-28 custom-scrollbar leading-relaxed"
             disabled={isAITyping}
           />
           <button
             type="submit"
             disabled={!inputPrompt.trim() || isAITyping}
-            className="p-1.5 rounded-full bg-primary text-on-primary disabled:opacity-40 hover:bg-primary-hover transition-all shrink-0 shadow-xs"
+            className="p-2 rounded-xl bg-primary text-on-primary disabled:opacity-40 hover:bg-primary-hover transition-all shrink-0 shadow-xs mb-0.5"
+            title="Send message (Enter)"
           >
             <Send className="w-4 h-4" />
           </button>

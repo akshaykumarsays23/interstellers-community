@@ -11,16 +11,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email and verification code are required' }, { status: 400 });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim().replace(/[\.\s]+$/, '').trim();
     const cleanCode = code.toString().trim();
     const cleanName = (name || cleanEmail.split('@')[0]).trim();
 
     const db = getDb();
-    const entry = db.verificationCodes?.[cleanEmail];
+    const entry = db.verificationCodes?.[cleanEmail] || db.verificationCodes?.[email.toLowerCase().trim()];
 
-    // Master passcode for host Akshay (1230) or valid generated code
-    const isMasterCode = cleanCode === '1230' || cleanCode === '777888' || cleanCode === '123456';
-    const isCodeValid = (entry && entry.code === cleanCode && Date.now() < entry.expiresAt) || isMasterCode;
+    const isHostEmail = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
+    const isCodeValid = entry && entry.code === cleanCode && Date.now() < entry.expiresAt;
 
     if (!isCodeValid) {
       return NextResponse.json(
@@ -35,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Check if Host Akshay
-    if (cleanEmail.includes('akshay') || cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space' || cleanEmail === 'akshay@gmail.com') {
+    if (isHostEmail) {
       if (!db.approvedEmails.includes(cleanEmail)) {
         db.approvedEmails.push(cleanEmail);
       }

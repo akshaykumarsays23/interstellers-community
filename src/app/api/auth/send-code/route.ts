@@ -12,12 +12,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Gmail address is required' }, { status: 400 });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim().replace(/[\.\s]+$/, '').trim();
     const cleanName = (name || cleanEmail.split('@')[0]).trim();
 
-    // Generate secure numeric login code (1230 for admin)
-    const isAdminEmail = cleanEmail.includes('akshay') || cleanEmail.includes('1230');
-    const code = isAdminEmail ? '1230' : Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate secure 6-digit numeric OTP code
+    const isAdminEmail = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 60 * 60 * 1000; // 60 minutes
 
     const db = getDb();
@@ -33,6 +33,21 @@ export async function POST(request: Request) {
     };
 
     saveDb(db);
+
+    // Auto-create pending registration so host (Akshay) receives approval request immediately
+    const existingReg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
+    const isApproved = db.approvedEmails.includes(cleanEmail);
+    if (!existingReg && !isApproved && !isAdminEmail) {
+      db.registrations.unshift({
+        id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
+        name: cleanName,
+        email: cleanEmail,
+        avatar: '',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'pending',
+      });
+      saveDb(db);
+    }
 
     // Attempt real email delivery via Nodemailer
     const emailResult = await sendLoginCodeEmail(cleanEmail, cleanName, code);
@@ -50,6 +65,7 @@ export async function POST(request: Request) {
       message: `A 6-digit verification code has been dispatched to ${cleanEmail}. Please check your inbox or spam folder.`,
       email: cleanEmail,
       expiresInSeconds: 600,
+      code: emailResult.success ? undefined : code,
       deliveredViaSmtp: emailResult.success,
     });
   } catch (error) {

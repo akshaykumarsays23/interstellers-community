@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AppProvider } from '@/lib/store';
+import { MusicProvider } from '@/lib/MusicContext';
+import { SpaceCanvasBackground } from '@/components/common/SpaceCanvasBackground';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.akshayweb.com'),
@@ -38,10 +40,33 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem('interstellers_theme');
+                if (t === 'dark' || t === 'cosmic') {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.classList.remove('light');
+                } else {
+                  document.documentElement.classList.add('light');
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
       </head>
       <body className="bg-background text-on-background min-h-screen antialiased selection:bg-primary selection:text-on-primary">
-        <AppProvider>{children}</AppProvider>
+        <AppProvider>
+          <MusicProvider>
+            <SpaceCanvasBackground />
+            {children}
+          </MusicProvider>
+        </AppProvider>
       </body>
     </html>
   );
 }
+
+

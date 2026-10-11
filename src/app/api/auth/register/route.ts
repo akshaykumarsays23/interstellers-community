@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb, saveDb, DbRegistration } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { name, email } = await request.json();
@@ -13,7 +15,7 @@ export async function POST(request: Request) {
     const db = getDb();
 
     // Check if host Akshay
-    if (cleanEmail.includes('akshay') || cleanName.toLowerCase().includes('akshay') || cleanEmail === 'akshaycricketer1230@gmail.com') {
+    if (cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space') {
       if (!db.approvedEmails.includes(cleanEmail)) {
         db.approvedEmails.push(cleanEmail);
         saveDb(db);

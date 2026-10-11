@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/lib/store';
-import { MessageSquare, Users, Layers, Compass, Settings } from 'lucide-react';
+import { MessageSquare, Users, Layers, Compass, Settings, Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const MobileNav: React.FC = () => {
@@ -16,6 +16,7 @@ export const MobileNav: React.FC = () => {
 
   const items = [
     { label: 'Feed', href: '/', icon: Compass, active: pathname === '/' || pathname === '/feed' },
+    { label: 'Arcade', href: '/arcade', icon: Gamepad2, active: pathname.startsWith('/arcade') },
     {
       label: 'Messages',
       href: '/messages',

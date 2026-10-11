@@ -37,7 +37,7 @@ export const INITIAL_POSTS: Post[] = [
   {
     id: "post_welcome",
     author: HOST_USER,
-    content: "🪐 Welcome to **Interstellers**!\n\n\"Time is never coming back, remember time is never...\"\n\nConnect with your friends, start discussions in channels, and collaborate in real-time. Invite your team and friends to join the galaxy!",
+    content: "🪐 Welcome to **Interstellers**!\n\n\"Time is never coming back, remember time is never...\"\n\nConnect with your friends, start discussions in channels, and collaborate in real-time across galactic spaces! ✨",
     createdAt: new Date().toISOString(),
     timestamp: "Just now",
     likes: 1,
@@ -45,8 +45,24 @@ export const INITIAL_POSTS: Post[] = [
     sharesCount: 0,
     isLiked: false,
     isBookmarked: true,
-    tags: ["#Welcome", "#Interstellers", "#Community"],
+    tags: ["#Welcome", "#Interstellers"],
     mediaUrl: "",
+    mediaType: "image",
+    comments: []
+  },
+  {
+    id: "post_telugu_vibe",
+    author: HOST_USER,
+    content: "🚀 **Exploring the Interstellers Community Workspace**!\n\nWelcome to our verified space crew. Connect with fellow travelers, publish updates, and collaborate across galactic stations!",
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    timestamp: "1 hr ago",
+    likes: 3,
+    commentsCount: 1,
+    sharesCount: 1,
+    isLiked: true,
+    isBookmarked: false,
+    tags: ["#TeluguVibe", "#Community"],
+    mediaUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80",
     mediaType: "image",
     comments: []
   }

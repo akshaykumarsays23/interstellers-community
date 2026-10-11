@@ -23,6 +23,8 @@ export const ApprovalsModal: React.FC = () => {
     approveRegistration,
     rejectRegistration,
     registerNewUser,
+    activeDevicesCount,
+    totalDevicesCount,
   } = useApp();
 
   if (!isApprovalsModalOpen) return null;
@@ -54,9 +56,13 @@ export const ApprovalsModal: React.FC = () => {
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary text-on-primary">
                   {pendingRequests.length} Pending
                 </span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{activeDevicesCount} Active Devices</span>
+                </span>
               </div>
               <p className="text-xs text-on-surface-variant">
-                Managed by Host Admin (Akshay)
+                Managed by Host Admin (Akshay) • {totalDevicesCount} total registered device(s)
               </p>
             </div>
           </div>
@@ -106,6 +112,7 @@ export const ApprovalsModal: React.FC = () => {
                     <p className="text-xs text-on-surface-variant flex items-center gap-1 truncate mt-0.5">
                       <Mail className="w-3 h-3 text-primary" />
                       <span>{req.email}</span>
+                      {req.timestamp && <span className="text-[10px] text-slate-400 ml-1">• {req.timestamp}</span>}
                     </p>
                   </div>
                 </div>
@@ -136,16 +143,18 @@ export const ApprovalsModal: React.FC = () => {
         {approvedRequests.length > 0 && (
           <div className="pt-2 border-t border-outline-variant/30">
             <h4 className="text-xs font-semibold text-on-surface-variant mb-2">
-              Recently Approved Members ({approvedRequests.length})
+              Approved Platform Members ({approvedRequests.length})
             </h4>
-            <div className="flex flex-wrap gap-2">
-              {approvedRequests.slice(0, 5).map((req) => (
+            <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
+              {approvedRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs border border-emerald-500/20"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs border border-emerald-500/20"
+                  title={req.email}
                 >
                   <Check className="w-3 h-3 text-emerald-600" />
-                  <span className="font-medium">{req.name}</span>
+                  <span className="font-semibold">{req.name}</span>
+                  <span className="text-[10px] opacity-75">({req.email})</span>
                 </div>
               ))}
             </div>

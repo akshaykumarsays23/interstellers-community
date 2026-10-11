@@ -34,20 +34,10 @@ export const SettingsView: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isAvatarLocked = Boolean(
-    currentUser.isAvatarLocked ||
-    settings.isAvatarLocked ||
-    (typeof window !== 'undefined' && localStorage.getItem('interstellers_avatar_locked') === 'true') ||
-    (currentUser.avatar && currentUser.avatar !== '/avatar.png' && currentUser.avatar !== '')
-  );
+  const isAvatarLocked = false;
 
   // Handle uploading real image file from local computer/device
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isAvatarLocked) {
-      setUploadError('Profile picture is permanently locked. Uploading is allowed ONCE and cannot be changed or removed.');
-      return;
-    }
-
     const file = e.target.files?.[0];
     setUploadError(null);
     setUploadSuccess(null);
@@ -95,12 +85,12 @@ export const SettingsView: React.FC = () => {
               ctx.drawImage(img, 0, 0, width, height);
               const compressed = canvas.toDataURL('image/jpeg', 0.85);
               setSelectedAvatar(compressed);
-              setUploadSuccess('Photo loaded and optimized. Click "Save Changes" to lock and save profile picture.');
+              setUploadSuccess('Photo loaded and ready. Click "Save Changes" to apply.');
               return;
             }
           } catch (_) {}
           setSelectedAvatar(result);
-          setUploadSuccess('Photo loaded from file. Click "Save Changes" to lock and save profile picture.');
+          setUploadSuccess('Photo loaded from file. Click "Save Changes" to apply.');
         };
         img.onerror = () => {
           setSelectedAvatar(result);
@@ -133,7 +123,7 @@ export const SettingsView: React.FC = () => {
           Settings & Profile Management
         </h1>
         <p className="text-xs sm:text-sm text-on-surface-variant">
-          Manage your verified interstellar identity, legal photo verification, and preferences.
+          Manage your profile identity, photo, and preferences.
         </p>
       </header>
 
@@ -144,29 +134,19 @@ export const SettingsView: React.FC = () => {
             <User className="w-4 h-4" />
           </div>
           <h2 className="font-heading font-semibold text-base text-on-surface">
-            Legal Profile & Identification
+            Profile Identification & Photo
           </h2>
         </div>
 
-        {/* Legal Passport Photo Guidelines Notice */}
+        {/* Passport Photo Guidelines Notice */}
         <div className="p-4 bg-gradient-to-r from-primary/10 via-social-blue/10 to-transparent rounded-2xl border border-primary/25 space-y-3">
           <div className="flex items-center gap-2 text-primary font-bold text-xs sm:text-sm">
             <Shield className="w-4 h-4 text-social-blue" />
-            <span>Official Photo Policy: Legal Passport Photos Only (Allowed ONCE)</span>
+            <span>Profile Photo Upload Unlocked</span>
           </div>
           <p className="text-xs text-on-surface-variant leading-relaxed">
-            Interstellers is a verified professional network. All profile pictures must be standard **formal passport-style headshots**. Profile photo uploading is allowed **ONCE** and will be permanently locked after saving.
+            Upload your real photo from your phone or computer. You can change or update your picture anytime.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-            <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Formal front-facing headshot (plain/neutral background)</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-300">
-              <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-              <span>No selfies, sunglasses, hats, or casual filters</span>
-            </div>
-          </div>
         </div>
 
         <form onSubmit={handleProfileSave} className="space-y-6">
@@ -180,23 +160,14 @@ export const SettingsView: React.FC = () => {
                   size="2xl"
                   className="ring-4 ring-primary/30 shadow-lg object-cover"
                 />
-                {!isAvatarLocked ? (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 bg-primary hover:bg-primary-hover text-on-primary w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95"
-                    title="Upload passport photo from your computer/device"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <div 
-                    className="absolute bottom-0 right-0 bg-amber-500 text-white w-9 h-9 rounded-full flex items-center justify-center shadow-lg"
-                    title="Profile Photo Verified & Locked Permanently"
-                  >
-                    <Lock className="w-4 h-4" />
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 bg-primary hover:bg-primary-hover text-on-primary w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95"
+                  title="Upload photo from your computer/device"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
               </div>
 
               {/* Hidden File Input */}
@@ -205,42 +176,33 @@ export const SettingsView: React.FC = () => {
                 ref={fileInputRef}
                 accept="image/png,image/jpeg,image/jpg,image/webp"
                 onChange={handleFileChange}
-                disabled={isAvatarLocked}
                 className="hidden"
               />
 
               {/* File Upload & Remove Actions */}
               <div className="flex flex-col gap-2 w-full">
-                {!isAvatarLocked ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-xs font-semibold shadow-xs transition-colors"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Upload Image File</span>
-                    </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-xs font-semibold shadow-xs transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Your Photo</span>
+                </button>
 
-                    {selectedAvatar && selectedAvatar !== currentUser.avatar && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedAvatar(currentUser.avatar);
-                          setUploadSuccess('Preview reset.');
-                        }}
-                        className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-error text-xs font-medium transition-colors"
-                      >
-                        <span>Cancel Selection</span>
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold cursor-not-allowed">
-                    <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>Photo Locked</span>
-                  </div>
-                )}
+                {(selectedAvatar || currentUser.avatar) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedAvatar('');
+                      updateProfile({ name, bio, role, avatar: '' });
+                      setUploadSuccess('Profile photo removed. Initial avatar active.');
+                    }}
+                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-error text-xs font-medium transition-colors"
+                  >
+                    <span>Remove Photo</span>
+                  </button>
+                ) : null}
               </div>
             </div>
 

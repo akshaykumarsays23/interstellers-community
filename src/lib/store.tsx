@@ -12,8 +12,20 @@ import {
   UserSettings,
   Message,
   Comment,
-  RegistrationRequest
+  RegistrationRequest,
+  TravelerGamificationState,
+  ArcadeGame,
+  GameScoreRecord,
+  LeaderboardEntry,
+  Mission,
+  Achievement,
+  StarCreditItem,
+  SpaceStation,
+  Crew,
+  TimeCapsule,
+  GameId,
 } from './types';
+
 import {
   CURRENT_USER,
   HOST_USER,
@@ -26,7 +38,27 @@ import {
   INITIAL_AI_MESSAGES,
   DEFAULT_SETTINGS
 } from './data';
+
+import {
+  INITIAL_ARCADE_GAMES,
+  INITIAL_MISSIONS,
+  INITIAL_ACHIEVEMENTS,
+  STAR_CREDIT_SHOP_ITEMS,
+  INITIAL_SPACE_STATIONS,
+  INITIAL_CREWS,
+  INITIAL_GLOBAL_LEADERBOARD,
+} from './arcadeData';
 import { generateId, formatTime } from './utils';
+
+export const getDMThreadId = (handleA: string, handleB: string): string => {
+  const cleanA = (handleA || '').toLowerCase().trim();
+  const cleanB = (handleB || '').toLowerCase().trim();
+  if (cleanA === 'nova_ai' || cleanB === 'nova_ai' || cleanA === 'ai_nova' || cleanB === 'ai_nova') {
+    return 'chat_nova';
+  }
+  const sorted = [cleanA, cleanB].sort();
+  return `chat_dm_${sorted[0]}_${sorted[1]}`;
+};
 
 interface CallState {
   isOpen: boolean;
@@ -51,10 +83,15 @@ interface AppContextType {
   logout: () => void;
   checkMyApprovalStatus: () => Promise<boolean>;
 
+  // Device & Visitor Analytics
+  activeDevicesCount: number;
+  totalDevicesCount: number;
+
   // Registration Approval Queue (for Akshay)
   registrationRequests: RegistrationRequest[];
   approveRegistration: (requestId: string) => Promise<void>;
   rejectRegistration: (requestId: string) => Promise<void>;
+  kickOutUser: (requestId: string) => Promise<void>;
   pendingRegistrationsCount: number;
   isApprovalsModalOpen: boolean;
   setIsApprovalsModalOpen: (open: boolean) => void;
@@ -70,9 +107,10 @@ interface AppContextType {
   isShareModalOpen: boolean;
   setIsShareModalOpen: (open: boolean) => void;
 
-  // Posts Feed
+  // Posts Feed Controls
   posts: Post[];
   createPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video', tags?: string[]) => void;
+  updatePost: (postId: string, newContent?: string, newMediaUrl?: string) => void;
   toggleLikePost: (postId: string) => void;
   toggleBookmarkPost: (postId: string) => void;
   addCommentToPost: (postId: string, content: string) => void;
@@ -83,7 +121,12 @@ interface AppContextType {
   chats: ChatThread[];
   activeChatId: string;
   setActiveChatId: (id: string) => void;
+  startChatWithUser: (user: User) => string;
   sendMessage: (threadId: string, text: string, mediaUrl?: string) => void;
+  requestDeleteMessage: (threadId: string, messageId: string) => void;
+  acceptDeleteMessage: (threadId: string, messageId: string) => void;
+  rejectDeleteMessage: (threadId: string, messageId: string) => void;
+  markChatAsRead: (threadId: string) => void;
   toggleChatPin: (threadId: string) => void;
   toggleChatArchive: (threadId: string) => void;
   activeChat?: ChatThread;
@@ -92,6 +135,7 @@ interface AppContextType {
   groups: GroupChannel[];
   activeGroupId: string;
   setActiveGroupId: (id: string) => void;
+  toggleJoinGroup: (groupId: string) => void;
   sendGroupMessage: (groupId: string, text: string) => void;
   activeGroup?: GroupChannel;
 
@@ -107,9 +151,12 @@ interface AppContextType {
   aiMessages: AIMessage[];
   isAITyping: boolean;
   sendAIMessage: (prompt: string) => void;
+  retryAIMessage: (failedPrompt: string) => void;
   clearAIChat: () => void;
   isAIPanelOpen: boolean;
   setIsAIPanelOpen: (open: boolean) => void;
+  isNovaVoiceOpen: boolean;
+  setIsNovaVoiceOpen: (open: boolean) => void;
 
   // Notifications
   notifications: AppNotification[];
@@ -128,6 +175,30 @@ interface AppContextType {
   endCall: () => void;
   toggleMute: () => void;
   toggleVideo: () => void;
+
+  // Interstellers Arcade & Galaxy Gamification
+  gamificationState: TravelerGamificationState;
+  arcadeGames: ArcadeGame[];
+  gameScores: GameScoreRecord[];
+  leaderboard: LeaderboardEntry[];
+  missions: Mission[];
+  achievements: Achievement[];
+  crews: Crew[];
+  stations: SpaceStation[];
+  timeCapsules: TimeCapsule[];
+  shopItems: StarCreditItem[];
+  recordGameScore: (gameId: GameId, score: number, statsDetails: string) => Promise<{ xpEarned: number; starCreditsEarned: number }>;
+  addXP: (amount: number, starCreditsAmount?: number) => void;
+  claimDailyChallenge: (score: number) => { success: boolean; message: string };
+  completeMission: (missionId: string) => void;
+  unlockAchievement: (achievementId: string) => void;
+  purchaseCosmetic: (itemId: string) => { success: boolean; error?: string };
+  equipCosmetic: (type: 'background' | 'frame' | 'nameEffect' | 'chatTheme', idOrClass?: string) => void;
+  toggleJoinCrew: (crewId: string) => void;
+  useEmergencyWarpPass: () => boolean;
+  createTimeCapsule: (content: string, unlockAt: string, mediaUrl?: string) => void;
+  restoreGhostOrbit: () => void;
+
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -142,8 +213,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([]);
   const [isApprovalsModalOpen, setIsApprovalsModalOpen] = useState<boolean>(false);
 
+  // Visitor & Active Device Tracking
+  const [activeDevicesCount, setActiveDevicesCount] = useState<number>(1);
+  const [totalDevicesCount, setTotalDevicesCount] = useState<number>(1);
+
+  // Auto-ping visitor device tracking
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let deviceId = localStorage.getItem('interstellers_device_id');
+    if (!deviceId) {
+      deviceId = 'dev_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+      localStorage.setItem('interstellers_device_id', deviceId);
+    }
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const deviceType = isMobile ? 'Mobile' : 'Desktop';
+
+    const pingDevice = async () => {
+      try {
+        const res = await fetch('/api/visitors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId, deviceType }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.activeCount !== undefined) setActiveDevicesCount(data.activeCount);
+          if (data.totalDevices !== undefined) setTotalDevicesCount(data.totalDevices);
+        }
+      } catch (_) {}
+    };
+
+    pingDevice();
+    const interval = setInterval(pingDevice, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [chats, setChats] = useState<ChatThread[]>(INITIAL_CHATS);
+  const [serverMessages, setServerMessages] = useState<Record<string, Message[]>>({});
   const [activeChatId, setActiveChatId] = useState<string>("chat_nova");
   const [groups, setGroups] = useState<GroupChannel[]>(INITIAL_GROUPS);
   const [activeGroupId, setActiveGroupId] = useState<string>("grp_general");
@@ -153,8 +262,416 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [aiMessages, setAiMessages] = useState<AIMessage[]>(INITIAL_AI_MESSAGES);
   const [isAITyping, setIsAITyping] = useState<boolean>(false);
   const [isAIPanelOpen, setIsAIPanelOpen] = useState<boolean>(false);
+  const [isNovaVoiceOpen, setIsNovaVoiceOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+
+
+
+  // Interstellers Arcade & Galaxy Gamification State
+  const [gamificationState, setGamificationState] = useState<TravelerGamificationState>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('interstellers_gamification_state');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (_) {}
+      }
+    }
+    return {
+      travelerLevel: 27,
+      xp: 8420,
+      xpToNextLevel: 10000,
+      starCredits: 4820,
+      signalStrength: 84,
+      orbitStability: 91,
+      currentStreak: 18,
+      emergencyWarpPasses: 2,
+      isGhostOrbit: false,
+      lastActiveDate: new Date().toISOString(),
+      hasClaimedDailyChallenge: false,
+      unlockedCosmetics: ['bg_cyber_nebula', 'frame_neon_plasma', 'name_holographic'],
+      equippedCosmetics: {
+        background: 'bg_cyber_nebula',
+        frame: 'frame_neon_plasma',
+        nameEffect: 'name_holographic',
+      },
+      moderationState: 'NORMAL',
+    };
+  });
+
+  const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>(INITIAL_ARCADE_GAMES);
+  const [gameScores, setGameScores] = useState<GameScoreRecord[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(INITIAL_GLOBAL_LEADERBOARD);
+  const [missions, setMissions] = useState<Mission[]>(INITIAL_MISSIONS);
+  const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
+  const [crews, setCrews] = useState<Crew[]>(INITIAL_CREWS);
+  const [stations, setStations] = useState<SpaceStation[]>(INITIAL_SPACE_STATIONS);
+  const [timeCapsules, setTimeCapsules] = useState<TimeCapsule[]>([]);
+  const shopItems = STAR_CREDIT_SHOP_ITEMS;
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('interstellers_gamification_state', JSON.stringify(gamificationState));
+    }
+  }, [gamificationState]);
+
+  const addXP = (amount: number, starCreditsAmount = 0) => {
+    setGamificationState((prev) => {
+      let nextXP = prev.xp + amount;
+      let nextLevel = prev.travelerLevel;
+      let nextXPToNext = prev.xpToNextLevel;
+
+      while (nextXP >= nextXPToNext) {
+        nextLevel += 1;
+        nextXPToNext += 2500;
+      }
+
+      const nextSignal = Math.min(100, prev.signalStrength + 1);
+
+      return {
+        ...prev,
+        xp: nextXP,
+        travelerLevel: nextLevel,
+        xpToNextLevel: nextXPToNext,
+        starCredits: prev.starCredits + starCreditsAmount,
+        signalStrength: nextSignal,
+      };
+    });
+  };
+
+  const unlockAchievement = (achievementId: string) => {
+    setAchievements((prev) =>
+      prev.map((a) => {
+        if (a.id === achievementId && !a.isUnlocked) {
+          addXP(a.rewardXP, a.rewardStarCredits);
+          return { ...a, isUnlocked: true, unlockedAt: new Date().toISOString().split('T')[0] };
+        }
+        return a;
+      })
+    );
+  };
+
+  const recordGameScore = async (gameId: GameId, score: number, statsDetails: string) => {
+    let xpEarned = Math.min(500, Math.floor(score / 10) + 60);
+    let starCreditsEarned = Math.min(250, Math.floor(score / 20) + 25);
+
+    if (gameId === 'reaction_warp') {
+      const speedBonus = Math.max(10, 400 - score);
+      xpEarned = Math.floor(speedBonus / 2) + 80;
+      starCreditsEarned = Math.floor(speedBonus / 4) + 40;
+    }
+
+    const newRecord: GameScoreRecord = {
+      id: `score_${generateId()}`,
+      gameId,
+      userId: currentUser.handle || currentUser.id,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatar,
+      score,
+      statsDetails,
+      xpEarned,
+      starCreditsEarned,
+      timestamp: formatTime(),
+    };
+
+    setGameScores((prev) => [newRecord, ...prev]);
+
+    setArcadeGames((prev) =>
+      prev.map((game) => {
+        if (game.id === gameId) {
+          return {
+            ...game,
+            highScore: Math.max(game.highScore, score),
+            playsCount: game.playsCount + 1,
+          };
+        }
+        return game;
+      })
+    );
+
+    addXP(xpEarned, starCreditsEarned);
+
+    setMissions((prev) =>
+      prev.map((m) => {
+        if (m.id === 'mission_1' && !m.isCompleted) {
+          return { ...m, isCompleted: true, progress: 1 };
+        }
+        if (m.id === 'mission_6' && !m.isCompleted) {
+          const nextProg = Math.min(m.maxProgress, m.progress + 1);
+          return { ...m, progress: nextProg, isCompleted: nextProg >= m.maxProgress };
+        }
+        return m;
+      })
+    );
+
+    if (gameId === 'reaction_warp' && score <= 250) {
+      unlockAchievement('ach_3');
+    }
+    if (gameId === 'asteroid_dodge' && score >= 10000) {
+      unlockAchievement('ach_4');
+    }
+
+    try {
+      await fetch('/api/arcade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submit_score', scoreRecord: newRecord }),
+      });
+    } catch (_) {}
+
+    return { xpEarned, starCreditsEarned };
+  };
+
+  const claimDailyChallenge = (score: number) => {
+    const today = new Date().toISOString().split('T')[0];
+    if (gamificationState.hasClaimedDailyChallenge && gamificationState.lastDailyChallengeDate === today) {
+      return { success: false, message: 'You have already claimed today\'s Galaxy Challenge reward! Reset at midnight.' };
+    }
+
+    addXP(350, 150);
+    setGamificationState((prev) => ({
+      ...prev,
+      hasClaimedDailyChallenge: true,
+      lastDailyChallengeDate: today,
+    }));
+
+    setMissions((prev) =>
+      prev.map((m) => (m.id === 'mission_4' ? { ...m, isCompleted: true, progress: 1 } : m))
+    );
+
+    return { success: true, message: '🌠 TODAY\'S GALAXY CHALLENGE COMPLETED! +350 XP & +150 ⭐ Star Credits awarded!' };
+  };
+
+  const completeMission = (missionId: string) => {
+    setMissions((prev) =>
+      prev.map((m) => {
+        if (m.id === missionId && !m.isCompleted) {
+          addXP(m.rewardXP, m.rewardStarCredits);
+          return { ...m, isCompleted: true, progress: m.maxProgress };
+        }
+        return m;
+      })
+    );
+  };
+
+  const purchaseCosmetic = (itemId: string) => {
+    const item = shopItems.find((i) => i.id === itemId);
+    if (!item) return { success: false, error: 'Item not found' };
+
+    if (gamificationState.starCredits < item.price) {
+      return { success: false, error: `Insufficient Star Credits! Required: ${item.price} ⭐` };
+    }
+
+    setGamificationState((prev) => ({
+      ...prev,
+      starCredits: prev.starCredits - item.price,
+      unlockedCosmetics: [...prev.unlockedCosmetics, itemId],
+    }));
+
+    return { success: true };
+  };
+
+  const equipCosmetic = (type: 'background' | 'frame' | 'nameEffect' | 'chatTheme', idOrClass?: string) => {
+    setGamificationState((prev) => ({
+      ...prev,
+      equippedCosmetics: {
+        ...prev.equippedCosmetics,
+        [type]: idOrClass,
+      },
+    }));
+  };
+
+  const toggleJoinCrew = (crewId: string) => {
+    setCrews((prev) =>
+      prev.map((c) => (c.id === crewId ? { ...c, isJoined: !c.isJoined, membersCount: c.isJoined ? c.membersCount - 1 : c.membersCount + 1 } : c))
+    );
+  };
+
+  const useEmergencyWarpPass = () => {
+    if (gamificationState.emergencyWarpPasses <= 0) return false;
+    setGamificationState((prev) => ({
+      ...prev,
+      emergencyWarpPasses: prev.emergencyWarpPasses - 1,
+      currentStreak: prev.currentStreak + 1,
+    }));
+    return true;
+  };
+
+  const createTimeCapsule = (content: string, unlockAt: string, mediaUrl?: string) => {
+    const capsule: TimeCapsule = {
+      id: `capsule_${generateId()}`,
+      authorId: currentUser.id,
+      authorName: currentUser.name,
+      authorAvatar: currentUser.avatar,
+      content,
+      createdAt: formatTime(),
+      unlockAt,
+      isUnlocked: false,
+      mediaUrl,
+    };
+    setTimeCapsules((prev) => [capsule, ...prev]);
+  };
+
+  const restoreGhostOrbit = () => {
+    setGamificationState((prev) => ({
+      ...prev,
+      isGhostOrbit: false,
+      orbitStability: 100,
+      signalStrength: 95,
+    }));
+  };
+
+  // Fetch real-time server messages for cross-account synchronization
+  const fetchServerMessages = async () => {
+    try {
+      const res = await fetch('/api/messages');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages && typeof data.messages === 'object') {
+          setServerMessages(data.messages);
+        }
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchServerMessages();
+    const interval = setInterval(fetchServerMessages, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 14-Minute Auto Nova Reminder Trigger (Exact 14 Minutes)
+  useEffect(() => {
+    if (!currentUser?.handle) return;
+
+    const timer = setTimeout(() => {
+      setIsAIPanelOpen(true);
+      const reminderMsg: AIMessage = {
+        id: `aim_${generateId()}`,
+        sender: 'ai',
+        text: `Hey Space Traveler! 🚀 Exactly 14 minutes have passed since launch and your daily missions are still pending!\n\nYou still need to finish your missions, or what do you want to do right now?`,
+        timestamp: formatTime(),
+        suggestedActions: [
+          "🚀 I want to post a post",
+          "📡 Check 20 Crazy Flight Missions",
+          "🪐 View Traveler Reputation HUD"
+        ],
+      };
+      setAiMessages((prev) => [...prev, reminderMsg]);
+    }, 14 * 60 * 1000);
+
+    return () => clearTimeout(timer);
+  }, [currentUser]);
+
+  // Re-build & synchronize chats threads whenever serverMessages, connections or currentUser changes
+  useEffect(() => {
+    if (!currentUser?.handle) return;
+
+    const currentHandle = currentUser.handle.toLowerCase().trim();
+
+    // 1. Always include Nova AI assistant chat
+    const novaThread: ChatThread = {
+      id: 'chat_nova',
+      participant: {
+        id: 'ai_nova',
+        name: 'Nova AI Assistant',
+        handle: 'nova_ai',
+        avatar: '',
+        bio: 'Your autonomous galactic navigator and workspace assistant.',
+        role: 'AI Navigator',
+        status: 'online',
+        isVerified: true,
+      },
+      lastMessage: 'Welcome to Interstellers! How can I assist you today?',
+      lastMessageTime: 'Just now',
+      unreadCount: 0,
+      isPinned: true,
+      messages: [
+        {
+          id: 'm_welcome',
+          senderId: 'ai_nova',
+          text: 'Welcome to Interstellers! "Time is never coming back, remember time is never..." I\'m Nova, your AI assistant. You can chat with me, invite friends, and create spaces anytime.',
+          timestamp: 'Just now',
+          time: 'Just now',
+          status: 'read',
+        },
+      ],
+    };
+
+    const novaMsgs = serverMessages['chat_nova'];
+    if (novaMsgs && novaMsgs.length > 0) {
+      novaThread.messages = novaMsgs;
+      const lastM = novaMsgs[novaMsgs.length - 1];
+      novaThread.lastMessage = lastM.text || 'Shared media';
+      novaThread.lastMessageTime = lastM.timestamp || lastM.time;
+    }
+
+    const threadList: ChatThread[] = [novaThread];
+    const processedThreadIds = new Set<string>(['chat_nova']);
+    const processedHandles = new Set<string>([currentHandle, 'nova_ai', 'ai_nova']);
+
+    // 2. Build threads for all registered connections / users
+    connections.forEach((conn) => {
+      if (!conn.handle) return;
+      const cleanH = conn.handle.toLowerCase().trim();
+      if (processedHandles.has(cleanH)) return;
+
+      const threadId = getDMThreadId(currentHandle, cleanH);
+      if (processedThreadIds.has(threadId)) return;
+
+      processedThreadIds.add(threadId);
+      processedHandles.add(cleanH);
+
+      const msgs = serverMessages[threadId] || [];
+      const lastMsgObj = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+
+      threadList.push({
+        id: threadId,
+        participant: conn,
+        lastMessage: lastMsgObj ? (lastMsgObj.text || 'Shared media') : 'No messages yet. Click to chat!',
+        lastMessageTime: lastMsgObj ? (lastMsgObj.timestamp || lastMsgObj.time) : '',
+        unreadCount: msgs.filter((m) => m.senderId !== currentUser.id && m.senderHandle !== currentHandle && m.status !== 'read').length,
+        messages: msgs,
+      });
+    });
+
+    // 3. Include any other threads in serverMessages involving currentUser
+    Object.keys(serverMessages).forEach((tId) => {
+      if (processedThreadIds.has(tId)) return;
+      if (tId.startsWith('chat_dm_') && tId.includes(currentHandle)) {
+        const handles = tId.replace('chat_dm_', '').split('_');
+        const otherHandle = handles.find((h) => h !== currentHandle) || handles[0];
+        if (processedHandles.has(otherHandle)) return;
+
+        processedThreadIds.add(tId);
+        processedHandles.add(otherHandle);
+
+        const msgs = serverMessages[tId] || [];
+        const lastMsgObj = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+
+        const otherUser = connections.find((c) => c.handle?.toLowerCase() === otherHandle) || {
+          id: `user_${otherHandle}`,
+          name: otherHandle,
+          handle: otherHandle,
+          avatar: '',
+          bio: 'Verified Member at Interstellers.',
+          role: 'Community Member',
+          status: 'online',
+          isVerified: true,
+        };
+
+        threadList.push({
+          id: tId,
+          participant: otherUser as User,
+          lastMessage: lastMsgObj ? (lastMsgObj.text || 'Shared media') : 'No messages yet.',
+          lastMessageTime: lastMsgObj ? (lastMsgObj.timestamp || lastMsgObj.time) : '',
+          unreadCount: msgs.filter((m) => m.senderId !== currentUser.id && m.senderHandle !== currentHandle && m.status !== 'read').length,
+          messages: msgs,
+        });
+      }
+    });
+
+    setChats(threadList);
+  }, [serverMessages, connections, currentUser]);
 
   const [callState, setCallState] = useState<CallState>({
     isOpen: false,
@@ -170,6 +687,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Load session, saved server profile & saved posts on start
   useEffect(() => {
     try {
+      // 0. Sync saved theme from localStorage on start
+      if (typeof window !== 'undefined') {
+        const savedTheme = localStorage.getItem('interstellers_theme');
+        if (savedTheme === 'dark' || savedTheme === 'cosmic') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+          document.body.classList.add('dark');
+          setSettings((prev) => ({ ...prev, theme: 'dark' }));
+        } else {
+          document.documentElement.classList.add('light');
+          document.documentElement.classList.remove('dark');
+          document.body.classList.remove('dark');
+        }
+      }
+
       // 1. Load posts from localStorage and API server
       const localSavedPosts = localStorage.getItem('interstellers_saved_posts');
       let initialPostList: Post[] = INITIAL_POSTS;
@@ -216,74 +748,109 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
 
       const savedPending = localStorage.getItem('interstellers_pending_user');
-      if (savedPending) {
-        setPendingApprovalUser(JSON.parse(savedPending));
-      }
       const savedUser = localStorage.getItem('interstellers_current_user');
-      const savedAvatar = localStorage.getItem('interstellers_saved_avatar');
-      const savedLocked = localStorage.getItem('interstellers_avatar_locked');
-      
-      const emailToCheck = savedUser ? (JSON.parse(savedUser).email || 'akshaycricketer1230@gmail.com') : 'akshaycricketer1230@gmail.com';
 
-      fetch(`/api/auth/status?email=${encodeURIComponent(emailToCheck)}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.status === 'approved') {
-            const parsed = savedUser ? JSON.parse(savedUser) : HOST_USER;
-            let finalAvatar: string = savedAvatar || '';
-            if (!finalAvatar || finalAvatar === '/avatar.png') {
-              finalAvatar = (data.user?.avatar && data.user.avatar !== '/avatar.png') 
-                ? data.user.avatar 
-                : (parsed.avatar || '/avatar.png');
-            }
-            if (!finalAvatar) {
-              finalAvatar = '/avatar.png';
-            }
-
-            const isLocked: boolean = savedLocked === 'true' || 
-              Boolean(data.user?.isAvatarLocked) || 
-              Boolean(parsed.isAvatarLocked) || 
-              Boolean(finalAvatar && finalAvatar !== '/avatar.png' && finalAvatar !== '');
-
-            const updatedUser: User = {
-              ...HOST_USER,
-              ...parsed,
-              avatar: finalAvatar,
-              isAvatarLocked: isLocked,
-            };
-            setCurrentUser(updatedUser);
-            setSettings((prev) => ({
-              ...prev,
-              displayName: updatedUser.name,
-              bio: updatedUser.bio,
-              role: updatedUser.role,
-              avatar: finalAvatar,
-              isAvatarLocked: isLocked,
-            }));
-            setIsAuthenticated(true);
-            setPendingApprovalUser(null);
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('interstellers_current_user', JSON.stringify(updatedUser));
-                if (finalAvatar) {
-                  localStorage.setItem('interstellers_saved_avatar', finalAvatar);
+      if (savedPending) {
+        try {
+          const pendingObj = JSON.parse(savedPending);
+          setPendingApprovalUser(pendingObj);
+          if (pendingObj?.email) {
+            fetch(`/api/auth/status?email=${encodeURIComponent(pendingObj.email)}`)
+              .then((r) => r.json())
+              .then((data) => {
+                if (data.status === 'approved') {
+                  const approvedUser: User = {
+                    id: 'user_' + generateId(),
+                    name: pendingObj.name,
+                    handle: pendingObj.name.toLowerCase().replace(/\s+/g, '_'),
+                    avatar: data.user?.avatar || '',
+                    bio: 'Verified Member at Interstellers.',
+                    role: 'Community Member',
+                    status: 'online',
+                    isVerified: true,
+                  };
+                  setCurrentUser(approvedUser);
+                  setIsAuthenticated(true);
+                  setPendingApprovalUser(null);
+                  localStorage.removeItem('interstellers_pending_user');
+                  localStorage.setItem('interstellers_current_user', JSON.stringify(approvedUser));
                 }
-                if (isLocked) {
-                  localStorage.setItem('interstellers_avatar_locked', 'true');
-                }
-              } catch (_) {}
-            }
-          } else if (data.status === 'pending') {
-            setIsAuthenticated(false);
-            if (savedUser) {
-              const parsed = JSON.parse(savedUser);
-              setPendingApprovalUser({ name: parsed.name, email: parsed.email });
-            }
+              })
+              .catch(() => {});
           }
-        })
-        .catch(() => {});
+        } catch (_) {}
+      } else if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          const emailToCheck = parsed.email;
+          if (emailToCheck) {
+            fetch(`/api/auth/status?email=${encodeURIComponent(emailToCheck)}`)
+              .then((r) => r.json())
+              .then((data) => {
+                if (data.status === 'approved') {
+                  const userAvatarKey = `interstellers_saved_avatar_${emailToCheck.toLowerCase().trim()}`;
+                  const savedUserAvatar = typeof window !== 'undefined' ? localStorage.getItem(userAvatarKey) : null;
+                  let finalAvatar: string = data.user?.avatar || savedUserAvatar || parsed.avatar || '';
+
+                  const updatedUser: User = {
+                    ...parsed,
+                    avatar: finalAvatar,
+                  };
+                  setCurrentUser(updatedUser);
+                  setSettings((prev) => ({
+                    ...prev,
+                    displayName: updatedUser.name,
+                    bio: updatedUser.bio,
+                    role: updatedUser.role,
+                    avatar: finalAvatar,
+                    email: emailToCheck,
+                  }));
+                  setIsAuthenticated(true);
+                  setPendingApprovalUser(null);
+                } else {
+                  setIsAuthenticated(false);
+                }
+              })
+              .catch(() => {
+                // If network fails, keep existing session
+                setCurrentUser(parsed);
+                setIsAuthenticated(true);
+              });
+          } else {
+            setCurrentUser(parsed);
+            setIsAuthenticated(true);
+          }
+        } catch (_) {
+          setIsAuthenticated(false);
+        }
+      } else {
+        // New visitor: Show authentication landing screen
+        setIsAuthenticated(false);
+        setPendingApprovalUser(null);
+      }
     } catch (_) {}
   }, []);
+
+  // Fetch all registered users from backend for Friends & Directory
+  const fetchRegisteredUsers = async () => {
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.users && Array.isArray(data.users)) {
+          setConnections(data.users);
+        }
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchRegisteredUsers();
+    if (isAuthenticated) {
+      const interval = setInterval(fetchRegisteredUsers, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
 
   // Fetch admin approvals from backend
   const fetchAdminApprovals = async () => {
@@ -348,6 +915,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pendingApprovalUser, isAuthenticated]);
 
+  // Active session watcher: if Akshay kicks out a user, immediately redirect them to Pending Approval Lobby
+  useEffect(() => {
+    if (isAuthenticated && !isAdmin && settings.email) {
+      const checkEviction = async () => {
+        try {
+          const res = await fetch(`/api/auth/status?email=${encodeURIComponent(settings.email)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status !== 'approved') {
+              const pending = { name: currentUser.name || settings.displayName || 'Explorer', email: settings.email };
+              setPendingApprovalUser(pending);
+              setIsAuthenticated(false);
+              localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
+              localStorage.removeItem('interstellers_current_user');
+            }
+          }
+        } catch (_) {}
+      };
+      const interval = setInterval(checkEviction, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, isAdmin, settings.email, currentUser.name, settings.displayName]);
+
   // Call timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -361,7 +951,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Send Login / Registration Verification Code to Gmail
   const sendVerificationCode = async (email: string, name?: string, type?: 'register' | 'signin') => {
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim().replace(/[\.\s]+$/, '').trim();
     const cleanName = (name || cleanEmail.split('@')[0]).trim();
 
     try {
@@ -382,7 +972,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // 2. Verify 6-digit Code & Transition
   const verifyLoginCode = async (email: string, code: string, name?: string) => {
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim().replace(/[\.\s]+$/, '').trim();
     const cleanName = (name || cleanEmail.split('@')[0]).trim();
 
     try {
@@ -398,8 +988,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.status === 'approved') {
-        // Akshay or pre-approved member -> enter platform immediately
-        const userToSet: User = cleanEmail.includes('akshay')
+        const isHostEmail = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
+        const userToSet: User = isHostEmail
           ? HOST_USER
           : {
               id: 'user_' + generateId(),
@@ -475,9 +1065,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const login = async (email?: string, name?: string) => {
     const cleanEmail = (email || '').toLowerCase().trim();
 
-    if (cleanEmail.includes('akshay') || cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space' || cleanEmail === 'akshay@gmail.com') {
+    if (cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space') {
       const savedUser = typeof window !== 'undefined' ? localStorage.getItem('interstellers_current_user') : null;
-      const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem('interstellers_saved_avatar') : null;
+      const hostAvatarKey = `interstellers_saved_avatar_akshaycricketer1230@gmail.com`;
+      const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem(hostAvatarKey) || localStorage.getItem('interstellers_saved_avatar') : null;
       let hostUserToSet = { ...HOST_USER };
       if (savedUser) {
         try {
@@ -592,7 +1183,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             id: 'user_' + data.updatedUser.id,
             name: data.updatedUser.name,
             handle: data.updatedUser.name.toLowerCase().replace(/\s+/g, '_'),
-            avatar: data.updatedUser.avatar || HOST_USER.avatar,
+            avatar: data.updatedUser.avatar || '',
             bio: 'Verified Member at Interstellers.',
             role: 'Community Member',
             status: 'online',
@@ -629,6 +1220,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Akshay Kicks Out a Member (Revokes approval back to pending approval lobby)
+  const kickOutUser = async (requestId: string) => {
+    try {
+      const res = await fetch('/api/admin/approvals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action: 'kick' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.registrations) {
+          setRegistrationRequests(data.registrations);
+        }
+        setConnections((prev) =>
+          prev.filter((u) => u.id !== requestId && u.handle !== requestId && u.name.toLowerCase() !== requestId.toLowerCase())
+        );
+        fetchRegisteredUsers();
+      }
+    } catch (e) {
+      console.error('Kick out error:', e);
+    }
+  };
+
   const logout = () => {
     setIsAuthenticated(false);
     setPendingApprovalUser(null);
@@ -644,8 +1258,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (typeof document !== 'undefined') {
           if (newSettings.theme === 'dark' || newSettings.theme === 'cosmic') {
             document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+            document.body.classList.add('dark');
+            localStorage.setItem('interstellers_theme', 'dark');
           } else {
+            document.documentElement.classList.add('light');
             document.documentElement.classList.remove('dark');
+            document.body.classList.remove('dark');
+            localStorage.setItem('interstellers_theme', 'light');
           }
         }
       }
@@ -654,16 +1274,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProfile = ({ name, bio, role, avatar }: { name: string; bio: string; role: string; avatar?: string }) => {
-    const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem('interstellers_saved_avatar') || '' : '';
-    const currentLocked = currentUser.isAvatarLocked || (typeof window !== 'undefined' && localStorage.getItem('interstellers_avatar_locked') === 'true');
+    const userEmail = settings.email || currentUser.handle || '';
+    const avatarStorageKey = userEmail ? `interstellers_saved_avatar_${userEmail.toLowerCase().trim()}` : 'interstellers_saved_avatar';
+    const savedAvatar = (avatarStorageKey && typeof window !== 'undefined') ? localStorage.getItem(avatarStorageKey) || '' : '';
     
-    // If avatar is currently locked, keep existing locked avatar
-    let newAvatar = currentLocked && savedAvatar 
-      ? savedAvatar 
-      : (avatar !== undefined ? avatar : (currentUser.avatar || savedAvatar || ''));
-
-    // If a non-default custom avatar is set or saved, lock it permanently!
-    const isLocked = Boolean(currentLocked || (newAvatar && newAvatar !== '/avatar.png' && newAvatar !== ''));
+    // Always prioritize newly provided avatar when saving profile in Settings
+    const newAvatar = avatar !== undefined ? avatar : (currentUser.avatar || savedAvatar || '');
 
     const updatedUser: User = {
       ...currentUser,
@@ -671,18 +1287,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       bio,
       role,
       avatar: newAvatar,
-      isAvatarLocked: isLocked,
+      isAvatarLocked: false,
     };
 
     setCurrentUser(updatedUser);
 
     if (typeof window !== 'undefined') {
       try {
-        if (newAvatar) {
-          localStorage.setItem('interstellers_saved_avatar', newAvatar);
-        }
-        if (isLocked) {
-          localStorage.setItem('interstellers_avatar_locked', 'true');
+        if (avatarStorageKey) {
+          if (newAvatar) {
+            localStorage.setItem(avatarStorageKey, newAvatar);
+          } else {
+            localStorage.removeItem(avatarStorageKey);
+          }
         }
         localStorage.setItem('interstellers_current_user', JSON.stringify(updatedUser));
       } catch (e) {
@@ -697,7 +1314,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         bio,
         role,
         avatar: newAvatar,
-        isAvatarLocked: isLocked,
+        isAvatarLocked: false,
       };
       if (typeof window !== 'undefined') {
         try {
@@ -709,21 +1326,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return nextSettings;
     });
 
-    // Save to server db.json persistently via API
-    try {
-      fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: settings.email || (currentUser.handle === 'akshay' ? 'akshaycricketer1230@gmail.com' : `${currentUser.handle}@gmail.com`),
-          name,
-          bio,
-          role,
-          avatar: newAvatar,
-          isAvatarLocked: isLocked,
-        }),
-      }).catch(() => {});
-    } catch (_) {}
+    // Save to server db.json persistently via API for current user
+    if (userEmail) {
+      try {
+        fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userEmail,
+            name,
+            bio,
+            role,
+            avatar: newAvatar,
+            isAvatarLocked: false,
+          }),
+        }).catch(() => {});
+      } catch (_) {}
+    }
 
     // Helper to lock and persist posts to localStorage and server DB
     const persistPosts = (updater: (prev: Post[]) => Post[]) => {
@@ -747,24 +1366,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
-    // Update posts authored by current user
+    // Update posts authored by current user so new avatar appears everywhere
     persistPosts((prevPosts) =>
       prevPosts.map((p) =>
-        p.author.id === currentUser.id || p.author.handle === currentUser.handle
-          ? { ...p, author: updatedUser }
+        p.author.id === currentUser.id || p.author.handle === currentUser.handle || p.author.name === currentUser.name
+          ? { ...p, author: { ...p.author, avatar: newAvatar } }
           : p
       )
     );
   };
 
   // Posts Feed methods
-  const createPost = (content: string, mediaUrl?: string, mediaType?: 'image' | 'video', tags?: string[]) => {
+  const createPost = (
+    content: string,
+    mediaUrl?: string,
+    mediaType?: 'image' | 'video',
+    tags?: string[]
+  ) => {
     const newPost: Post = {
       id: `post_${generateId()}`,
       author: currentUser,
       content,
       createdAt: new Date().toISOString(),
-      timestamp: "Just now",
+      timestamp: formatTime(),
       likes: 0,
       commentsCount: 0,
       sharesCount: 0,
@@ -807,6 +1431,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setNotifications((prev) => [newNotif, ...prev]);
   };
 
+  const persistPostsState = (nextPosts: Post[]) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('interstellers_saved_posts', JSON.stringify(nextPosts));
+      } catch (e) {
+        console.warn('localStorage quota limit for posts:', e);
+      }
+    }
+    try {
+      fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ posts: nextPosts }),
+      }).catch(() => {});
+    } catch (_) {}
+  };
+
+  const updatePost = (
+    postId: string,
+    newContent?: string,
+    newMediaUrl?: string
+  ) => {
+    setPosts((prev) => {
+      const next = prev.map((post) => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            content: newContent !== undefined ? newContent : post.content,
+            mediaUrl: newMediaUrl !== undefined ? newMediaUrl : post.mediaUrl,
+          };
+        }
+        return post;
+      });
+      persistPostsState(next);
+      return next;
+    });
+  };
+
   const toggleLikePost = (postId: string) => {
     setPosts((prev) => {
       const next = prev.map((post) => {
@@ -820,11 +1482,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         return post;
       });
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
-        } catch (_) {}
-      }
+      persistPostsState(next);
       return next;
     });
   };
@@ -834,11 +1492,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = prev.map((post) =>
         post.id === postId ? { ...post, isBookmarked: !post.isBookmarked } : post
       );
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
-        } catch (_) {}
-      }
+      persistPostsState(next);
       return next;
     });
   };
@@ -848,7 +1502,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       id: `comm_${generateId()}`,
       author: currentUser,
       content,
-      timestamp: "Just now",
+      timestamp: formatTime(),
       likes: 0,
     };
     setPosts((prev) => {
@@ -862,18 +1516,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         return post;
       });
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
-        } catch (_) {}
-      }
-      try {
-        fetch('/api/posts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ posts: next }),
-        }).catch(() => {});
-      } catch (_) {}
+      persistPostsState(next);
       return next;
     });
   };
@@ -897,11 +1540,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         return post;
       });
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
-        } catch (_) {}
-      }
+      persistPostsState(next);
       return next;
     });
   };
@@ -909,29 +1548,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deletePost = (postId: string) => {
     setPosts((prev) => {
       const next = prev.filter((p) => p.id !== postId);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('interstellers_saved_posts', JSON.stringify(next));
-        } catch (_) {}
-      }
-      try {
-        fetch('/api/posts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ posts: next }),
-        }).catch(() => {});
-      } catch (_) {}
+      persistPostsState(next);
       return next;
     });
   };
 
   // Direct Messaging methods
-  const sendMessage = (threadId: string, text: string, mediaUrl?: string) => {
+  const sendMessage = async (threadId: string, text: string, mediaUrl?: string) => {
     if (!text.trim() && !mediaUrl) return;
 
     const newMessage: Message = {
       id: `msg_${generateId()}`,
       senderId: currentUser.id,
+      senderHandle: currentUser.handle,
       text,
       mediaUrl,
       timestamp: formatTime(),
@@ -945,7 +1574,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return {
             ...thread,
             lastMessage: text,
-            lastMessageTime: "Just now",
+            lastMessageTime: formatTime(),
             messages: [...thread.messages, newMessage],
           };
         }
@@ -953,25 +1582,226 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    if (threadId === 'chat_nova') {
-      setTimeout(() => {
-        const replyMsg: Message = {
-          id: `msg_${generateId()}`,
-          senderId: 'ai_nova',
-          text: `Nova here! I received: "${text}". You can manage approved members, invite friends, or post updates anytime.`,
-          timestamp: formatTime(),
-          time: formatTime(),
-          status: 'read',
-        };
-        setChats((prevChats) =>
-          prevChats.map((t) =>
-            t.id === threadId
-              ? { ...t, lastMessage: replyMsg.text, lastMessageTime: formatTime(), messages: [...t.messages, replyMsg] }
-              : t
-          )
-        );
-      }, 1000);
+    // Persist message to backend API for cross-account synchronization
+    try {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'send',
+          threadId,
+          messageId: newMessage.id,
+          senderId: currentUser.id,
+          senderHandle: currentUser.handle,
+          senderName: currentUser.name,
+          text,
+          mediaUrl,
+          timestamp: newMessage.timestamp,
+          time: newMessage.time,
+        }),
+      });
+      fetchServerMessages();
+    } catch (e) {
+      console.error('Error persisting message:', e);
     }
+
+    if (threadId === 'chat_nova') {
+      const userEmail = currentUser.email || (currentUser.handle === 'akshay' ? 'akshaycricketer1230@gmail.com' : undefined);
+      const novaThreadMsgs = serverMessages['chat_nova'] || [];
+      const historyPayload = novaThreadMsgs.slice(-10).map((m) => ({
+        role: (m.senderId === 'ai_nova' ? 'assistant' : 'user') as 'user' | 'assistant',
+        content: m.text,
+      }));
+
+      (async () => {
+        try {
+          const res = await fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: text,
+              history: historyPayload,
+              userEmail,
+            }),
+          });
+          const data = await res.json();
+          const replyText = res.ok && data.reply ? data.reply : (data.error || 'Nova is temporarily unavailable. Please try again.');
+
+          const replyMsg: Message = {
+            id: `msg_${generateId()}`,
+            senderId: 'ai_nova',
+            senderHandle: 'nova_ai',
+            text: replyText,
+            timestamp: formatTime(),
+            time: formatTime(),
+            status: 'read',
+          };
+
+          await fetch('/api/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'send',
+              threadId: 'chat_nova',
+              messageId: replyMsg.id,
+              senderId: 'ai_nova',
+              senderHandle: 'nova_ai',
+              senderName: 'Nova AI Assistant',
+              text: replyText,
+              timestamp: replyMsg.timestamp,
+              time: replyMsg.time,
+            }),
+          });
+          fetchServerMessages();
+        } catch (_) {}
+      })();
+    }
+  };
+
+  const requestDeleteMessage = async (threadId: string, messageId: string) => {
+    try {
+      setChats((prev) =>
+        prev.map((thread) => {
+          if (thread.id === threadId) {
+            return {
+              ...thread,
+              messages: thread.messages.map((msg) =>
+                msg.id === messageId
+                  ? {
+                      ...msg,
+                      deleteRequest: {
+                        requestedBy: currentUser.handle,
+                        requestedByName: currentUser.name,
+                        status: 'pending' as const,
+                      },
+                    }
+                  : msg
+              ),
+            };
+          }
+          return thread;
+        })
+      );
+
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'request_delete',
+          threadId,
+          messageId,
+          requestedBy: currentUser.handle,
+          requestedByName: currentUser.name,
+        }),
+      });
+      fetchServerMessages();
+    } catch (e) {
+      console.error('Error requesting message deletion:', e);
+    }
+  };
+
+  const acceptDeleteMessage = async (threadId: string, messageId: string) => {
+    try {
+      setChats((prev) =>
+        prev.map((thread) => {
+          if (thread.id === threadId) {
+            return {
+              ...thread,
+              messages: thread.messages.filter((msg) => msg.id !== messageId),
+            };
+          }
+          return thread;
+        })
+      );
+
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'accept_delete',
+          threadId,
+          messageId,
+          userHandle: currentUser.handle,
+        }),
+      });
+      fetchServerMessages();
+    } catch (e) {
+      console.error('Error accepting deletion:', e);
+    }
+  };
+
+  const rejectDeleteMessage = async (threadId: string, messageId: string) => {
+    try {
+      setChats((prev) =>
+        prev.map((thread) => {
+          if (thread.id === threadId) {
+            return {
+              ...thread,
+              messages: thread.messages.map((msg) => {
+                if (msg.id === messageId) {
+                  const copy = { ...msg };
+                  delete copy.deleteRequest;
+                  return copy;
+                }
+                return msg;
+              }),
+            };
+          }
+          return thread;
+        })
+      );
+
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reject_delete',
+          threadId,
+          messageId,
+          userHandle: currentUser.handle,
+        }),
+      });
+      fetchServerMessages();
+    } catch (e) {
+      console.error('Error rejecting deletion:', e);
+    }
+  };
+
+  const markChatAsRead = async (threadId: string) => {
+    if (!threadId) return;
+
+    setChats((prev) =>
+      prev.map((thread) => {
+        if (thread.id === threadId) {
+          const updatedMsgs = thread.messages.map((m) => {
+            if (m.senderId !== currentUser.id && m.senderHandle !== currentUser.handle) {
+              return { ...m, status: 'read' as const };
+            }
+            return m;
+          });
+          return {
+            ...thread,
+            unreadCount: 0,
+            messages: updatedMsgs,
+          };
+        }
+        return thread;
+      })
+    );
+
+    try {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'mark_read',
+          threadId,
+          userHandle: currentUser.handle,
+          senderId: currentUser.id,
+        }),
+      });
+      fetchServerMessages();
+    } catch (_) {}
   };
 
   const toggleChatPin = (threadId: string) => {
@@ -986,7 +1816,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const startChatWithUser = (user: User): string => {
+    if (user.id === 'ai_nova' || user.handle === 'nova_ai') {
+      setActiveChatId('chat_nova');
+      return 'chat_nova';
+    }
+    const threadId = getDMThreadId(currentUser.handle, user.handle);
+    setActiveChatId(threadId);
+    return threadId;
+  };
+
   // Group Hub methods
+  const toggleJoinGroup = (groupId: string) => {
+    setGroups((prev) =>
+      prev.map((g) => {
+        if (g.id === groupId) {
+          const isAlreadyMember = g.members.some(
+            (m) => m.id === currentUser.id || m.handle === currentUser.handle
+          );
+          if (isAlreadyMember) {
+            return {
+              ...g,
+              membersCount: Math.max(1, g.membersCount - 1),
+              members: g.members.filter(
+                (m) => m.id !== currentUser.id && m.handle !== currentUser.handle
+              ),
+            };
+          } else {
+            return {
+              ...g,
+              membersCount: g.membersCount + 1,
+              members: [...g.members, currentUser],
+            };
+          }
+        }
+        return g;
+      })
+    );
+  };
+
   const sendGroupMessage = (groupId: string, text: string) => {
     if (!text.trim()) return;
 
@@ -1046,49 +1914,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // AI Assistant (Nova) methods
-  const sendAIMessage = (prompt: string) => {
-    if (!prompt.trim()) return;
+  const sendAIMessage = async (prompt: string) => {
+    if (!prompt.trim() || isAITyping) return;
 
+    const trimmedPrompt = prompt.trim();
     const userAIMsg: AIMessage = {
       id: `aim_${generateId()}`,
       sender: 'user',
-      text: prompt,
+      text: trimmedPrompt,
       timestamp: formatTime(),
     };
+
+    const historyPayload = aiMessages
+      .filter((m) => !m.isError)
+      .map((m) => ({
+        role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+        content: m.text,
+      }));
 
     setAiMessages((prev) => [...prev, userAIMsg]);
     setIsAITyping(true);
 
-    setTimeout(() => {
-      let replyText = "";
-      const lower = prompt.toLowerCase();
+    try {
+      const userEmail = currentUser.email || (currentUser.handle === 'akshay' ? 'akshaycricketer1230@gmail.com' : undefined);
 
-      if (lower.includes("approve") || lower.includes("pending") || lower.includes("member")) {
-        const pendingCount = registrationRequests.filter((r) => r.status === 'pending').length;
-        replyText = `🛡️ **Member Approvals Summary**:\nYou currently have **${pendingCount} pending user(s)** awaiting your host approval.\nClick 'Approvals' in the top header or sidebar to approve access.`;
-      } else if (lower.includes("invite") || lower.includes("share") || lower.includes("link")) {
-        replyText = `🔗 **Shareable Link**:\nSend \`http://localhost:3000\` or \`http://192.168.29.34:3000\` to your friends. When they enter their Gmail verification code, they are held in the pending holding lobby until you click Approve!`;
-      } else if (lower.includes("quote") || lower.includes("time")) {
-        replyText = `✨ *"Time is never coming back, remember time is never..."*\n\nThis is the core motto of Interstellers — inspiring every explorer to connect, create, and collaborate without delay!`;
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: trimmedPrompt,
+          history: historyPayload,
+          userEmail,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.reply) {
+        const aiReply: AIMessage = {
+          id: `aim_${generateId()}`,
+          sender: 'ai',
+          text: data.reply,
+          timestamp: formatTime(),
+        };
+        setAiMessages((prev) => [...prev, aiReply]);
       } else {
-        replyText = `🪐 I've processed your inquiry regarding "${prompt}". All galaxy channels are synced and active. Let me know if you want to review member approvals or share invite links!`;
+        const errorReply: AIMessage = {
+          id: `aim_${generateId()}`,
+          sender: 'ai',
+          text: data.error || 'Nova is temporarily unavailable. Please try again.',
+          timestamp: formatTime(),
+          isError: true,
+          failedPrompt: trimmedPrompt,
+        };
+        setAiMessages((prev) => [...prev, errorReply]);
       }
-
-      const aiReply: AIMessage = {
+    } catch (_) {
+      const networkErrorReply: AIMessage = {
         id: `aim_${generateId()}`,
         sender: 'ai',
-        text: replyText,
+        text: 'Nova is temporarily unavailable. Please try again.',
         timestamp: formatTime(),
-        suggestedActions: [
-          "Check pending member approvals",
-          "How do I share the website link?",
-          "Show official galaxy spaces"
-        ],
+        isError: true,
+        failedPrompt: trimmedPrompt,
       };
-
-      setAiMessages((prev) => [...prev, aiReply]);
+      setAiMessages((prev) => [...prev, networkErrorReply]);
+    } finally {
       setIsAITyping(false);
-    }, 800);
+    }
+  };
+
+  const retryAIMessage = async (failedPrompt: string) => {
+    setAiMessages((prev) => prev.filter((m) => !(m.isError && m.failedPrompt === failedPrompt)));
+    await sendAIMessage(failedPrompt);
   };
 
   const clearAIChat = () => {
@@ -1153,9 +2051,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         registerNewUser,
         logout,
         checkMyApprovalStatus,
+        activeDevicesCount,
+        totalDevicesCount,
         registrationRequests,
         approveRegistration,
         rejectRegistration,
+        kickOutUser,
         pendingRegistrationsCount,
         isApprovalsModalOpen,
         setIsApprovalsModalOpen,
@@ -1168,6 +2069,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsShareModalOpen,
         posts,
         createPost,
+        updatePost,
         toggleLikePost,
         toggleBookmarkPost,
         addCommentToPost,
@@ -1176,13 +2078,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         chats,
         activeChatId,
         setActiveChatId,
+        startChatWithUser,
         sendMessage,
+        requestDeleteMessage,
+        acceptDeleteMessage,
+        rejectDeleteMessage,
+        markChatAsRead,
         toggleChatPin,
         toggleChatArchive,
         activeChat,
         groups,
         activeGroupId,
         setActiveGroupId,
+        toggleJoinGroup,
         sendGroupMessage,
         activeGroup,
         connections,
@@ -1194,9 +2102,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         aiMessages,
         isAITyping,
         sendAIMessage,
+        retryAIMessage,
         clearAIChat,
         isAIPanelOpen,
         setIsAIPanelOpen,
+        isNovaVoiceOpen,
+        setIsNovaVoiceOpen,
         notifications,
         markNotificationAsRead,
         markAllNotificationsAsRead,
@@ -1209,6 +2120,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         endCall,
         toggleMute,
         toggleVideo,
+        gamificationState,
+        arcadeGames,
+        gameScores,
+        leaderboard,
+        missions,
+        achievements,
+        crews,
+        stations,
+        timeCapsules,
+        shopItems,
+        recordGameScore,
+        addXP,
+        claimDailyChallenge,
+        completeMission,
+        unlockAchievement,
+        purchaseCosmetic,
+        equipCosmetic,
+        toggleJoinCrew,
+        useEmergencyWarpPass,
+        createTimeCapsule,
+        restoreGhostOrbit,
+
       }}
     >
       {children}

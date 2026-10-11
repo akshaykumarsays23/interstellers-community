@@ -9,6 +9,7 @@ export interface User {
   mutualFriends?: number;
   status: 'online' | 'offline' | 'away' | 'busy';
   customStatus?: string;
+  email?: string;
   isVerified?: boolean;
   isAvatarLocked?: boolean;
 }
@@ -55,15 +56,23 @@ export interface Comment {
   isLiked?: boolean;
 }
 
+export interface DeleteRequestInfo {
+  requestedBy: string;
+  requestedByName: string;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
 export interface Message {
   id: string;
   senderId: string;
+  senderHandle?: string;
   text: string;
   timestamp: string;
   time: string;
   status?: 'sent' | 'delivered' | 'read';
   mediaUrl?: string;
   reactions?: { emoji: string; count: number; userReacted?: boolean }[];
+  deleteRequest?: DeleteRequestInfo;
 }
 
 export interface ChatThread {
@@ -122,6 +131,8 @@ export interface AIMessage {
   text: string;
   timestamp: string;
   suggestedActions?: string[];
+  isError?: boolean;
+  failedPrompt?: string;
 }
 
 export interface UserSettings {
@@ -141,3 +152,149 @@ export interface UserSettings {
   readReceipts: boolean;
   theme: 'light' | 'dark' | 'cosmic';
 }
+
+// -------------------------------------------------------------
+// INTERSTELLERS ARCADE & GALAXY GAMIFICATION TYPES
+// -------------------------------------------------------------
+
+export type GameId = 'reaction_warp' | 'asteroid_dodge' | 'cosmic_quiz' | 'alien_code' | 'memory_galaxy';
+
+export interface ArcadeGame {
+  id: GameId;
+  name: string;
+  subtitle: string;
+  description: string;
+  icon: string;
+  badge: string;
+  category: string;
+  highScore: number;
+  playsCount: number;
+}
+
+export interface GameScoreRecord {
+  id: string;
+  gameId: GameId;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  score: number;
+  statsDetails: string;
+  xpEarned: number;
+  starCreditsEarned: number;
+  timestamp: string;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  name: string;
+  handle: string;
+  avatar: string;
+  travelerLevel: number;
+  score: number;
+  starCredits: number;
+  streak: number;
+  badge?: string;
+  crewName?: string;
+}
+
+export interface Mission {
+  id: string;
+  title: string;
+  description: string;
+  type: 'daily' | 'weekly' | 'secret';
+  rewardXP: number;
+  rewardStarCredits: number;
+  isCompleted: boolean;
+  progress: number;
+  maxProgress: number;
+  secretUnlocked?: boolean;
+  icon: string;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  category: 'game' | 'social' | 'streak' | 'reputation';
+  rewardXP: number;
+  rewardStarCredits: number;
+  isUnlocked: boolean;
+  unlockedAt?: string;
+}
+
+export interface StarCreditItem {
+  id: string;
+  name: string;
+  description: string;
+  type: 'background' | 'frame' | 'name_effect' | 'badge' | 'chat_theme';
+  price: number;
+  icon: string;
+  cssClass?: string;
+  previewUrl?: string;
+}
+
+export interface SpaceStation {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  membersCount: number;
+  postsCount: number;
+  bannerUrl: string;
+  activeWormhole?: {
+    connectedStationId: string;
+    connectedStationName: string;
+    endsAt: string;
+  };
+}
+
+export interface Crew {
+  id: string;
+  name: string;
+  tagline: string;
+  icon: string;
+  membersCount: number;
+  totalXP: number;
+  leaderName: string;
+  leaderHandle: string;
+  description: string;
+  isJoined?: boolean;
+}
+
+export interface TimeCapsule {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  content: string;
+  createdAt: string;
+  unlockAt: string;
+  isUnlocked: boolean;
+  mediaUrl?: string;
+}
+
+export interface TravelerGamificationState {
+  travelerLevel: number;
+  xp: number;
+  xpToNextLevel: number;
+  starCredits: number;
+  signalStrength: number; // 0-100%
+  orbitStability: number; // 0-100%
+  currentStreak: number;
+  emergencyWarpPasses: number;
+  isGhostOrbit: boolean;
+  lastActiveDate: string;
+  hasClaimedDailyChallenge: boolean;
+  lastDailyChallengeDate?: string;
+  unlockedCosmetics: string[];
+  equippedCosmetics: {
+    background?: string;
+    frame?: string;
+    nameEffect?: string;
+    chatTheme?: string;
+  };
+  moderationState: 'NORMAL' | 'WARNING' | 'COMM_BLACKOUT' | 'SHADOW_ORBIT' | 'BLACK_HOLE' | 'AIRLOCK';
+}
+

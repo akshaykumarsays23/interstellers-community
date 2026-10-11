@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
 import { Badge } from '@/components/common/Badge';
+import { WallpaperModal } from '@/components/common/WallpaperModal';
 import {
   Search,
   Phone,
@@ -17,8 +18,16 @@ import {
   Archive,
   Info,
   ChevronLeft,
+  Palette,
+  Lock,
+  Trash2,
+  ShieldAlert,
+  Clock,
+  Check,
+  X as XIcon,
+  Mic,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatMessageDate, formatDate } from '@/lib/utils';
 
 export const MessagesDashboard: React.FC = () => {
   const {
@@ -27,10 +36,15 @@ export const MessagesDashboard: React.FC = () => {
     setActiveChatId,
     activeChat,
     sendMessage,
+    requestDeleteMessage,
+    acceptDeleteMessage,
+    rejectDeleteMessage,
+    markChatAsRead,
     startCall,
     currentUser,
     toggleChatPin,
     toggleChatArchive,
+    setIsNovaVoiceOpen,
   } = useApp();
 
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'archived'>('all');
@@ -38,6 +52,33 @@ export const MessagesDashboard: React.FC = () => {
   const [messageText, setMessageText] = useState('');
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [chatWallpaper, setChatWallpaper] = useState<string>('');
+  const [isWallpaperModalOpen, setIsWallpaperModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedWp = localStorage.getItem('interstellers_chat_wallpaper');
+      if (savedWp) setChatWallpaper(savedWp);
+    }
+  }, []);
+
+  // Automatically mark current active chat as read so badges disappear when viewed
+  useEffect(() => {
+    if (activeChatId) {
+      markChatAsRead(activeChatId);
+    }
+  }, [activeChatId, activeChat?.messages?.length]);
+
+  const handleSelectWallpaper = (url: string) => {
+    setChatWallpaper(url);
+    if (typeof window !== 'undefined') {
+      if (url) {
+        localStorage.setItem('interstellers_chat_wallpaper', url);
+      } else {
+        localStorage.removeItem('interstellers_chat_wallpaper');
+      }
+    }
+  };
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -153,6 +194,7 @@ export const MessagesDashboard: React.FC = () => {
                   key={thread.id}
                   onClick={() => {
                     setActiveChatId(thread.id);
+                    markChatAsRead(thread.id);
                     setShowMobileChat(true);
                   }}
                   className={cn(
@@ -186,7 +228,7 @@ export const MessagesDashboard: React.FC = () => {
                           thread.unreadCount > 0 ? 'text-primary font-bold' : 'text-on-surface-variant'
                         )}
                       >
-                        {thread.lastMessageTime}
+                        {formatMessageDate(thread.lastMessageTime)}
                       </span>
                     </div>
 
@@ -258,6 +300,17 @@ export const MessagesDashboard: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-1 sm:gap-2">
+              {activeChat.id === 'chat_nova' && (
+                <button
+                  onClick={() => setIsNovaVoiceOpen(true)}
+                  className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md animate-pulse"
+                  title="Start Gemini Live Voice Mode"
+                >
+                  <Mic className="w-4 h-4 text-cyan-300" />
+                  <span className="hidden sm:inline">Voice Live</span>
+                </button>
+              )}
+
               <button
                 onClick={() => startCall('audio', activeChat.participant)}
                 className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary text-xs font-semibold flex items-center gap-1.5 transition-colors"
@@ -274,6 +327,15 @@ export const MessagesDashboard: React.FC = () => {
               >
                 <Video className="w-4 h-4" />
                 <span className="hidden sm:inline">Video</span>
+              </button>
+
+              <button
+                onClick={() => setIsWallpaperModalOpen(true)}
+                className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary text-xs font-semibold flex items-center gap-1.5 transition-colors border border-outline-variant/40"
+                title="Change Chat Background / Wallpaper"
+              >
+                <Palette className="w-4 h-4 text-amber-500" />
+                <span className="hidden sm:inline">Wallpaper</span>
               </button>
 
               <button
@@ -298,21 +360,36 @@ export const MessagesDashboard: React.FC = () => {
           </header>
 
           {/* Message Stream */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-3 bg-surface-container-lowest/50 custom-scrollbar">
+          <div
+            className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-3 bg-surface-container-lowest custom-scrollbar transition-all"
+            style={
+              chatWallpaper
+                ? {
+                    backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.25)), url(${chatWallpaper})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundAttachment: 'fixed',
+                  }
+                : undefined
+            }
+          >
             {/* Date Divider */}
             <div className="flex justify-center my-2">
-              <span className="px-3 py-1 bg-surface-container text-on-surface-variant text-[11px] font-semibold rounded-full">
-                Today
+              <span className="px-3 py-1 bg-surface-container/90 backdrop-blur-xs text-on-surface-variant text-[11px] font-semibold rounded-full shadow-xs border border-outline-variant/30">
+                Today • {formatDate()}
               </span>
             </div>
 
             {activeChat.messages.map((msg) => {
-              const isSender = msg.senderId === currentUser.id;
+              const isSender = msg.senderId === currentUser.id || msg.senderHandle === currentUser.handle;
+              const hasDeleteReq = !!msg.deleteRequest;
+              const isDeleteReqByMe = msg.deleteRequest?.requestedBy === currentUser.handle;
+
               return (
                 <div
                   key={msg.id}
                   className={cn(
-                    'flex items-end gap-2.5 max-w-[85%] sm:max-w-[70%]',
+                    'flex items-end gap-2.5 max-w-[88%] sm:max-w-[75%] group relative',
                     isSender ? 'self-end flex-row-reverse' : 'self-start'
                   )}
                 >
@@ -321,36 +398,96 @@ export const MessagesDashboard: React.FC = () => {
                       src={activeChat.participant.avatar}
                       name={activeChat.participant.name}
                       size="xs"
-                      className="mb-1"
+                      className="mb-1 shrink-0"
                     />
                   )}
 
                   <div className={cn('flex flex-col gap-1', isSender ? 'items-end' : 'items-start')}>
+                    {/* Message Bubble */}
                     <div
                       className={cn(
-                        'p-3.5 text-xs sm:text-sm rounded-2xl shadow-xs leading-relaxed',
+                        'p-3.5 text-xs sm:text-sm rounded-2xl shadow-sm leading-relaxed relative border transition-all',
                         isSender
-                          ? 'bg-primary text-on-primary rounded-br-none'
-                          : 'bg-surface-container-high text-on-surface rounded-bl-none border border-outline-variant/30'
+                          ? 'bg-primary text-on-primary rounded-br-none border-primary/40'
+                          : 'bg-surface-bright/95 backdrop-blur-xs text-on-surface rounded-bl-none border-outline-variant/40 shadow-xs',
+                        hasDeleteReq && 'ring-2 ring-amber-500/60 bg-amber-950/20'
                       )}
                     >
-                      {msg.text}
+                      {/* Content */}
+                      <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
 
-                      {/* Attached Media in chat */}
+                      {/* Attached Media */}
                       {msg.mediaUrl && (
-                        <div className="mt-2 rounded-xl overflow-hidden max-h-48 border border-white/20">
+                        <div className="mt-2 rounded-xl overflow-hidden max-h-56 border border-white/20">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={msg.mediaUrl} alt="Chat attachment" className="w-full h-full object-cover" />
                         </div>
                       )}
+
+                      {/* Dual Acceptance Deletion Request Box */}
+                      {hasDeleteReq && (
+                        <div className="mt-2.5 pt-2.5 border-t border-amber-500/30 flex flex-col gap-1.5 text-xs">
+                          {isDeleteReqByMe ? (
+                            <div className="flex items-center justify-between gap-2 bg-amber-500/10 p-2 rounded-xl border border-amber-500/20">
+                              <span className="flex items-center gap-1.5 text-[11px] text-amber-200 font-medium">
+                                <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                Deletion Pending — Waiting for recipient to accept deletion...
+                              </span>
+                              <button
+                                onClick={() => rejectDeleteMessage(activeChat.id, msg.id)}
+                                className="px-2 py-1 bg-surface-container hover:bg-surface-container-high rounded-lg text-[10px] font-semibold text-on-surface-variant transition-colors"
+                              >
+                                Cancel Request
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="bg-amber-500/15 p-2.5 rounded-xl border border-amber-500/40 flex flex-col gap-2">
+                              <div className="flex items-center gap-1.5 text-[11px] text-amber-100 font-semibold">
+                                <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                                <span>{msg.deleteRequest?.requestedByName || 'Participant'} requested to delete this message. Both users must accept to delete.</span>
+                              </div>
+                              <div className="flex items-center gap-2 pt-0.5">
+                                <button
+                                  onClick={() => acceptDeleteMessage(activeChat.id, msg.id)}
+                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Accept Deletion</span>
+                                </button>
+                                <button
+                                  onClick={() => rejectDeleteMessage(activeChat.id, msg.id)}
+                                  className="px-3 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                                >
+                                  <XIcon className="w-3.5 h-3.5" />
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1 px-1">
-                      <span className="text-[10px] text-on-surface-variant/70 font-medium">
-                        {msg.timestamp || msg.time}
+                    {/* Metadata Footer: Timestamp, Lock status & Request Delete Trigger */}
+                    <div className="flex items-center gap-2 px-1 text-[10px] text-on-surface-variant/80 font-medium">
+                      <span className="flex items-center gap-1" title="Message Locked & Encrypted">
+                        <Lock className="w-3 h-3 text-emerald-400 shrink-0" />
+                        <span>{formatMessageDate(msg.timestamp || msg.time)}</span>
                       </span>
+
                       {isSender && (
                         <CheckCheck className="w-3.5 h-3.5 text-primary stroke-[2.5]" />
+                      )}
+
+                      {!hasDeleteReq && (
+                        <button
+                          onClick={() => requestDeleteMessage(activeChat.id, msg.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-error text-on-surface-variant/60 flex items-center gap-0.5 ml-1"
+                          title="Request Mutual Message Deletion (Requires Both Users Approval)"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -434,12 +571,16 @@ export const MessagesDashboard: React.FC = () => {
           <div>
             <Avatar name="Interstellers" size="2xl" className="mx-auto mb-3" />
             <h3 className="font-heading font-semibold text-lg text-on-surface mb-1">Select a Conversation</h3>
-            <p className="text-xs text-on-surface-variant max-w-sm">
-              Connect with your peers across all galaxy channels and project syncs.
-            </p>
           </div>
         </div>
       )}
+
+      <WallpaperModal
+        isOpen={isWallpaperModalOpen}
+        currentWallpaper={chatWallpaper}
+        onSelectWallpaper={handleSelectWallpaper}
+        onClose={() => setIsWallpaperModalOpen(false)}
+      />
     </div>
   );
 };

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { PostComposer } from './PostComposer';
+import { SpaceTravelerBriefing } from './SpaceTravelerBriefing';
 import { PostCard } from './PostCard';
 import { TrendingPanel } from './TrendingPanel';
 import { Compass, Sparkles, Filter, Bookmark, Flame } from 'lucide-react';
@@ -28,10 +29,13 @@ export const FeedView: React.FC = () => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Main Feed Column */}
-        <div className="lg:col-span-8">
+    <div className="w-full p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col lg:flex-row gap-6 w-full items-start">
+        {/* Main Posts Feed Column (expanded to fill all available width) */}
+        <div className="flex-1 min-w-0">
+          {/* Space Traveler Flight Briefing */}
+          <SpaceTravelerBriefing />
+
           {/* Post Composer */}
           <PostComposer />
 
@@ -95,7 +99,7 @@ export const FeedView: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div>
+            <div className="space-y-4">
               {filteredPosts.map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
@@ -104,7 +108,7 @@ export const FeedView: React.FC = () => {
         </div>
 
         {/* Right Trending & Activity Column */}
-        <div className="hidden lg:block lg:col-span-4">
+        <div className="hidden lg:block w-80 xl:w-96 shrink-0">
           <div className="sticky top-24">
             <TrendingPanel />
           </div>
@@ -113,3 +117,4 @@ export const FeedView: React.FC = () => {
     </div>
   );
 };
+

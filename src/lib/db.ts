@@ -18,11 +18,41 @@ export interface VerificationCodeEntry {
   createdAt: number;
 }
 
+export interface VisitorSession {
+  id: string;
+  ip?: string;
+  userAgent?: string;
+  deviceType: 'Mobile' | 'Desktop' | 'Tablet';
+  lastSeen: number;
+  firstSeen: number;
+}
+
+export interface DeleteRequestInfo {
+  requestedBy: string;
+  requestedByName: string;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
+export interface DbMessage {
+  id: string;
+  senderId: string;
+  senderHandle: string;
+  senderName?: string;
+  text: string;
+  mediaUrl?: string;
+  timestamp: string;
+  time: string;
+  status?: 'sent' | 'delivered' | 'read';
+  deleteRequest?: DeleteRequestInfo;
+}
+
 export interface DbData {
   registrations: DbRegistration[];
   approvedEmails: string[];
   verificationCodes?: Record<string, VerificationCodeEntry>;
   posts?: any[];
+  visitorSessions?: VisitorSession[];
+  messages?: Record<string, DbMessage[]>;
 }
 
 const DB_DIR = path.join(process.cwd(), 'data');
@@ -33,6 +63,7 @@ const INITIAL_DB: DbData = {
   approvedEmails: ['akshaycricketer1230@gmail.com', 'akshay@interstellers.space', 'akshay@gmail.com', 'akshay'],
   verificationCodes: {},
   posts: [],
+  visitorSessions: [],
 };
 
 export function getDb(): DbData {

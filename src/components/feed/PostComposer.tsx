@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
-import { Image as ImageIcon, Sparkles, Send, Tag, Smile, X } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, Send, Tag, Smile, X, Upload, Lock, Search, Grid, Shuffle } from 'lucide-react';
+import { SPACE_IMAGES, SpaceImage } from '@/lib/spaceImages';
 
 interface PostComposerProps {
   onSuccess?: () => void;
@@ -16,14 +17,67 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
   const [showMediaInput, setShowMediaInput] = useState(false);
   const [selectedTag, setSelectedTag] = useState('#CommunityUpdate');
   const [isPosting, setIsPosting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableTags = ['#CommunityUpdate', '#Productivity', '#AI', '#DesignSystem', '#CoreEngineering', '#CosmicHub'];
+  const categories = ['All', 'Galaxies', 'Nebulae', 'Planets & Earth', 'Astronauts & Rockets', 'Deep Space & Stars'];
 
-  const sampleImages = [
-    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
-  ];
+  const filteredSpaceImages = SPACE_IMAGES.filter((img) => {
+    const matchesCat = selectedCategory === 'All' || img.category === selectedCategory;
+    const matchesSearch = img.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCat && matchesSearch;
+  });
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const rawUrl = event.target?.result as string;
+      if (!rawUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL(file.type || 'image/jpeg', 0.85);
+        setMediaUrl(dataUrl);
+      };
+      img.onerror = () => {
+        setMediaUrl(rawUrl);
+      };
+      img.src = rawUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handlePickRandomSpaceImage = () => {
+    const randomIdx = Math.floor(Math.random() * SPACE_IMAGES.length);
+    setMediaUrl(SPACE_IMAGES[randomIdx].url);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +85,12 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
 
     setIsPosting(true);
     setTimeout(() => {
-      createPost(content, mediaUrl || undefined, mediaUrl ? 'image' : undefined, [selectedTag]);
+      createPost(
+        content,
+        mediaUrl || undefined,
+        mediaUrl ? 'image' : undefined,
+        [selectedTag]
+      );
       setContent('');
       setMediaUrl('');
       setShowMediaInput(false);
@@ -41,67 +100,159 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 p-4 sm:p-5 shadow-card transition-shadow hover:shadow-card-hover mb-6">
+    <div id="post-composer" className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 p-5 sm:p-6 lg:p-7 shadow-card transition-shadow hover:shadow-card-hover mb-6">
+      {/* Hidden File Input for Uploading Photos from Computer */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept="image/*"
+        className="hidden"
+      />
+
       <div className="flex gap-3 items-start">
         <Avatar src={currentUser.avatar} name={currentUser.name} status="online" showStatus size="md" />
 
         <div className="flex-1 min-w-0">
           <textarea
+            id="post-composer-textarea"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Share an interplanetary update, release note, or idea..."
+            placeholder="Share an interplanetary update, release note, or space photo..."
             rows={3}
             className="w-full bg-surface-container-low/60 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant border border-outline-variant/30 focus:border-primary focus:bg-surface-bright focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
           />
 
-          {/* Media URL Input Drawer */}
+          {/* 100 Space Pictures Media Drawer */}
           {showMediaInput && (
-            <div className="mt-3 p-3 bg-surface-container-low rounded-xl border border-outline-variant/40 space-y-2">
+            <div className="mt-3 p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/40 space-y-3 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-on-surface">Attach Media URL</span>
+                <span className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                  <Grid className="w-3.5 h-3.5 text-primary" />
+                  100 Space Pictures Gallery & Image URL
+                </span>
                 <button
                   type="button"
                   onClick={() => {
                     setShowMediaInput(false);
-                    setMediaUrl('');
                   }}
                   className="text-on-surface-variant hover:text-error"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <input
-                type="url"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="Paste image URL (e.g. https://...)"
-                className="w-full bg-surface-bright rounded-lg px-3 py-1.5 text-xs text-on-surface border border-outline-variant/60 focus:border-primary outline-none"
-              />
-              <div className="flex items-center gap-2 pt-1 overflow-x-auto">
-                <span className="text-[11px] text-on-surface-variant shrink-0">Quick presets:</span>
-                {sampleImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setMediaUrl(img)}
-                    className="text-[11px] px-2 py-0.5 rounded bg-surface-container hover:bg-primary-fixed hover:text-primary text-on-surface-variant shrink-0"
-                  >
-                    Image {idx + 1}
-                  </button>
-                ))}
+
+              {/* Upload & Paste URL Controls */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary-hover flex items-center gap-1.5 shrink-0 shadow-xs transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload from Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePickRandomSpaceImage}
+                  className="px-3 py-1.5 rounded-lg bg-primary-fixed text-primary text-xs font-semibold hover:bg-primary-fixed/80 flex items-center gap-1.5 shrink-0 transition-colors"
+                >
+                  <Shuffle className="w-3.5 h-3.5" />
+                  Random Space Pic
+                </button>
+                <input
+                  type="url"
+                  value={mediaUrl.startsWith('data:') ? '' : mediaUrl}
+                  onChange={(e) => setMediaUrl(e.target.value)}
+                  placeholder="Or paste custom image URL (https://...)"
+                  className="flex-1 min-w-[200px] bg-surface-bright rounded-lg px-3 py-1.5 text-xs text-on-surface border border-outline-variant/60 focus:border-primary outline-none"
+                />
+              </div>
+
+              {/* Categories & Search */}
+              <div className="space-y-2 pt-1 border-t border-outline-variant/30">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar py-1">
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`text-[11px] px-2.5 py-1 rounded-md shrink-0 transition-colors ${
+                          selectedCategory === cat
+                            ? 'bg-primary text-on-primary font-semibold'
+                            : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full sm:w-44">
+                    <Search className="w-3 h-3 text-on-surface-variant absolute left-2.5 top-2.5" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search 100 space pics..."
+                      className="w-full pl-7 pr-2 py-1 text-[11px] bg-surface-bright rounded-lg border border-outline-variant/50 focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 100 Space Pictures Grid */}
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1 bg-surface-bright/50 rounded-lg border border-outline-variant/30">
+                  {filteredSpaceImages.map((img) => {
+                    const isSelected = mediaUrl === img.url;
+                    return (
+                      <button
+                        key={img.id}
+                        type="button"
+                        onClick={() => setMediaUrl(img.url)}
+                        className={`group relative rounded-lg overflow-hidden border aspect-video transition-all ${
+                          isSelected
+                            ? 'border-primary ring-2 ring-primary/40 scale-95'
+                            : 'border-outline-variant/40 hover:border-primary hover:scale-[1.03]'
+                        }`}
+                        title={`${img.title} (${img.category})`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img.url} alt={img.title} className="w-full h-full object-cover" loading="lazy" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1">
+                          <span className="text-[9px] font-medium text-white truncate w-full leading-tight">
+                            #{img.id} {img.title}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 bg-primary text-on-primary rounded-full p-0.5 shadow-xs">
+                            <Lock className="w-2.5 h-2.5" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-on-surface-variant/70 text-right">
+                  Showing {filteredSpaceImages.length} of {SPACE_IMAGES.length} interesting space pictures
+                </p>
               </div>
             </div>
           )}
 
-          {/* Media Preview */}
+          {/* Media Preview with Locked Indicator */}
           {mediaUrl && (
-            <div className="mt-3 relative rounded-xl overflow-hidden max-h-48 border border-outline-variant/40">
+            <div className="mt-3 relative rounded-xl overflow-hidden max-h-56 border border-outline-variant/40 group">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={mediaUrl} alt="Attached preview" className="w-full h-full object-cover" />
+              <div className="absolute top-2 left-2 px-2.5 py-1 rounded-md bg-black/75 text-emerald-300 text-[11px] font-medium flex items-center gap-1 backdrop-blur-xs border border-emerald-500/30 shadow-xs">
+                <Lock className="w-3 h-3 text-emerald-400" />
+                <span>Photo Ready & Locked</span>
+              </div>
               <button
                 type="button"
                 onClick={() => setMediaUrl('')}
-                className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black"
+                className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -113,11 +264,21 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+                title="Upload photo from computer"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload Photo</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setShowMediaInput(!showMediaInput)}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
               >
                 <ImageIcon className="w-4 h-4 text-social-blue" />
-                <span className="hidden sm:inline">Photo</span>
+                <span className="hidden sm:inline">100 Space Gallery</span>
               </button>
 
               <div className="relative">
@@ -140,8 +301,9 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
               disabled={!content.trim() || isPosting}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover disabled:opacity-40 text-on-primary text-xs font-semibold shadow-xs transition-all active:scale-95"
             >
+              <Lock className="w-3.5 h-3.5 text-on-primary/80" />
               <Send className="w-3.5 h-3.5" />
-              <span>{isPosting ? 'Broadcasting...' : 'Publish'}</span>
+              <span>{isPosting ? 'Locking & Publishing...' : 'Publish & Lock'}</span>
             </button>
           </div>
         </div>
@@ -149,3 +311,5 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
     </div>
   );
 };
+
+

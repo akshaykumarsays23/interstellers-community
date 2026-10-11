@@ -22,9 +22,105 @@
     color: #131b2e;
     font-family: 'Be Vietnam Pro', Inter, sans-serif;
     overflow-x: hidden;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
   }
 }
 
+/* -------------------------------------------------------------
+   GLOBAL DARK THEME OVERRIDES FOR ENTIRE PAGE & ALL CONTAINERS
+---------------------------------------------------------------- */
+html.dark,
+html.dark body {
+  background-color: #080c14 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark * {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Background surface transformations - Transparent base so space canvas shines through */
+html.dark .bg-surface-bright,
+html.dark .bg-surface,
+html.dark .bg-background {
+  background-color: transparent !important;
+}
+
+html.dark .bg-surface-container-lowest,
+html.dark .bg-white {
+  background-color: rgba(15, 22, 36, 0.78) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #f8fafc !important;
+}
+
+html.dark .bg-surface-container-low,
+html.dark .bg-surface-container {
+  background-color: rgba(18, 27, 44, 0.80) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #f1f5f9 !important;
+}
+
+html.dark .bg-surface-container-high,
+html.dark .bg-surface-container-highest {
+  background-color: rgba(24, 36, 58, 0.85) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #f8fafc !important;
+}
+
+/* Text color transformations for readability */
+html.dark .text-on-surface,
+html.dark .text-primary-dark {
+  color: #f8fafc !important;
+}
+
+html.dark .text-on-surface-variant {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-secondary {
+  color: #cbd5e1 !important;
+}
+
+/* Forms & Inputs in Dark Mode */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #162032 !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Borders in Dark Mode */
+html.dark .border-outline-variant\/60,
+html.dark .border-outline-variant\/40,
+html.dark .border-outline-variant,
+html.dark .border-outline {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Glassmorphism containers in Dark Mode */
+html.dark .glass {
+  background: rgba(17, 24, 39, 0.85) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Dropdown menus & popups in Dark Mode */
+html.dark .bg-surface-container-lowest\/95,
+html.dark .bg-surface-bright\/95 {
+  background-color: rgba(21, 30, 48, 0.95) !important;
+}
+
+/* Material Symbols & Scrollbars */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -61,6 +157,10 @@
   border-radius: 9999px;
 }
 
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #7b7487;
 }
@@ -79,21 +179,6 @@
   background: rgba(99, 14, 212, 0.5);
 }
 
-/* Glassmorphism utilities */
-.glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(204, 195, 216, 0.4);
-}
-
-.glass-dark {
-  background: rgba(19, 27, 46, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 /* Cosmic ambient glows */
 .cosmic-orb-1 {
   background: radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, rgba(99, 14, 212, 0.05) 60%, transparent 80%);
@@ -102,3 +187,4 @@
 .cosmic-orb-2 {
   background: radial-gradient(circle, rgba(24, 119, 242, 0.2) 0%, rgba(124, 58, 237, 0.05) 60%, transparent 80%);
 }
+

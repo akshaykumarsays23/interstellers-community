@@ -13,31 +13,28 @@ export async function POST(request: Request) {
     const cleanEmail = email.toLowerCase().trim();
     const db = getDb();
 
-    const isAkshay = cleanEmail.includes('akshay') || cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
+    // Host admin accounts that share profile sync
+    const isHostAdmin = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
 
-    // Find existing or create registration entries
-    const targets = isAkshay 
-      ? ['akshay@interstellers.space', 'akshaycricketer1230@gmail.com', 'akshay@gmail.com', 'akshay']
+    const targets = isHostAdmin
+      ? ['akshaycricketer1230@gmail.com', 'akshay@interstellers.space']
       : [cleanEmail];
 
     targets.forEach((targetEmail) => {
       let reg = db.registrations.find((r) => r.email.toLowerCase() === targetEmail);
       if (reg) {
         if (name) reg.name = name;
-        if (avatar !== undefined && avatar !== '') {
+        if (avatar !== undefined) {
           reg.avatar = avatar;
-          reg.isAvatarLocked = true;
-        } else if (isAvatarLocked !== undefined) {
-          reg.isAvatarLocked = isAvatarLocked;
+          reg.isAvatarLocked = false;
         }
       } else {
-        const isLocked = Boolean(isAvatarLocked || (avatar && avatar !== '' && avatar !== '/avatar.png'));
         db.registrations.unshift({
           id: 'user_profile_' + Math.random().toString(36).substring(2, 7),
-          name: name || 'Akshay Kumar',
+          name: name || cleanEmail.split('@')[0],
           email: targetEmail,
           avatar: avatar || '',
-          isAvatarLocked: isLocked,
+          isAvatarLocked: false,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           status: 'approved',
         });
@@ -52,3 +49,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
   }
 }
+
+

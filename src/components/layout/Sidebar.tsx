@@ -18,6 +18,9 @@ import {
   ShieldCheck,
   Share2,
   UserCheck,
+  Mic,
+  Gamepad2,
+  Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +30,7 @@ export const Sidebar: React.FC = () => {
     currentUser,
     isAIPanelOpen,
     setIsAIPanelOpen,
+    setIsNovaVoiceOpen,
     setIsShareModalOpen,
     setIsApprovalsModalOpen,
     pendingRegistrationsCount,
@@ -47,6 +51,13 @@ export const Sidebar: React.FC = () => {
       active: pathname === '/' || pathname === '/feed',
     },
     {
+      label: 'Interstellers Arcade',
+      href: '/arcade',
+      icon: Gamepad2,
+      active: pathname.startsWith('/arcade'),
+      badge: 'HOT 🔥',
+    },
+    {
       label: 'Messages',
       href: '/messages',
       icon: MessageSquare,
@@ -59,6 +70,12 @@ export const Sidebar: React.FC = () => {
       icon: Users,
       active: pathname.startsWith('/friends'),
       badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
+    },
+    {
+      label: 'Space Stations',
+      href: '/stations',
+      icon: Radio,
+      active: pathname.startsWith('/stations'),
     },
     {
       label: 'Group Hub & Spaces',
@@ -190,6 +207,21 @@ export const Sidebar: React.FC = () => {
             </div>
             <span className="text-[10px] text-primary font-bold">
               {isAIPanelOpen ? 'Active' : 'Open'}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setIsNovaVoiceOpen(true)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm text-cyan-300 bg-gradient-to-r from-purple-950/60 via-indigo-950/60 to-cyan-950/60 hover:from-purple-900/80 hover:to-cyan-900/80 border border-cyan-500/30 transition-all shadow-md group animate-pulse"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-1 rounded-lg bg-cyan-500 text-black shadow-xs">
+                <Mic className="w-3.5 h-3.5" />
+              </div>
+              <span className="font-bold">Nova Voice Live</span>
+            </div>
+            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 uppercase tracking-widest">
+              Live 🎙️
             </span>
           </button>
         </div>
