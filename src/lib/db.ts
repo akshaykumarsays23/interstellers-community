@@ -55,8 +55,11 @@ export interface DbData {
   messages?: Record<string, DbMessage[]>;
 }
 
+import os from 'os';
+
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'db.json');
+const TMP_FILE = path.join(os.tmpdir(), 'interstellers_db.json');
 
 const INITIAL_DB: DbData = {
   registrations: [],
@@ -66,33 +69,115 @@ const INITIAL_DB: DbData = {
   visitorSessions: [],
 };
 
+// In-memory runtime cache for serverless environments where disk writes are restricted
+let inMemoryDb: DbData | null = null;
+
+function ensureDbIntegrity(db: any): DbData {
+  if (!db || typeof db !== 'object') {
+    db = { ...INITIAL_DB };
+  }
+  if (!Array.isArray(db.registrations)) {
+    db.registrations = [];
+  }
+  if (!Array.isArray(db.approvedEmails)) {
+    db.approvedEmails = ['akshaycricketer1230@gmail.com', 'akshay@interstellers.space', 'akshay@gmail.com', 'akshay'];
+  }
+  if (!db.verificationCodes || typeof db.verificationCodes !== 'object') {
+    db.verificationCodes = {};
+  }
+  return db as DbData;
+}
+
 export function getDb(): DbData {
+  if (inMemoryDb) {
+    return ensureDbIntegrity(inMemoryDb);
+  }
+
   try {
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
+    let parsed: any = null;
+
+    // 1. Try reading bundled db.json
+    if (fs.existsSync(DB_FILE)) {
+      try {
+        const content = fs.readFileSync(DB_FILE, 'utf-8');
+        parsed = JSON.parse(content);
+      } catch (e) {
+        console.warn('[DB] Failed reading DB_FILE:', e);
+      }
     }
-    if (!fs.existsSync(DB_FILE)) {
-      fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DB, null, 2), 'utf-8');
-      return INITIAL_DB;
+
+    // 2. Try merging with ephemeral /tmp db if exists (for Vercel serverless writes)
+    if (fs.existsSync(TMP_FILE)) {
+      try {
+        const tmpContent = fs.readFileSync(TMP_FILE, 'utf-8');
+        const tmpParsed = JSON.parse(tmpContent);
+        if (tmpParsed) {
+          if (!parsed) {
+            parsed = tmpParsed;
+          } else {
+            // Merge registrations
+            if (Array.isArray(tmpParsed.registrations)) {
+              const existingIds = new Set((parsed.registrations || []).map((r: any) => r.id || r.email));
+              tmpParsed.registrations.forEach((r: any) => {
+                if (!existingIds.has(r.id || r.email)) {
+                  parsed.registrations.unshift(r);
+                }
+              });
+            }
+            // Merge approved emails
+            if (Array.isArray(tmpParsed.approvedEmails)) {
+              parsed.approvedEmails = Array.from(new Set([...(parsed.approvedEmails || []), ...tmpParsed.approvedEmails]));
+            }
+            // Merge verification codes
+            if (tmpParsed.verificationCodes) {
+              parsed.verificationCodes = { ...(parsed.verificationCodes || {}), ...tmpParsed.verificationCodes };
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[DB] Failed reading TMP_FILE:', e);
+      }
     }
-    const content = fs.readFileSync(DB_FILE, 'utf-8');
-    const parsed = JSON.parse(content);
-    if (!parsed.verificationCodes) {
-      parsed.verificationCodes = {};
+
+    if (!parsed) {
+      parsed = { ...INITIAL_DB };
     }
-    return parsed;
+
+    inMemoryDb = ensureDbIntegrity(parsed);
+    return inMemoryDb;
   } catch (err) {
     console.error('Error reading db:', err);
-    return INITIAL_DB;
+    inMemoryDb = { ...INITIAL_DB };
+    return inMemoryDb;
   }
 }
 
 export function saveDb(data: DbData) {
   try {
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
+    const verifiedData = ensureDbIntegrity(data);
+    inMemoryDb = verifiedData;
+
+    // 1. Try writing to primary DB_FILE (local dev / persistent storage)
+    let wrotePrimary = false;
+    try {
+      if (!fs.existsSync(DB_DIR)) {
+        fs.mkdirSync(DB_DIR, { recursive: true });
+      }
+      fs.writeFileSync(DB_FILE, JSON.stringify(verifiedData, null, 2), 'utf-8');
+      wrotePrimary = true;
+    } catch (err: any) {
+      // On Vercel, filesystem is read-only (EROFS)
+      console.warn('[DB] Primary file write skipped or read-only (expected on Vercel):', err?.message || err);
     }
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+
+    // 2. Write to /tmp if primary failed or for serverless warm persistence
+    if (!wrotePrimary) {
+      try {
+        fs.writeFileSync(TMP_FILE, JSON.stringify(verifiedData, null, 2), 'utf-8');
+      } catch (tmpErr) {
+        console.warn('[DB] Fallback /tmp write error:', tmpErr);
+      }
+    }
   } catch (err) {
     console.error('Error saving db:', err);
   }

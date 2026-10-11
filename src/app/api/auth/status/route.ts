@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { normalizeEmail, isAdminEmail } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,11 +13,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    const cleanEmail = email.toLowerCase().trim().replace(/[\.\s]+$/, '').trim();
+    const cleanEmail = normalizeEmail(email);
     const db = getDb();
 
     // Check if host Akshay
-    if (cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space') {
+    if (isAdminEmail(cleanEmail)) {
       const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
       return NextResponse.json({
         status: 'approved',
@@ -24,28 +25,31 @@ export async function GET(request: Request) {
         user: {
           name: 'Akshay Kumar',
           email: cleanEmail,
-          avatar: reg?.avatar || '',
+          avatar: reg?.avatar || '/avatar.png',
           isAvatarLocked: false,
         },
       });
     }
 
     // Check approved list
-    if (db.approvedEmails.includes(cleanEmail)) {
+    const isApproved = Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail);
+    if (isApproved) {
       const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
       return NextResponse.json({
         status: 'approved',
+        role: 'member',
         user: reg 
           ? { name: reg.name, email: reg.email, avatar: reg.avatar || '', isAvatarLocked: false } 
           : { name: cleanEmail.split('@')[0], email: cleanEmail, avatar: '', isAvatarLocked: false },
       });
     }
 
-    // Check registrations
+    // Check registrations queue
     const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
     if (reg) {
       return NextResponse.json({
         status: reg.status,
+        role: reg.status === 'approved' ? 'member' : 'guest',
         user: { 
           name: reg.name, 
           email: reg.email, 
@@ -61,4 +65,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to check status' }, { status: 500 });
   }
 }
-

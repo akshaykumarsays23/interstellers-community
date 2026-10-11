@@ -29,6 +29,7 @@ import {
 import {
   CURRENT_USER,
   HOST_USER,
+  GUEST_USER,
   INITIAL_USERS,
   INITIAL_POSTS,
   INITIAL_CHATS,
@@ -76,8 +77,8 @@ interface AppContextType {
   isAdmin: boolean;
   pendingApprovalUser: { name: string; email: string } | null;
   setPendingApprovalUser: (val: { name: string; email: string } | null) => void;
-  sendVerificationCode: (email: string, name?: string, type?: 'register' | 'signin') => Promise<{ success: boolean; code?: string; message?: string; error?: string }>;
-  verifyLoginCode: (email: string, code: string, name?: string) => Promise<{ success: boolean; status?: 'approved' | 'pending'; message?: string; error?: string }>;
+  sendVerificationCode: (email: string, name?: string, type?: 'register' | 'signin') => Promise<{ success: boolean; code?: string; otpToken?: string; message?: string; error?: string }>;
+  verifyLoginCode: (email: string, code: string, name?: string, otpToken?: string) => Promise<{ success: boolean; status?: 'approved' | 'pending'; message?: string; error?: string }>;
   login: (email?: string, name?: string) => Promise<{ success: boolean; requiresApproval?: boolean }>;
   registerNewUser: (name: string, email: string) => Promise<void>;
   logout: () => void;
@@ -205,7 +206,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<User>(HOST_USER);
+  const [currentUser, setCurrentUser] = useState<User>(GUEST_USER);
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [pendingApprovalUser, setPendingApprovalUser] = useState<{ name: string; email: string } | null>(null);
   
@@ -681,7 +682,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     duration: 0,
   });
 
-  const isAdmin = currentUser.handle === 'akshay' || currentUser.id === 'user_host';
+  const isAdmin =
+    isAuthenticated &&
+    (currentUser.handle === 'akshay' ||
+      currentUser.id === 'user_host' ||
+      currentUser.email === 'akshaycricketer1230@gmail.com' ||
+      currentUser.email === 'akshay@interstellers.space');
 
   // Load session & saved server profile on start
   // Load session, saved server profile & saved posts on start
@@ -747,87 +753,146 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         });
 
-      const savedPending = localStorage.getItem('interstellers_pending_user');
-      const savedUser = localStorage.getItem('interstellers_current_user');
-
-      if (savedPending) {
-        try {
-          const pendingObj = JSON.parse(savedPending);
-          setPendingApprovalUser(pendingObj);
-          if (pendingObj?.email) {
-            fetch(`/api/auth/status?email=${encodeURIComponent(pendingObj.email)}`)
-              .then((r) => r.json())
-              .then((data) => {
-                if (data.status === 'approved') {
-                  const approvedUser: User = {
-                    id: 'user_' + generateId(),
-                    name: pendingObj.name,
-                    handle: pendingObj.name.toLowerCase().replace(/\s+/g, '_'),
-                    avatar: data.user?.avatar || '',
-                    bio: 'Verified Member at Interstellers.',
-                    role: 'Community Member',
-                    status: 'online',
-                    isVerified: true,
-                  };
-                  setCurrentUser(approvedUser);
-                  setIsAuthenticated(true);
-                  setPendingApprovalUser(null);
-                  localStorage.removeItem('interstellers_pending_user');
-                  localStorage.setItem('interstellers_current_user', JSON.stringify(approvedUser));
-                }
-              })
-              .catch(() => {});
-          }
-        } catch (_) {}
-      } else if (savedUser) {
-        try {
-          const parsed = JSON.parse(savedUser);
-          const emailToCheck = parsed.email;
-          if (emailToCheck) {
-            fetch(`/api/auth/status?email=${encodeURIComponent(emailToCheck)}`)
-              .then((r) => r.json())
-              .then((data) => {
-                if (data.status === 'approved') {
-                  const userAvatarKey = `interstellers_saved_avatar_${emailToCheck.toLowerCase().trim()}`;
-                  const savedUserAvatar = typeof window !== 'undefined' ? localStorage.getItem(userAvatarKey) : null;
-                  let finalAvatar: string = data.user?.avatar || savedUserAvatar || parsed.avatar || '';
-
-                  const updatedUser: User = {
-                    ...parsed,
-                    avatar: finalAvatar,
-                  };
-                  setCurrentUser(updatedUser);
-                  setSettings((prev) => ({
-                    ...prev,
-                    displayName: updatedUser.name,
-                    bio: updatedUser.bio,
-                    role: updatedUser.role,
-                    avatar: finalAvatar,
-                    email: emailToCheck,
-                  }));
-                  setIsAuthenticated(true);
-                  setPendingApprovalUser(null);
-                } else {
-                  setIsAuthenticated(false);
-                }
-              })
-              .catch(() => {
-                // If network fails, keep existing session
-                setCurrentUser(parsed);
-                setIsAuthenticated(true);
-              });
-          } else {
-            setCurrentUser(parsed);
+      // Verify active server session first
+      fetch('/api/auth/session')
+        .then((r) => r.json())
+        .then((sessionData) => {
+          if (sessionData.authenticated && sessionData.user) {
+            const serverUser: User = {
+              id: sessionData.user.id || 'user_' + generateId(),
+              name: sessionData.user.name,
+              handle: sessionData.user.handle || sessionData.user.name.toLowerCase().replace(/\s+/g, '_'),
+              avatar: sessionData.user.avatar || '',
+              bio: sessionData.user.role === 'Host Admin' ? HOST_USER.bio : 'Verified Member at Interstellers.',
+              role: sessionData.user.role || 'Community Member',
+              email: sessionData.user.email,
+              status: 'online',
+              isVerified: true,
+            };
+            setCurrentUser(serverUser);
+            setSettings((prev) => ({
+              ...prev,
+              displayName: serverUser.name,
+              handle: serverUser.handle,
+              role: serverUser.role,
+              avatar: serverUser.avatar,
+              email: serverUser.email || '',
+            }));
             setIsAuthenticated(true);
+            setPendingApprovalUser(null);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('interstellers_current_user', JSON.stringify(serverUser));
+              localStorage.removeItem('interstellers_pending_user');
+            }
+            return;
           }
-        } catch (_) {
+
+          // If no active server session, check local storage
+          const savedPending = typeof window !== 'undefined' ? localStorage.getItem('interstellers_pending_user') : null;
+          const savedUser = typeof window !== 'undefined' ? localStorage.getItem('interstellers_current_user') : null;
+
+          if (savedPending) {
+            try {
+              const pendingObj = JSON.parse(savedPending);
+              setPendingApprovalUser(pendingObj);
+              setIsAuthenticated(false);
+              setCurrentUser(GUEST_USER);
+              if (pendingObj?.email) {
+                fetch(`/api/auth/status?email=${encodeURIComponent(pendingObj.email)}`)
+                  .then((r) => r.json())
+                  .then((data) => {
+                    if (data.status === 'approved') {
+                      const isHostEmail = pendingObj.email.toLowerCase().trim() === 'akshaycricketer1230@gmail.com' || pendingObj.email.toLowerCase().trim() === 'akshay@interstellers.space';
+                      const approvedUser: User = isHostEmail
+                        ? HOST_USER
+                        : {
+                            id: 'user_' + generateId(),
+                            name: pendingObj.name,
+                            handle: pendingObj.name.toLowerCase().replace(/\s+/g, '_'),
+                            avatar: data.user?.avatar || '',
+                            bio: 'Verified Member at Interstellers.',
+                            role: 'Community Member',
+                            email: pendingObj.email,
+                            status: 'online',
+                            isVerified: true,
+                          };
+                      setCurrentUser(approvedUser);
+                      setIsAuthenticated(true);
+                      setPendingApprovalUser(null);
+                      localStorage.removeItem('interstellers_pending_user');
+                      localStorage.setItem('interstellers_current_user', JSON.stringify(approvedUser));
+                    }
+                  })
+                  .catch(() => {});
+              }
+            } catch (_) {
+              setIsAuthenticated(false);
+              setCurrentUser(GUEST_USER);
+            }
+          } else if (savedUser) {
+            try {
+              const parsed = JSON.parse(savedUser);
+              const emailToCheck = parsed.email;
+              if (emailToCheck) {
+                fetch(`/api/auth/status?email=${encodeURIComponent(emailToCheck)}`)
+                  .then((r) => r.json())
+                  .then((data) => {
+                    if (data.status === 'approved') {
+                      const userAvatarKey = `interstellers_saved_avatar_${emailToCheck.toLowerCase().trim()}`;
+                      const savedUserAvatar = typeof window !== 'undefined' ? localStorage.getItem(userAvatarKey) : null;
+                      let finalAvatar: string = data.user?.avatar || savedUserAvatar || parsed.avatar || '';
+
+                      const updatedUser: User = {
+                        ...parsed,
+                        avatar: finalAvatar,
+                      };
+                      setCurrentUser(updatedUser);
+                      setSettings((prev) => ({
+                        ...prev,
+                        displayName: updatedUser.name,
+                        bio: updatedUser.bio,
+                        role: updatedUser.role,
+                        avatar: finalAvatar,
+                        email: emailToCheck,
+                      }));
+                      setIsAuthenticated(true);
+                      setPendingApprovalUser(null);
+                    } else {
+                      setIsAuthenticated(false);
+                      setCurrentUser(GUEST_USER);
+                      if (data.status === 'pending') {
+                        setPendingApprovalUser({ name: parsed.name, email: emailToCheck });
+                      } else {
+                        localStorage.removeItem('interstellers_current_user');
+                      }
+                    }
+                  })
+                  .catch(() => {
+                    // Network failed: keep session if user had valid email
+                    setCurrentUser(parsed);
+                    setIsAuthenticated(true);
+                  });
+              } else {
+                // Anonymous or stale host object without email: force unauthenticated
+                setIsAuthenticated(false);
+                setCurrentUser(GUEST_USER);
+                localStorage.removeItem('interstellers_current_user');
+              }
+            } catch (_) {
+              setIsAuthenticated(false);
+              setCurrentUser(GUEST_USER);
+            }
+          } else {
+            // New visitor: Show authentication landing screen
+            setIsAuthenticated(false);
+            setCurrentUser(GUEST_USER);
+            setPendingApprovalUser(null);
+          }
+        })
+        .catch(() => {
           setIsAuthenticated(false);
-        }
-      } else {
-        // New visitor: Show authentication landing screen
-        setIsAuthenticated(false);
-        setPendingApprovalUser(null);
-      }
+          setCurrentUser(GUEST_USER);
+        });
     } catch (_) {}
   }, []);
 
@@ -964,22 +1029,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         return { success: false, error: data.error || 'Failed to send verification code' };
       }
-      return { success: true, code: data.code, message: data.message };
+      if (data.otpToken && typeof window !== 'undefined') {
+        localStorage.setItem('interstellers_otp_token', data.otpToken);
+      }
+      return { success: true, code: data.code, otpToken: data.otpToken, message: data.message };
     } catch (err: any) {
       return { success: false, error: err?.message || 'Network error while requesting code' };
     }
   };
 
   // 2. Verify 6-digit Code & Transition
-  const verifyLoginCode = async (email: string, code: string, name?: string) => {
+  const verifyLoginCode = async (email: string, code: string, name?: string, otpToken?: string) => {
     const cleanEmail = email.toLowerCase().trim().replace(/[\.\s]+$/, '').trim();
     const cleanName = (name || cleanEmail.split('@')[0]).trim();
+    const tokenToUse = otpToken || (typeof window !== 'undefined' ? localStorage.getItem('interstellers_otp_token') : null);
 
     try {
       const res = await fetch('/api/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, code, name: cleanName }),
+        body: JSON.stringify({ email: cleanEmail, code, name: cleanName, otpToken: tokenToUse }),
       });
       const data = await res.json();
 
@@ -987,17 +1056,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Invalid verification code' };
       }
 
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('interstellers_otp_token');
+      }
+
       if (data.status === 'approved') {
         const isHostEmail = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
         const userToSet: User = isHostEmail
           ? HOST_USER
           : {
-              id: 'user_' + generateId(),
+              id: data.user?.id || 'user_' + generateId(),
               name: data.user?.name || cleanName,
               handle: (data.user?.name || cleanName).toLowerCase().replace(/\s+/g, '_'),
               avatar: data.user?.avatar || '',
               bio: 'Verified Member at Interstellers.',
               role: 'Community Member',
+              email: cleanEmail,
               status: 'online',
               isVerified: true,
             };
@@ -1008,18 +1082,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           displayName: userToSet.name,
           handle: userToSet.handle,
           email: cleanEmail,
+          avatar: userToSet.avatar,
         });
         setIsAuthenticated(true);
         setPendingApprovalUser(null);
-        localStorage.setItem('interstellers_current_user', JSON.stringify(userToSet));
-        localStorage.removeItem('interstellers_pending_user');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('interstellers_current_user', JSON.stringify(userToSet));
+          localStorage.removeItem('interstellers_pending_user');
+        }
         return { success: true, status: 'approved' as const, message: data.message };
       } else {
         // New user registration -> Held in pending approval lobby for Akshay
         const pending = { name: cleanName, email: cleanEmail };
         setPendingApprovalUser(pending);
         setIsAuthenticated(false);
-        localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
+        setCurrentUser(GUEST_USER);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
+          localStorage.removeItem('interstellers_current_user');
+        }
         return { success: true, status: 'pending' as const, message: data.message };
       }
     } catch (err: any) {
@@ -1041,23 +1122,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (data.status === 'approved') {
-        setCurrentUser(HOST_USER);
-        setSettings(DEFAULT_SETTINGS);
+        const isHostEmail = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
+        const userToSet: User = isHostEmail
+          ? HOST_USER
+          : {
+              id: 'user_' + generateId(),
+              name: data.user?.name || cleanName,
+              handle: (data.user?.name || cleanName).toLowerCase().replace(/\s+/g, '_'),
+              avatar: data.user?.avatar || '',
+              bio: 'Verified Member at Interstellers.',
+              role: 'Community Member',
+              email: cleanEmail,
+              status: 'online',
+              isVerified: true,
+            };
+
+        setCurrentUser(userToSet);
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          displayName: userToSet.name,
+          handle: userToSet.handle,
+          email: cleanEmail,
+          avatar: userToSet.avatar,
+        });
         setIsAuthenticated(true);
         setPendingApprovalUser(null);
-        localStorage.setItem('interstellers_current_user', JSON.stringify(HOST_USER));
-        localStorage.removeItem('interstellers_pending_user');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('interstellers_current_user', JSON.stringify(userToSet));
+          localStorage.removeItem('interstellers_pending_user');
+        }
       } else {
         const pending = { name: cleanName, email: cleanEmail };
         setPendingApprovalUser(pending);
         setIsAuthenticated(false);
-        localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
+        setCurrentUser(GUEST_USER);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
+          localStorage.removeItem('interstellers_current_user');
+        }
       }
     } catch (e) {
       console.error(e);
       const pending = { name: cleanName, email: cleanEmail };
       setPendingApprovalUser(pending);
       setIsAuthenticated(false);
+      setCurrentUser(GUEST_USER);
     }
   };
 
@@ -1244,10 +1353,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setIsAuthenticated(false);
+    setCurrentUser(GUEST_USER);
+    setSettings(DEFAULT_SETTINGS);
     setPendingApprovalUser(null);
-    localStorage.removeItem('interstellers_current_user');
-    localStorage.removeItem('interstellers_pending_user');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('interstellers_current_user');
+      localStorage.removeItem('interstellers_pending_user');
+      localStorage.removeItem('interstellers_otp_token');
+    }
   };
 
   // Settings methods

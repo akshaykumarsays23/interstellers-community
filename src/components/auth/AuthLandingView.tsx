@@ -37,6 +37,7 @@ export const AuthLandingView: React.FC = () => {
   const [modalType, setModalType] = useState<'signin' | 'register'>('signin');
   const [authError, setAuthError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [otpToken, setOtpToken] = useState<string | null>(null);
 
   const handleOpenAuth = (type: 'signin' | 'register') => {
     setModalType(type);
@@ -46,6 +47,7 @@ export const AuthLandingView: React.FC = () => {
     setNameInput('');
     setEmailInput('');
     setCodeInput('');
+    setOtpToken(null);
     setShowModal(true);
   };
 
@@ -71,6 +73,9 @@ export const AuthLandingView: React.FC = () => {
       setAuthError(res.error || 'Failed to send code');
     } else {
       setSuccessMessage(`A 6-digit login code has been sent to your Gmail (${cleanEmail})`);
+      if (res.otpToken) {
+        setOtpToken(res.otpToken);
+      }
       if (res.code) {
         setCodeInput(res.code);
       }
@@ -94,13 +99,14 @@ export const AuthLandingView: React.FC = () => {
       return;
     }
 
-    const res = await verifyLoginCode(cleanEmail, cleanCode, cleanName);
+    const res = await verifyLoginCode(cleanEmail, cleanCode, cleanName, otpToken || undefined);
     setIsLoading(false);
 
     if (!res.success) {
       setAuthError(res.error || 'Invalid verification code. Please check and try again.');
     } else {
       setShowModal(false);
+      setOtpToken(null);
     }
   };
 

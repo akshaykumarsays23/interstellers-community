@@ -417,7 +417,7 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
       "deviceType": "Desktop",
       "firstSeen": 1791121960923,
-      "lastSeen": 1791706753119
+      "lastSeen": 1791715750761
     },
     {
       "id": "dev_3e0lo6bmutvwjhr",
@@ -987,7 +987,7 @@
         "mediaUrl": "",
         "timestamp": "Oct 11, 2026, 01:43 PM",
         "time": "Oct 11, 2026, 01:43 PM",
-        "status": "sent"
+        "status": "read"
       }
     ],
     "chat_dm_akshay_pooja_verma": [

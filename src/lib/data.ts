@@ -28,6 +28,19 @@ export const CURRENT_USER: User = {
   isVerified: true,
 };
 
+export const GUEST_USER: User = {
+  id: "user_guest",
+  name: "Galactic Explorer",
+  handle: "explorer",
+  avatar: "",
+  bio: "Welcome to Interstellers. Please sign in to explore.",
+  role: "Guest",
+  company: "Interstellers",
+  status: "offline",
+  customStatus: "Awaiting authentication",
+  isVerified: false,
+};
+
 // Clean initial users list - no fake mock users
 export const INITIAL_USERS: User[] = [
   HOST_USER

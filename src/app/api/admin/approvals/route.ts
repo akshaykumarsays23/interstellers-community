@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb, saveDb } from '@/lib/db';
+import { normalizeEmail, isAdminEmail } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,9 +12,9 @@ export async function GET() {
     let dbChanged = false;
     if (db.verificationCodes) {
       Object.entries(db.verificationCodes).forEach(([email, entry]) => {
-        const cleanEmail = email.toLowerCase().trim();
-        const isAdmin = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
-        const isApproved = db.approvedEmails.includes(cleanEmail);
+        const cleanEmail = normalizeEmail(email);
+        const isAdmin = isAdminEmail(cleanEmail);
+        const isApproved = Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail);
         const existing = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
         if (!existing && !isApproved && !isAdmin) {
           db.registrations.unshift({
@@ -50,8 +51,16 @@ export async function POST(request: Request) {
     }
 
     const db = getDb();
+    if (!Array.isArray(db.approvedEmails)) {
+      db.approvedEmails = ['akshaycricketer1230@gmail.com', 'akshay@interstellers.space'];
+    }
+
+    const cleanReqId = (requestId || '').toString().toLowerCase().trim();
     const target = db.registrations.find(
-      (r) => r.id === requestId || (r.email && r.email.toLowerCase() === (requestId || '').toLowerCase()) || r.name.toLowerCase().replace(/\s+/g, '_') === requestId
+      (r) =>
+        r.id === requestId ||
+        (r.email && r.email.toLowerCase() === cleanReqId) ||
+        r.name.toLowerCase().replace(/\s+/g, '_') === cleanReqId
     );
 
     if (!target && action !== 'kick') {
@@ -61,25 +70,30 @@ export async function POST(request: Request) {
     if (action === 'approve') {
       if (target) {
         target.status = 'approved';
-        if (!db.approvedEmails.includes(target.email.toLowerCase())) {
-          db.approvedEmails.push(target.email.toLowerCase());
+        const targetEmail = normalizeEmail(target.email);
+        if (!db.approvedEmails.includes(targetEmail)) {
+          db.approvedEmails.push(targetEmail);
         }
       }
     } else if (action === 'reject') {
       if (target) {
         target.status = 'rejected';
-        db.approvedEmails = db.approvedEmails.filter((e) => e.toLowerCase() !== target.email.toLowerCase());
+        const targetEmail = normalizeEmail(target.email);
+        db.approvedEmails = db.approvedEmails.filter((e) => normalizeEmail(e) !== targetEmail);
       }
     } else if (action === 'kick') {
       if (target) {
         target.status = 'pending';
-        db.approvedEmails = db.approvedEmails.filter((e) => e.toLowerCase() !== target.email.toLowerCase());
+        const targetEmail = normalizeEmail(target.email);
+        db.approvedEmails = db.approvedEmails.filter((e) => normalizeEmail(e) !== targetEmail);
       } else {
-        // Find by matching name or handle if reg entry wasn't matched directly
-        const matched = db.registrations.find((r) => r.name.toLowerCase() === (requestId || '').toLowerCase());
+        const matched = db.registrations.find(
+          (r) => r.name.toLowerCase() === cleanReqId
+        );
         if (matched) {
           matched.status = 'pending';
-          db.approvedEmails = db.approvedEmails.filter((e) => e.toLowerCase() !== matched.email.toLowerCase());
+          const matchedEmail = normalizeEmail(matched.email);
+          db.approvedEmails = db.approvedEmails.filter((e) => normalizeEmail(e) !== matchedEmail);
         }
       }
     }
