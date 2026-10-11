@@ -55,13 +55,31 @@ export async function POST(request: Request) {
       db.approvedEmails = ['akshaycricketer1230@gmail.com', 'akshay@interstellers.space'];
     }
 
-    const cleanReqId = (requestId || '').toString().toLowerCase().trim();
-    const target = db.registrations.find(
-      (r) =>
-        r.id === requestId ||
-        (r.email && r.email.toLowerCase() === cleanReqId) ||
-        r.name.toLowerCase().replace(/\s+/g, '_') === cleanReqId
-    );
+    const rawReq = (requestId || '').toString().trim();
+    const cleanReq = rawReq.toLowerCase();
+    const strippedId = cleanReq.replace(/^user_/, '');
+
+    // Comprehensive multi-field target matching (id, stripped id, email, name, handle)
+    let target = db.registrations.find((r) => {
+      const rId = (r.id || '').toLowerCase();
+      const rStripped = rId.replace(/^user_/, '');
+      const rEmail = normalizeEmail(r.email || '');
+      const rName = (r.name || '').toLowerCase();
+      const rHandle = rName.replace(/[\s\-_]+/g, '');
+      const reqHandle = cleanReq.replace(/[\s\-_]+/g, '');
+
+      return (
+        r.id === rawReq ||
+        rId === cleanReq ||
+        rStripped === strippedId ||
+        rId === strippedId ||
+        rStripped === cleanReq ||
+        rEmail === cleanReq ||
+        (cleanReq.includes('@') && cleanReq.includes(rEmail)) ||
+        rName === cleanReq ||
+        rHandle === reqHandle
+      );
+    });
 
     if (!target && action !== 'kick') {
       return NextResponse.json({ error: 'Registration request not found' }, { status: 404 });
@@ -85,16 +103,20 @@ export async function POST(request: Request) {
       if (target) {
         target.status = 'pending';
         const targetEmail = normalizeEmail(target.email);
+        // Revoke all instances of this email from approved list
         db.approvedEmails = db.approvedEmails.filter((e) => normalizeEmail(e) !== targetEmail);
+        // Also update any other registration rows with this email
+        db.registrations.forEach((r) => {
+          if (normalizeEmail(r.email) === targetEmail) {
+            r.status = 'pending';
+          }
+        });
       } else {
-        const matched = db.registrations.find(
-          (r) => r.name.toLowerCase() === cleanReqId
-        );
-        if (matched) {
-          matched.status = 'pending';
-          const matchedEmail = normalizeEmail(matched.email);
-          db.approvedEmails = db.approvedEmails.filter((e) => normalizeEmail(e) !== matchedEmail);
-        }
+        // Fallback: If passed an email directly, remove from approved list
+        db.approvedEmails = db.approvedEmails.filter((e) => {
+          const norm = normalizeEmail(e);
+          return norm !== cleanReq && !norm.includes(cleanReq);
+        });
       }
     }
 
@@ -103,7 +125,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       registrations: db.registrations,
-      updatedUser: target,
+      updatedUser: target || null,
     });
   } catch (error) {
     console.error('Approvals POST error:', error);

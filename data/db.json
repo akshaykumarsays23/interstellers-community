@@ -165,10 +165,10 @@
       "content": "1. 🤖 **Nova AI** was improved with better chat and voice features.\n2. 🎮 **Arcade** was added with 5 playable mini-games.\n3. ⭐ **XP, levels, missions, achievements, and rewards** were added.\n4. 🪐 **Stations, Crews, Telescope, Wormholes, and Time Capsules** were added.\n5. 🚀 The **Interstellers website was updated and is running successfully**.\n",
       "createdAt": "2026-10-07T18:38:27.550Z",
       "timestamp": "Just now",
-      "likes": 0,
+      "likes": 1,
       "commentsCount": 0,
       "sharesCount": 0,
-      "isLiked": false,
+      "isLiked": true,
       "isBookmarked": false,
       "mediaUrl": "https://images.unsplash.com/photo-1502134249126-9f3755a50d78?q=80&w=1200&auto=format&fit=crop&v=11",
       "mediaType": "image",
@@ -193,10 +193,10 @@
       "content": "still working and hope i finish soon ok then bye ",
       "createdAt": "2026-10-07T18:37:10.452Z",
       "timestamp": "Just now",
-      "likes": 0,
+      "likes": 1,
       "commentsCount": 0,
       "sharesCount": 0,
-      "isLiked": false,
+      "isLiked": true,
       "isBookmarked": false,
       "mediaUrl": "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=1200&auto=format&fit=crop&v=19",
       "mediaType": "image",
@@ -370,36 +370,6 @@
       "mediaUrl": "",
       "mediaType": "image",
       "comments": []
-    },
-    {
-      "id": "post_telugu_vibe",
-      "author": {
-        "id": "user_host",
-        "name": "Akshay Kumar",
-        "handle": "akshay",
-        "avatar": "/avatar.png",
-        "bio": "Founder & Community Host at Interstellers. 'Time is never coming back, remember time is never...'",
-        "role": "Community Host & Admin",
-        "company": "Interstellers",
-        "status": "online",
-        "customStatus": "Building Interstellers 🚀",
-        "isVerified": true
-      },
-      "content": "🎧 **Trending Telugu Beats & Melodies Vibe**!\n\nListen to this energy track while exploring our cosmic galaxy workspace. You can now attach custom MP3 music files from desktop or select trending Telugu, Hindi & English tracks for any post!",
-      "createdAt": "2026-10-04T16:23:27.605Z",
-      "timestamp": "1 hr ago",
-      "likes": 3,
-      "commentsCount": 1,
-      "sharesCount": 1,
-      "isLiked": true,
-      "isBookmarked": false,
-      "tags": [
-        "#TeluguVibe",
-        "#TollywoodBeats"
-      ],
-      "mediaUrl": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80",
-      "mediaType": "image",
-      "comments": []
     }
   ],
   "visitorSessions": [
@@ -409,7 +379,7 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
       "deviceType": "Desktop",
       "firstSeen": 1791051620417,
-      "lastSeen": 1791722101177
+      "lastSeen": 1791723555679
     },
     {
       "id": "dev_npjnd20mutvrod5",
@@ -1055,12 +1025,15 @@
     ]
   },
   "musicStats": {
-    "totalPlays": 27,
+    "totalPlays": 37,
     "userPlays": {
-      "akshaycricketer1230@gmail.com": 1,
+      "akshaycricketer1230@gmail.com": 11,
       "akshay": 1,
       "vikram": 1
     },
-    "lastPlayedAt": 1791722078059
-  }
+    "lastPlayedAt": 1791723520786
+  },
+  "deletedPostIds": [
+    "test_post_to_delete_1791723549079"
+  ]
 }

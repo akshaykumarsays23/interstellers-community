@@ -39,12 +39,14 @@ export async function GET() {
       const cleanEmail = reg.email.toLowerCase().trim();
       if (seenEmails.has(cleanEmail)) return;
 
-      if (reg.status === 'approved' || db.approvedEmails.includes(cleanEmail)) {
+      // Require user to be approved AND in approvedEmails list (kicked users are excluded)
+      if (reg.status === 'approved' && Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail)) {
         seenEmails.add(cleanEmail);
         const handle = reg.name.toLowerCase().replace(/\s+/g, '_');
         approvedList.push({
-          id: `user_${reg.id}`,
+          id: reg.id,
           name: reg.name,
+          email: reg.email,
           handle,
           avatar: reg.avatar || '',
           bio: 'Verified Member at Interstellers.',

@@ -60,6 +60,7 @@ export interface DbData {
   visitorSessions?: VisitorSession[];
   messages?: Record<string, DbMessage[]>;
   musicStats?: MusicStats;
+  deletedPostIds?: string[];
 }
 
 import os from 'os';
@@ -78,6 +79,7 @@ const INITIAL_DB: DbData = {
     totalPlays: 24,
     userPlays: {},
   },
+  deletedPostIds: [],
 };
 
 // In-memory runtime cache for serverless environments where disk writes are restricted
@@ -104,6 +106,13 @@ function ensureDbIntegrity(db: any): DbData {
   }
   if (!db.musicStats.userPlays || typeof db.musicStats.userPlays !== 'object') {
     db.musicStats.userPlays = {};
+  }
+  if (!Array.isArray(db.deletedPostIds)) {
+    db.deletedPostIds = [];
+  }
+  if (Array.isArray(db.posts) && db.deletedPostIds.length > 0) {
+    const delSet = new Set(db.deletedPostIds);
+    db.posts = db.posts.filter((p: any) => p && !delSet.has(p.id));
   }
   return db as DbData;
 }
@@ -157,6 +166,10 @@ export function getDb(): DbData {
               const currentTotal = Math.max(parsed.musicStats?.totalPlays || 0, tmpParsed.musicStats.totalPlays || 0);
               const mergedUserPlays = { ...(parsed.musicStats?.userPlays || {}), ...(tmpParsed.musicStats.userPlays || {}) };
               parsed.musicStats = { totalPlays: currentTotal, userPlays: mergedUserPlays, lastPlayedAt: tmpParsed.musicStats.lastPlayedAt };
+            }
+            // Merge deletedPostIds
+            if (Array.isArray(tmpParsed.deletedPostIds)) {
+              parsed.deletedPostIds = Array.from(new Set([...(parsed.deletedPostIds || []), ...tmpParsed.deletedPostIds]));
             }
           }
         }

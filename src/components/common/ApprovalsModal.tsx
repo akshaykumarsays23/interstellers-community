@@ -13,6 +13,7 @@ import {
   Mail,
   UserPlus,
   Sparkles,
+  UserMinus,
 } from 'lucide-react';
 
 export const ApprovalsModal: React.FC = () => {
@@ -22,6 +23,7 @@ export const ApprovalsModal: React.FC = () => {
     registrationRequests,
     approveRegistration,
     rejectRegistration,
+    kickOutUser,
     registerNewUser,
     activeDevicesCount,
     totalDevicesCount,
@@ -146,17 +148,32 @@ export const ApprovalsModal: React.FC = () => {
               Approved Platform Members ({approvedRequests.length})
             </h4>
             <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
-              {approvedRequests.map((req) => (
-                <div
-                  key={req.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs border border-emerald-500/20"
-                  title={req.email}
-                >
-                  <Check className="w-3 h-3 text-emerald-600" />
-                  <span className="font-semibold">{req.name}</span>
-                  <span className="text-[10px] opacity-75">({req.email})</span>
-                </div>
-              ))}
+              {approvedRequests.map((req) => {
+                const isHostAccount =
+                  req.email.toLowerCase() === 'akshaycricketer1230@gmail.com' ||
+                  req.email.toLowerCase() === 'akshay@interstellers.space';
+
+                return (
+                  <div
+                    key={req.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs border border-emerald-500/20 group"
+                    title={req.email}
+                  >
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span className="font-semibold">{req.name}</span>
+                    <span className="text-[10px] opacity-75">({req.email})</span>
+                    {!isHostAccount && (
+                      <button
+                        onClick={() => kickOutUser(req.id)}
+                        className="p-1 hover:bg-error/20 text-error rounded-full transition-colors ml-0.5"
+                        title={`Kick out ${req.name} and send back to Waiting queue`}
+                      >
+                        <UserMinus className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

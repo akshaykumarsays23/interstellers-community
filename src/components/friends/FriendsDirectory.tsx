@@ -282,7 +282,7 @@ export const FriendsDirectory: React.FC = () => {
 
                           {isAdmin && (
                             <button
-                              onClick={() => kickOutUser(user.id || user.handle)}
+                              onClick={() => kickOutUser(user.email || user.id || user.handle)}
                               className="px-2.5 py-1.5 rounded-xl bg-error/15 hover:bg-error text-error hover:text-on-error font-semibold text-xs transition-all flex items-center gap-1 border border-error/30 shadow-xs"
                               title={`Kick out ${user.name} and send back to Host Approvals queue`}
                             >

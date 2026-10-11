@@ -710,12 +710,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       // 1. Load posts from localStorage and API server
       const localSavedPosts = localStorage.getItem('interstellers_saved_posts');
+      const localDeletedRaw = localStorage.getItem('interstellers_deleted_post_ids');
+      const localDeletedSet = new Set<string>();
+      if (localDeletedRaw) {
+        try {
+          const parsed = JSON.parse(localDeletedRaw);
+          if (Array.isArray(parsed)) parsed.forEach((id: string) => localDeletedSet.add(id));
+        } catch (_) {}
+      }
+
       let initialPostList: Post[] = INITIAL_POSTS;
       if (localSavedPosts) {
         try {
           const parsed = JSON.parse(localSavedPosts);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            initialPostList = parsed;
+            initialPostList = parsed.filter((p: Post) => p && !localDeletedSet.has(p.id));
           }
         } catch (_) {}
       }
@@ -723,34 +732,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fetch('/api/posts')
         .then((r) => r.json())
         .then((data) => {
-          if (data.posts && Array.isArray(data.posts) && data.posts.length > 0) {
-            const combinedMap = new Map<string, Post>();
-            data.posts.forEach((p: Post) => combinedMap.set(p.id, p));
-            initialPostList.forEach((p: Post) => {
-              if (!combinedMap.has(p.id)) {
+          const allDeleted = new Set<string>();
+          localDeletedSet.forEach((id) => allDeleted.add(id));
+          if (data && Array.isArray(data.deletedPostIds)) {
+            data.deletedPostIds.forEach((id: string) => allDeleted.add(id));
+          }
+          // Sync merged deleted set to localStorage
+          try {
+            localStorage.setItem('interstellers_deleted_post_ids', JSON.stringify(Array.from(allDeleted)));
+          } catch (_) {}
+
+          const combinedMap = new Map<string, Post>();
+          if (data.posts && Array.isArray(data.posts)) {
+            data.posts.forEach((p: Post) => {
+              if (p && p.id && !allDeleted.has(p.id)) {
                 combinedMap.set(p.id, p);
               }
             });
-            INITIAL_POSTS.forEach((p: Post) => {
-              if (!combinedMap.has(p.id)) {
-                combinedMap.set(p.id, p);
-              }
-            });
-            const mergedList = Array.from(combinedMap.values());
-            setPosts(mergedList);
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('interstellers_saved_posts', JSON.stringify(mergedList));
-              } catch (_) {}
+          }
+
+          initialPostList.forEach((p: Post) => {
+            if (p && p.id && !allDeleted.has(p.id) && !combinedMap.has(p.id)) {
+              combinedMap.set(p.id, p);
             }
-          } else if (localSavedPosts) {
-            setPosts(initialPostList);
+          });
+
+          // Only seed INITIAL_POSTS if no posts exist at all and they were not deleted
+          if (combinedMap.size === 0) {
+            INITIAL_POSTS.forEach((p: Post) => {
+              if (p && p.id && !allDeleted.has(p.id)) {
+                combinedMap.set(p.id, p);
+              }
+            });
+          }
+
+          const mergedList = Array.from(combinedMap.values());
+          setPosts(mergedList);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('interstellers_saved_posts', JSON.stringify(mergedList));
+            } catch (_) {}
           }
         })
         .catch(() => {
-          if (localSavedPosts) {
-            setPosts(initialPostList);
-          }
+          const filtered = initialPostList.filter((p: Post) => p && !localDeletedSet.has(p.id));
+          setPosts(filtered);
         });
 
       // Verify active server session first
@@ -982,14 +1008,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Active session watcher: if Akshay kicks out a user, immediately redirect them to Pending Approval Lobby
   useEffect(() => {
-    if (isAuthenticated && !isAdmin && settings.email) {
+    const userEmail = settings.email || currentUser.email;
+    if (isAuthenticated && !isAdmin && userEmail) {
       const checkEviction = async () => {
         try {
-          const res = await fetch(`/api/auth/status?email=${encodeURIComponent(settings.email)}`);
+          const res = await fetch(`/api/auth/status?email=${encodeURIComponent(userEmail)}`);
           if (res.ok) {
             const data = await res.json();
             if (data.status !== 'approved') {
-              const pending = { name: currentUser.name || settings.displayName || 'Explorer', email: settings.email };
+              fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+              const pending = { name: currentUser.name || settings.displayName || 'Explorer', email: userEmail };
               setPendingApprovalUser(pending);
               setIsAuthenticated(false);
               localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
@@ -998,10 +1026,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (_) {}
       };
-      const interval = setInterval(checkEviction, 3000);
+      const interval = setInterval(checkEviction, 2500);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, isAdmin, settings.email, currentUser.name, settings.displayName]);
+  }, [isAuthenticated, isAdmin, settings.email, currentUser.email, currentUser.name, settings.displayName]);
 
   // Call timer
   useEffect(() => {
@@ -1330,22 +1358,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Akshay Kicks Out a Member (Revokes approval back to pending approval lobby)
-  const kickOutUser = async (requestId: string) => {
+  const kickOutUser = async (targetIdentifier: string) => {
     try {
       const res = await fetch('/api/admin/approvals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, action: 'kick' }),
+        body: JSON.stringify({ requestId: targetIdentifier, action: 'kick' }),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.registrations) {
           setRegistrationRequests(data.registrations);
         }
+        const cleanTarget = targetIdentifier.toLowerCase().replace(/^user_/, '');
         setConnections((prev) =>
-          prev.filter((u) => u.id !== requestId && u.handle !== requestId && u.name.toLowerCase() !== requestId.toLowerCase())
+          prev.filter((u) => {
+            const uId = (u.id || '').toLowerCase().replace(/^user_/, '');
+            const uEmail = (u.email || '').toLowerCase();
+            const uHandle = (u.handle || '').toLowerCase();
+            const uName = (u.name || '').toLowerCase();
+            return (
+              uId !== cleanTarget &&
+              uEmail !== cleanTarget &&
+              uHandle !== cleanTarget &&
+              uName !== cleanTarget &&
+              !cleanTarget.includes(uId)
+            );
+          })
         );
-        fetchRegisteredUsers();
+        await fetchRegisteredUsers();
+        await fetchAdminApprovals();
       }
     } catch (e) {
       console.error('Kick out error:', e);
@@ -1661,11 +1703,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deletePost = (postId: string) => {
+    // 1. Permanently record postId into tombstone list in localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('interstellers_deleted_post_ids');
+        const list: string[] = raw ? JSON.parse(raw) : [];
+        if (!list.includes(postId)) {
+          list.push(postId);
+          localStorage.setItem('interstellers_deleted_post_ids', JSON.stringify(list));
+        }
+      } catch (_) {}
+    }
+
+    // 2. Remove from active state & local storage
     setPosts((prev) => {
       const next = prev.filter((p) => p.id !== postId);
       persistPostsState(next);
       return next;
     });
+
+    // 3. Permanently remove from server database
+    try {
+      fetch(`/api/posts?id=${encodeURIComponent(postId)}`, {
+        method: 'DELETE',
+      }).catch(() => {});
+    } catch (_) {}
   };
 
   // Direct Messaging methods
