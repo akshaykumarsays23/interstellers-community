@@ -14,11 +14,15 @@ import {
   Minus,
   Sparkles,
   Radio,
+  Headphones,
+  Flame,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMusic } from '@/lib/MusicContext';
+import { useApp } from '@/lib/store';
 
 export const RightSidebarMusicPlayer: React.FC = () => {
+  const { currentUser } = useApp();
   const {
     isPlaying,
     currentTime,
@@ -26,6 +30,8 @@ export const RightSidebarMusicPlayer: React.FC = () => {
     volume,
     isRepeat,
     autoplayBlocked,
+    userPlayCount,
+    totalPlayCount,
     togglePlay,
     restartSong,
     seekMusic,
@@ -110,6 +116,55 @@ export const RightSidebarMusicPlayer: React.FC = () => {
           <p className="text-[11px] text-on-surface-variant truncate font-medium mt-0.5">
             Alphaville • Interstellers Anthem
           </p>
+        </div>
+      </div>
+
+      {/* Listening Frequency & Play Count Display */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {/* User's Personal Play Count */}
+        <div
+          className="flex items-center gap-2 p-2 bg-surface-container/70 rounded-xl border border-outline-variant/30 relative overflow-hidden group/user-stat transition-all hover:border-primary/40 hover:bg-surface-container"
+          title={`You have listened to this song ${userPlayCount} ${userPlayCount === 1 ? 'time' : 'times'} (${currentUser?.name || 'Your Account'})`}
+        >
+          <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
+            <Headphones className="w-3.5 h-3.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] text-on-surface-variant font-medium leading-none block truncate">
+              Your Listens
+            </span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="font-mono font-bold text-xs text-on-surface tabular-nums">
+                {userPlayCount}
+              </span>
+              <span className="text-[9px] text-on-surface-variant font-normal">
+                {userPlayCount === 1 ? 'time' : 'times'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Global Galaxy Total Play Count */}
+        <div
+          className="flex items-center gap-2 p-2 bg-surface-container/70 rounded-xl border border-outline-variant/30 relative overflow-hidden group/global-stat transition-all hover:border-social-blue/40 hover:bg-surface-container"
+          title={`All galactic travelers combined have played this anthem ${totalPlayCount} times`}
+        >
+          <div className="w-7 h-7 rounded-lg bg-social-blue/15 text-social-blue flex items-center justify-center shrink-0">
+            <Flame className="w-3.5 h-3.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] text-on-surface-variant font-medium leading-none block truncate">
+              Galaxy Plays
+            </span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="font-mono font-bold text-xs text-social-blue tabular-nums">
+                {totalPlayCount}
+              </span>
+              <span className="text-[9px] text-on-surface-variant font-normal">
+                total
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

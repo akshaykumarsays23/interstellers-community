@@ -405,11 +405,11 @@
   "visitorSessions": [
     {
       "id": "dev_0nhzg2kmuspw0sh",
-      "ip": "127.0.0.1",
+      "ip": "::1",
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
       "deviceType": "Desktop",
       "firstSeen": 1791051620417,
-      "lastSeen": 1791633798601
+      "lastSeen": 1791722101177
     },
     {
       "id": "dev_npjnd20mutvrod5",
@@ -1053,5 +1053,14 @@
         "status": "sent"
       }
     ]
+  },
+  "musicStats": {
+    "totalPlays": 27,
+    "userPlays": {
+      "akshaycricketer1230@gmail.com": 1,
+      "akshay": 1,
+      "vikram": 1
+    },
+    "lastPlayedAt": 1791722078059
   }
 }

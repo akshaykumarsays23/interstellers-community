@@ -46,6 +46,12 @@ export interface DbMessage {
   deleteRequest?: DeleteRequestInfo;
 }
 
+export interface MusicStats {
+  totalPlays: number;
+  userPlays: Record<string, number>;
+  lastPlayedAt?: number;
+}
+
 export interface DbData {
   registrations: DbRegistration[];
   approvedEmails: string[];
@@ -53,6 +59,7 @@ export interface DbData {
   posts?: any[];
   visitorSessions?: VisitorSession[];
   messages?: Record<string, DbMessage[]>;
+  musicStats?: MusicStats;
 }
 
 import os from 'os';
@@ -67,6 +74,10 @@ const INITIAL_DB: DbData = {
   verificationCodes: {},
   posts: [],
   visitorSessions: [],
+  musicStats: {
+    totalPlays: 24,
+    userPlays: {},
+  },
 };
 
 // In-memory runtime cache for serverless environments where disk writes are restricted
@@ -84,6 +95,15 @@ function ensureDbIntegrity(db: any): DbData {
   }
   if (!db.verificationCodes || typeof db.verificationCodes !== 'object') {
     db.verificationCodes = {};
+  }
+  if (!db.musicStats || typeof db.musicStats !== 'object') {
+    db.musicStats = { totalPlays: 24, userPlays: {} };
+  }
+  if (typeof db.musicStats.totalPlays !== 'number') {
+    db.musicStats.totalPlays = 24;
+  }
+  if (!db.musicStats.userPlays || typeof db.musicStats.userPlays !== 'object') {
+    db.musicStats.userPlays = {};
   }
   return db as DbData;
 }
@@ -131,6 +151,12 @@ export function getDb(): DbData {
             // Merge verification codes
             if (tmpParsed.verificationCodes) {
               parsed.verificationCodes = { ...(parsed.verificationCodes || {}), ...tmpParsed.verificationCodes };
+            }
+            // Merge music stats
+            if (tmpParsed.musicStats) {
+              const currentTotal = Math.max(parsed.musicStats?.totalPlays || 0, tmpParsed.musicStats.totalPlays || 0);
+              const mergedUserPlays = { ...(parsed.musicStats?.userPlays || {}), ...(tmpParsed.musicStats.userPlays || {}) };
+              parsed.musicStats = { totalPlays: currentTotal, userPlays: mergedUserPlays, lastPlayedAt: tmpParsed.musicStats.lastPlayedAt };
             }
           }
         }

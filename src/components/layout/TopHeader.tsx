@@ -39,7 +39,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     activeDevicesCount,
     isAdmin,
   } = useApp();
-  const { isPlaying, togglePlay } = useMusic();
+  const { isPlaying, togglePlay, userPlayCount, totalPlayCount } = useMusic();
 
   const toggleTheme = () => {
     const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
@@ -118,7 +118,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20'
               : 'bg-surface-container text-on-surface-variant border-outline-variant/40 hover:text-on-surface'
           )}
-          title={isPlaying ? 'Pause Forever Young (Website Theme)' : 'Play Forever Young (Website Theme)'}
+          title={
+            isPlaying
+              ? `Pause Forever Young • You listened ${userPlayCount} ${userPlayCount === 1 ? 'time' : 'times'} (Galaxy: ${totalPlayCount} plays)`
+              : `Play Forever Young • You listened ${userPlayCount} ${userPlayCount === 1 ? 'time' : 'times'} (Galaxy: ${totalPlayCount} plays)`
+          }
         >
           {isPlaying ? (
             <Pause className="w-3 h-3 fill-current text-primary" />
@@ -126,6 +130,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <Play className="w-3 h-3 fill-current text-on-surface-variant ml-0.5" />
           )}
           <span className="hidden sm:inline font-medium text-[11px]">Forever Young</span>
+          {userPlayCount > 0 && (
+            <span
+              className="inline-flex items-center text-[10px] font-mono font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded-full"
+              title={`You listened ${userPlayCount} times`}
+            >
+              {userPlayCount}x
+            </span>
+          )}
           {isPlaying && (
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           )}

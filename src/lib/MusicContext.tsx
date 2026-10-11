@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
+import { useApp } from '@/lib/store';
 
 interface MusicContextType {
   isPlaying: boolean;
@@ -9,6 +10,8 @@ interface MusicContextType {
   volume: number;
   isRepeat: boolean;
   autoplayBlocked: boolean;
+  userPlayCount: number;
+  totalPlayCount: number;
   togglePlay: () => void;
   playSong: () => void;
   pauseSong: () => void;
@@ -19,17 +22,50 @@ interface MusicContextType {
   decreaseVolume: () => void;
   toggleRepeat: () => void;
   formatTime: (seconds: number) => string;
+  recordSongPlay: () => Promise<void>;
+  refreshMusicStats: () => Promise<void>;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
 
 export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useApp();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [autoplayBlocked, setAutoplayBlocked] = useState<boolean>(false);
+
+  // Extract a unique, consistent key for the current active user
+  const userKey = (currentUser?.email || currentUser?.id || 'guest').toLowerCase().trim();
+
+  // Personal play count for the current user
+  const [userPlayCount, setUserPlayCount] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`interstellers_user_plays_${userKey}`);
+      if (saved !== null) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 0) return parsed;
+      }
+    }
+    return 0;
+  });
+
+  // Global community play count across all users
+  const [totalPlayCount, setTotalPlayCount] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('interstellers_total_song_plays');
+      if (saved !== null) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 0) return parsed;
+      }
+    }
+    return 24;
+  });
+
+  // Track if current play session has already been counted (milestone: 5 seconds)
+  const hasCountedCurrentPlayback = useRef<boolean>(false);
 
   // Volume state (default 75%)
   const [volume, setVolume] = useState<number>(() => {
@@ -51,6 +87,84 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return true;
   });
+
+  // Synchronize stats from backend
+  const refreshMusicStats = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/music/stats?user=${encodeURIComponent(userKey)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.userPlays === 'number') {
+          setUserPlayCount(data.userPlays);
+          try {
+            localStorage.setItem(`interstellers_user_plays_${userKey}`, data.userPlays.toString());
+          } catch (_) {}
+        }
+        if (typeof data.totalPlays === 'number') {
+          setTotalPlayCount(data.totalPlays);
+          try {
+            localStorage.setItem('interstellers_total_song_plays', data.totalPlays.toString());
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      console.warn('[Music] Error fetching stats:', e);
+    }
+  }, [userKey]);
+
+  // When active user identity changes (login, switch account, guest), reload user-specific stats
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`interstellers_user_plays_${userKey}`);
+      if (saved !== null) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 0) {
+          setUserPlayCount(parsed);
+        } else {
+          setUserPlayCount(0);
+        }
+      } else {
+        setUserPlayCount(0);
+      }
+    }
+    refreshMusicStats();
+  }, [userKey, refreshMusicStats]);
+
+  // Record a play (optimistic local update + server sync)
+  const recordSongPlay = useCallback(async () => {
+    // 1. Optimistic local updates
+    setUserPlayCount((prev) => {
+      const next = prev + 1;
+      try {
+        localStorage.setItem(`interstellers_user_plays_${userKey}`, next.toString());
+      } catch (_) {}
+      return next;
+    });
+
+    setTotalPlayCount((prev) => {
+      const next = prev + 1;
+      try {
+        localStorage.setItem('interstellers_total_song_plays', next.toString());
+      } catch (_) {}
+      return next;
+    });
+
+    // 2. Sync with backend API
+    try {
+      const res = await fetch('/api/music/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: userKey }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.userPlays === 'number') setUserPlayCount(data.userPlays);
+        if (typeof data.totalPlays === 'number') setTotalPlayCount(data.totalPlays);
+      }
+    } catch (err) {
+      console.warn('[Music] Failed to sync play count with server:', err);
+    }
+  }, [userKey]);
 
   // Synchronize volume
   const updateVolume = useCallback((newVol: number) => {
@@ -115,6 +229,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const audio = audioRef.current;
     if (!audio) return;
     audio.currentTime = 0;
+    hasCountedCurrentPlayback.current = false;
     audio.play().then(() => setIsPlaying(true)).catch(() => {});
   }, []);
 
@@ -122,6 +237,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCurrentTime(targetTime);
     if (audioRef.current) {
       audioRef.current.currentTime = targetTime;
+    }
+    // Rewind back before 3s resets count eligibility for next play milestone
+    if (targetTime < 3) {
+      hasCountedCurrentPlayback.current = false;
     }
   }, []);
 
@@ -185,7 +304,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const onTimeUpdate = () => {
     if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
+      const current = audioRef.current.currentTime;
+      setCurrentTime(current);
+
+      // Milestone: Count as a valid listen once user reaches 5 seconds of playback
+      if (current >= 5 && !hasCountedCurrentPlayback.current) {
+        hasCountedCurrentPlayback.current = true;
+        recordSongPlay();
+      }
     }
   };
 
@@ -196,6 +322,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const onEnded = () => {
+    hasCountedCurrentPlayback.current = false;
     if (isRepeat) {
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
@@ -215,6 +342,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         volume,
         isRepeat,
         autoplayBlocked,
+        userPlayCount,
+        totalPlayCount,
         togglePlay,
         playSong,
         pauseSong,
@@ -225,6 +354,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         decreaseVolume,
         toggleRepeat,
         formatTime,
+        recordSongPlay,
+        refreshMusicStats,
       }}
     >
       {/* Root Persistent HTML Audio Element */}
