@@ -1740,7 +1740,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }),
           });
           const data = await res.json();
-          const replyText = res.ok && data.reply ? data.reply : (data.error || 'Nova is temporarily unavailable. Please try again.');
+          const replyText = res.ok && data.reply ? data.reply : (data.error || data.details || 'Nova is temporarily unavailable. Please try again.');
 
           const replyMsg: Message = {
             id: `msg_${generateId()}`,
@@ -2077,7 +2077,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const errorReply: AIMessage = {
           id: `aim_${generateId()}`,
           sender: 'ai',
-          text: data.error || 'Nova is temporarily unavailable. Please try again.',
+          text: data.error || data.details || 'Nova is temporarily unavailable. Please try again.',
           timestamp: formatTime(),
           isError: true,
           failedPrompt: trimmedPrompt,

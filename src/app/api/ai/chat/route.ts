@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 interface HistoryMessage {
   role: 'user' | 'assistant';
@@ -192,15 +193,13 @@ SPECIFIC DIRECT ANSWER INSTRUCTIONS:
     const openaiKey = process.env.OPENAI_API_KEY?.trim();
     const groqKey = process.env.GROQ_API_KEY?.trim();
 
-    // Priority 1: Google Gemini (gemini-3.8-flash / gemini-flash-latest)
+    // Priority 1: Google Gemini (gemini-3.7-flash / gemini-3.8-flash / gemini-3.5-flash)
     if (geminiKey) {
       try {
         const geminiModels = [
-          'gemini-3.8-flash',
           'gemini-3.7-flash',
+          'gemini-3.8-flash',
           'gemini-3.5-flash',
-          'gemini-flash-latest',
-          'gemini-pro-latest',
         ];
         let data: any = null;
         let lastErrText = '';
@@ -217,44 +216,61 @@ SPECIFIC DIRECT ANSWER INSTRUCTIONS:
         ];
 
         for (const model of geminiModels) {
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-          const response = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              system_instruction: {
-                parts: [{ text: systemPrompt }],
-              },
-              contents,
-              generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 1000,
-              },
-            }),
-          });
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 7000);
 
-          if (response.ok) {
-            data = await response.json();
-            break;
-          } else {
-            lastErrText = await response.text();
-            console.error(`Gemini API (${model}) returned status ${response.status}:`, lastErrText);
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+            const response = await fetch(geminiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                system_instruction: {
+                  parts: [{ text: systemPrompt }],
+                },
+                contents,
+                generationConfig: {
+                  temperature: 0.7,
+                  maxOutputTokens: 1000,
+                },
+              }),
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const resJson = await response.json();
+              if (resJson?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                data = resJson;
+                break;
+              }
+            } else {
+              lastErrText = await response.text();
+              console.warn(`Gemini API (${model}) returned status ${response.status}:`, lastErrText);
+            }
+          } catch (modelErr: any) {
+            console.warn(`Gemini (${model}) request failed or timed out:`, modelErr?.message || modelErr);
           }
         }
+
         const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (reply && typeof reply === 'string') {
           return NextResponse.json({ reply: reply.trim() });
         }
 
+        console.error('All Gemini model fallbacks exhausted. Last error:', lastErrText);
         return NextResponse.json(
-          { error: 'Nova is temporarily unavailable. Please try again.' },
+          {
+            error: 'Nova is temporarily experiencing high demand from Google AI. Please try your message again in a moment.',
+            details: lastErrText || 'All Gemini models busy',
+          },
           { status: 502 }
         );
-      } catch (err) {
+      } catch (err: any) {
         console.error('Gemini provider error:', err);
         return NextResponse.json(
-          { error: 'Nova is temporarily unavailable. Please try again.' },
+          { error: 'Nova is temporarily unavailable. Please try again.', details: err?.message },
           { status: 502 }
         );
       }
@@ -375,8 +391,8 @@ SPECIFIC DIRECT ANSWER INSTRUCTIONS:
     // If no provider key is configured on server
     return NextResponse.json(
       {
-        error: 'Nova is temporarily unavailable. Please try again.',
-        details: 'No AI provider configured. Please configure GEMINI_API_KEY, OPENAI_API_KEY, or GROQ_API_KEY in server environment variables (.env.local).',
+        error: 'Nova AI requires GEMINI_API_KEY to be configured in Vercel Environment Variables. Please add GEMINI_API_KEY to your Vercel Project Settings and redeploy.',
+        details: 'Missing GEMINI_API_KEY in server environment. Please go to Vercel Project Settings -> Environment Variables, add GEMINI_API_KEY, and redeploy.',
       },
       { status: 503 }
     );
