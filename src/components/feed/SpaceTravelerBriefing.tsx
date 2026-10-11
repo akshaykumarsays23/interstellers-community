@@ -98,7 +98,7 @@ export const SpaceTravelerBriefing: React.FC = () => {
       <div className="relative w-full bg-slate-950 overflow-hidden border-b border-outline-variant/40">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/space_traveler_banner.png"
+          src="/space_traveler_banner2.png"
           alt="Welcome to Interstellers"
           className="w-full h-auto block object-cover max-h-80 sm:max-h-96 md:max-h-[440px] lg:max-h-[500px]"
         />
