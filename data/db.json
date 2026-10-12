@@ -6,7 +6,7 @@
       "email": "vikramsethi91@gmail.com",
       "avatar": "",
       "timestamp": "07:24 pm",
-      "status": "approved"
+      "status": "rejected"
     },
     {
       "id": "reg_bpwy9mxmutkqeus",
@@ -14,7 +14,7 @@
       "email": "akshaykumarsays23@gmiail.com",
       "avatar": "",
       "timestamp": "02:13 pm",
-      "status": "approved"
+      "status": "rejected"
     },
     {
       "id": "reg_93e5uykmutk7100",
@@ -47,7 +47,7 @@
       "email": "poojaverma91@gmail.com",
       "avatar": "",
       "timestamp": "11:55 pm",
-      "status": "approved"
+      "status": "rejected"
     },
     {
       "id": "reg_likhith_127",
@@ -55,7 +55,7 @@
       "email": "likhith127127@gmail.com",
       "avatar": "",
       "timestamp": "10:15 pm",
-      "status": "approved"
+      "status": "rejected"
     },
     {
       "id": "reg_drc6d4jmurvhlv8",
@@ -63,7 +63,7 @@
       "email": "suryateja3525@gmail.com",
       "avatar": "",
       "timestamp": "09:39 am",
-      "status": "approved"
+      "status": "rejected"
     },
     {
       "id": "user_profile_82eq9",
@@ -71,7 +71,7 @@
       "email": "akshay",
       "avatar": "",
       "timestamp": "11:29 pm",
-      "status": "approved",
+      "status": "rejected",
       "isAvatarLocked": false
     },
     {
@@ -80,7 +80,7 @@
       "email": "akshay@gmail.com",
       "avatar": "",
       "timestamp": "11:29 pm",
-      "status": "approved",
+      "status": "rejected",
       "isAvatarLocked": false
     },
     {
@@ -107,20 +107,14 @@
       "email": "chandumattyb@gmail.com",
       "avatar": "",
       "timestamp": "08:49 am",
-      "status": "approved"
+      "status": "rejected"
     }
   ],
   "approvedEmails": [
     "akshaycricketer1230@gmail.com",
     "akshay@interstellers.space",
-    "chandumattyb@gmail.com",
     "alvinakshaykumar@gmail.com",
-    "suryateja3525@gmail.com",
-    "likhith127127@gmail.com",
-    "poojaverma91@gmail.com",
-    "akshaykumarsays23@gmail.com",
-    "akshaykumarsays23@gmiail.com",
-    "vikramsethi91@gmail.com"
+    "akshaykumarsays23@gmail.com"
   ],
   "verificationCodes": {
     "likhith127127@gmail.com": {
@@ -375,11 +369,11 @@
   "visitorSessions": [
     {
       "id": "dev_0nhzg2kmuspw0sh",
-      "ip": "::1",
+      "ip": "127.0.0.1",
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
       "deviceType": "Desktop",
       "firstSeen": 1791051620417,
-      "lastSeen": 1791723555679
+      "lastSeen": 1791811111979
     },
     {
       "id": "dev_npjnd20mutvrod5",
@@ -412,6 +406,14 @@
       "deviceType": "Desktop",
       "firstSeen": 1791124859134,
       "lastSeen": 1791125245467
+    },
+    {
+      "id": "dev_ve24oq7mv44cluo",
+      "ip": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
+      "deviceType": "Desktop",
+      "firstSeen": 1791741034302,
+      "lastSeen": 1791741773915
     }
   ],
   "messages": {
@@ -491,6 +493,17 @@
         "mediaUrl": "",
         "timestamp": "08:14 pm",
         "time": "08:14 pm",
+        "status": "read"
+      },
+      {
+        "id": "msg_vnmk9jlmv44ceew",
+        "senderId": "user_host",
+        "senderHandle": "akshay",
+        "senderName": "Akshay Kumar",
+        "text": "hallo",
+        "mediaUrl": "",
+        "timestamp": "Oct 11, 2026, 11:20 PM",
+        "time": "Oct 11, 2026, 11:20 PM",
         "status": "read"
       }
     ],
@@ -748,7 +761,7 @@
         "mediaUrl": "",
         "timestamp": "12:11 pm",
         "time": "12:11 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_fckmvbtmv3gfm94",
@@ -770,7 +783,7 @@
         "mediaUrl": "",
         "timestamp": "12:11 pm",
         "time": "12:11 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_07yw1b1mv3gfvhx",
@@ -792,7 +805,7 @@
         "mediaUrl": "",
         "timestamp": "12:11 pm",
         "time": "12:11 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_i8j7io6mv3ggtb4",
@@ -814,7 +827,7 @@
         "mediaUrl": "",
         "timestamp": "12:12 pm",
         "time": "12:12 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_p6aa4t8mv3gheke",
@@ -836,7 +849,7 @@
         "mediaUrl": "",
         "timestamp": "12:58 pm",
         "time": "12:58 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_yau2db5mv3i50fv",
@@ -858,7 +871,7 @@
         "mediaUrl": "",
         "timestamp": "12:59 pm",
         "time": "12:59 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_z8hbgn2mv3i5uyo",
@@ -880,7 +893,7 @@
         "mediaUrl": "",
         "timestamp": "01:10 pm",
         "time": "01:10 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_6tlaxmymv3ijg8x",
@@ -902,7 +915,7 @@
         "mediaUrl": "",
         "timestamp": "01:10 pm",
         "time": "01:10 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_hwbmyqzmv3ijke4",
@@ -924,7 +937,7 @@
         "mediaUrl": "",
         "timestamp": "01:35 pm",
         "time": "01:35 pm",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_acb63jxmv3jkv2i",
@@ -946,7 +959,7 @@
         "mediaUrl": "",
         "timestamp": "Oct 11, 2026, 01:42 PM",
         "time": "Oct 11, 2026, 01:42 PM",
-        "status": "sent"
+        "status": "read"
       },
       {
         "id": "msg_tk3a2w0mv3jqccu",
@@ -957,6 +970,72 @@
         "mediaUrl": "",
         "timestamp": "Oct 11, 2026, 01:43 PM",
         "time": "Oct 11, 2026, 01:43 PM",
+        "status": "read"
+      },
+      {
+        "id": "msg_zkbks14mv3uvyvl",
+        "senderId": "user_host",
+        "senderHandle": "akshay",
+        "senderName": "Akshay Kumar",
+        "text": "yes",
+        "mediaUrl": "",
+        "timestamp": "Oct 11, 2026, 06:55 PM",
+        "time": "Oct 11, 2026, 06:55 PM",
+        "status": "read"
+      },
+      {
+        "id": "msg_xl8673gmv3uw283",
+        "senderId": "ai_nova",
+        "senderHandle": "nova_ai",
+        "senderName": "Nova AI Assistant",
+        "text": "Here is a quick mind-bending space fact: \n\nIf two pieces of the same type of metal touch in the vacuum of space, they will permanently bond together. It's called cold welding, and it doesn't happen on Earth only because our atmosphere creates a thin layer of oxidized material on the metal's surface.\n\nWant another cool fact, a riddle, or a quick trivia question?",
+        "mediaUrl": "",
+        "timestamp": "Oct 11, 2026, 06:55 PM",
+        "time": "Oct 11, 2026, 06:55 PM",
+        "status": "read"
+      },
+      {
+        "id": "msg_jm87tjcmv3ux495",
+        "senderId": "user_host",
+        "senderHandle": "akshay",
+        "senderName": "Akshay Kumar",
+        "text": "ha",
+        "mediaUrl": "",
+        "timestamp": "Oct 11, 2026, 06:56 PM",
+        "time": "Oct 11, 2026, 06:56 PM",
+        "status": "read"
+      },
+      {
+        "id": "msg_cpe5698mv3ux72m",
+        "senderId": "ai_nova",
+        "senderHandle": "nova_ai",
+        "senderName": "Nova AI Assistant",
+        "text": "Here is a riddle for you:\n\nI speak without a mouth and hear without ears. I have no body, but I come alive with wind. \n\nWhat am I?",
+        "mediaUrl": "",
+        "timestamp": "Oct 11, 2026, 06:56 PM",
+        "time": "Oct 11, 2026, 06:56 PM",
+        "status": "read"
+      },
+      {
+        "id": "msg_jiscbzkmv3uxo5l",
+        "senderId": "user_host",
+        "senderHandle": "akshay",
+        "senderName": "Akshay Kumar",
+        "text": "sounnd",
+        "mediaUrl": "",
+        "timestamp": "Oct 11, 2026, 06:57 PM",
+        "time": "Oct 11, 2026, 06:57 PM",
+        "status": "read"
+      },
+      {
+        "id": "msg_xaa6z4hmv3uxqbg",
+        "senderId": "ai_nova",
+        "senderHandle": "nova_ai",
+        "senderName": "Nova AI Assistant",
+        "text": "Very close! The answer is an **echo**. \n\nSound is definitely the right neighborhood. Ready for another one, or want to try something else?",
+        "mediaUrl": "",
+        "timestamp": "Oct 11, 2026, 06:57 PM",
+        "time": "Oct 11, 2026, 06:57 PM",
         "status": "read"
       }
     ],
@@ -1025,15 +1104,16 @@
     ]
   },
   "musicStats": {
-    "totalPlays": 37,
+    "totalPlays": 47,
     "userPlays": {
-      "akshaycricketer1230@gmail.com": 11,
+      "akshaycricketer1230@gmail.com": 21,
       "akshay": 1,
       "vikram": 1
     },
-    "lastPlayedAt": 1791723520786
+    "lastPlayedAt": 1791810597082
   },
   "deletedPostIds": [
-    "test_post_to_delete_1791723549079"
+    "test_post_to_delete_1791723549079",
+    "post_telugu_vibe"
   ]
 }

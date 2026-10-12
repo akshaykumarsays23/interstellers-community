@@ -71,17 +71,35 @@ html.dark .bg-surface-container-highest {
 }
 
 /* Text color transformations for readability */
+html.dark .text-primary {
+  color: #c084fc !important;
+}
+
 html.dark .text-on-surface,
 html.dark .text-primary-dark {
   color: #f8fafc !important;
 }
 
 html.dark .text-on-surface-variant {
-  color: #94a3b8 !important;
+  color: #cbd5e1 !important;
 }
 
 html.dark .text-secondary {
-  color: #cbd5e1 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  color: #f8fafc !important;
+}
+
+html.dark .quote-axiom {
+  color: #fde047 !important;
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.45);
 }
 
 /* Forms & Inputs in Dark Mode */

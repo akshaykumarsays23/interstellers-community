@@ -2,12 +2,12 @@
 
 import React from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { GroupChatHub } from '@/components/groups/GroupChatHub';
+import { SpaceHouseView } from '@/components/groups/SpaceHouseView';
 
 export default function GroupsPage() {
   return (
-    <AppShell title="Group Chat Hub" subtitle="Collaborative team spaces and topic streams">
-      <GroupChatHub />
+    <AppShell title="Space House" subtitle="4 Multiverse Houses • 1 House for 1 Month • Compete & Chat">
+      <SpaceHouseView />
     </AppShell>
   );
 }

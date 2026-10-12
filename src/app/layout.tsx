@@ -5,18 +5,18 @@ import { MusicProvider } from '@/lib/MusicContext';
 import { SpaceCanvasBackground } from '@/components/common/SpaceCanvasBackground';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.akshayweb.com'),
-  title: 'Interstellers — Professional Networking | www.akshayweb.com',
+  metadataBase: new URL('https://interstellers.vercel.app'),
+  title: 'Interstellers — Professional Galactic Networking | interstellers.vercel.app',
   description:
-    'Join Interstellers — "Time is never coming back, remember time is never..." Connect with friends, collaborate across galactic spaces, and experience real-time community networking at www.akshayweb.com.',
+    'Join Interstellers — "Time is never coming back, remember time is never..." Connect with fellows, explore Space Houses, collaborate across stations, and experience real-time community networking at https://interstellers.vercel.app.',
   icons: {
     icon: '/logo.png',
     apple: '/logo.png',
   },
   openGraph: {
-    title: 'Interstellers — www.akshayweb.com',
+    title: 'Interstellers — interstellers.vercel.app',
     description: 'Time is never coming back, remember time is never... Join the verified professional galaxy.',
-    url: 'https://www.akshayweb.com',
+    url: 'https://interstellers.vercel.app',
     siteName: 'Interstellers',
     images: [
       {

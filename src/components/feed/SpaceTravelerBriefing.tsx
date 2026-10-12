@@ -38,9 +38,27 @@ import { cn } from '@/lib/utils';
 export const SpaceTravelerBriefing: React.FC = () => {
   const { currentUser, isAdmin, leaderboard } = useApp();
   const [isExpanded, setIsExpanded] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'intro' | 'rules' | 'reputation'>('intro');
+  const [activeSubTab, setActiveSubTab] = useState<'intro' | 'rules' | 'reputation' | 'mysteries'>('mysteries');
   const [ruleMode, setRuleMode] = useState<'core7' | 'classified20'>('core7');
   const [protocolFilter, setProtocolFilter] = useState<'all' | 'orbit' | 'community' | 'guardian' | 'badges'>('all');
+  const [revealedDossiers, setRevealedDossiers] = useState<Record<string, boolean>>({});
+  const [randomAnomalies, setRandomAnomalies] = useState<string[]>([]);
+
+  const toggleDossier = (id: string) => {
+    setRevealedDossiers((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const generateRandomFishyAnomaly = () => {
+    const list = [
+      '📡 Quantum Ping #889: An unrecognized tachyon stream was intercepted from the Crab Nebula. Decryption reveals: "Akshay has hidden secret points inside Space House mini-games!"',
+      '🛸 Deep Radar Alert: A mysterious craft with DC and Marvel logos was spotted docking at Station Citadel. House competition points just spiked by +100!',
+      '🌀 Paradox Sensor: Time dilation detected at 1.04x speed. Remember: "Time is never coming back, remember time is never..."',
+      '🧬 Genetic Scan: Pokemon House has synchronized with Power Rangers Megazord reactor! House battle scores are escalating.',
+      '🤖 Nova Core Ping: "All fellows matching protocols are running smoothly. Keep exploring, traveler!"',
+    ];
+    const pick = list[Math.floor(Math.random() * list.length)];
+    setRandomAnomalies((prev) => [pick, ...prev.slice(0, 4)]);
+  };
 
   const userRank = leaderboard ? leaderboard.findIndex((entry) => entry.userId === currentUser.id) + 1 : 0;
   const isTop10 = userRank > 0 && userRank <= 10;
@@ -94,74 +112,335 @@ export const SpaceTravelerBriefing: React.FC = () => {
 
   return (
     <div className="mb-6 rounded-3xl border border-outline-variant/60 bg-surface-container-lowest overflow-hidden shadow-card transition-all duration-300">
-      {/* Uncropped Banner Image Header */}
-      <div className="relative w-full bg-slate-950 overflow-hidden border-b border-outline-variant/40">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/neon_interstellar_welcome_crew.png"
-          alt="Welcome to Interstellers"
-          className="w-full h-auto block object-cover max-h-80 sm:max-h-96 md:max-h-[440px] lg:max-h-[500px]"
-        />
+        {/* Uncropped Banner Image Header */}
+        <div className="relative w-full bg-slate-950 overflow-hidden border-b border-outline-variant/40">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/neon_interstellar_welcome_crew.png"
+            alt="Welcome to Interstellers"
+            className="w-full h-auto block object-contain"
+          />
 
-        {/* Header Controls Overlay */}
-        <div className="absolute top-3 right-3 z-10">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md border border-white/20 text-xs font-semibold text-white hover:bg-slate-900 hover:border-primary transition-all shadow-md"
-          >
-            <Rocket className="w-3.5 h-3.5 text-primary" />
-            <span>{isExpanded ? 'Hide Briefing' : 'Show Briefing'}</span>
-            {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-300" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-300" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      {isExpanded && (
-        <div className="p-5 sm:p-7 space-y-6 bg-surface-container-lowest">
-          
-          {/* Navigation Sub-Tabs */}
-          <div className="flex items-center gap-2 border-b border-outline-variant/40 pb-3 overflow-x-auto custom-scrollbar">
+          {/* Header Controls Overlay */}
+          <div className="absolute top-3 right-3 z-10">
             <button
-              onClick={() => setActiveSubTab('intro')}
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
-                activeSubTab === 'intro'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
-              )}
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md border border-white/20 text-xs font-semibold text-white hover:bg-slate-900 hover:border-primary transition-all shadow-md"
             >
-              <Mic className="w-3.5 h-3.5" />
-              <span>Host Briefing (103s)</span>
-            </button>
-
-            <button
-              onClick={() => setActiveSubTab('rules')}
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
-                activeSubTab === 'rules'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
-              )}
-            >
-              <Rocket className="w-3.5 h-3.5" />
-              <span>Space Rules</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-mono ml-0.5">Active</span>
-            </button>
-
-            <button
-              onClick={() => setActiveSubTab('reputation')}
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
-                activeSubTab === 'reputation'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
-              )}
-            >
-              <Activity className="w-3.5 h-3.5" />
-              <span>Traveler Reputation HUD</span>
+              <Rocket className="w-3.5 h-3.5 text-primary" />
+              <span>{isExpanded ? 'Hide Briefing' : 'Show Briefing'}</span>
+              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-300" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-300" />}
             </button>
           </div>
+        </div>
+
+        {/* Main Content Area */}
+        {isExpanded && (
+          <div className="p-5 sm:p-7 space-y-6 bg-surface-container-lowest">
+            
+            {/* Navigation Sub-Tabs */}
+            <div className="flex items-center gap-2 border-b border-outline-variant/40 pb-3 overflow-x-auto custom-scrollbar">
+              <button
+                onClick={() => setActiveSubTab('mysteries')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
+                  activeSubTab === 'mysteries'
+                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white shadow-md'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
+                )}
+              >
+                <Eye className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                <span>Cosmic Mysteries (Fishy Anomalies)</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/25 text-amber-300 font-mono ml-0.5">Secret 🕵️</span>
+              </button>
+
+              <button
+                onClick={() => setActiveSubTab('intro')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
+                  activeSubTab === 'intro'
+                    ? 'bg-primary text-on-primary shadow-xs'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
+                )}
+              >
+                <Mic className="w-3.5 h-3.5" />
+                <span>Host Briefing (103s)</span>
+              </button>
+
+              <button
+                onClick={() => setActiveSubTab('rules')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
+                  activeSubTab === 'rules'
+                    ? 'bg-primary text-on-primary shadow-xs'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
+                )}
+              >
+                <Rocket className="w-3.5 h-3.5" />
+                <span>Space Rules</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-mono ml-0.5">Active</span>
+              </button>
+
+              <button
+                onClick={() => setActiveSubTab('reputation')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
+                  activeSubTab === 'reputation'
+                    ? 'bg-primary text-on-primary shadow-xs'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
+                )}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Traveler Reputation HUD</span>
+              </button>
+            </div>
+
+          {/* TAB 4: COSMIC MYSTERIES & FISHY ANOMALIES (CLASSIFIED DOSSIERS) */}
+          {activeSubTab === 'mysteries' && (
+            <div className="space-y-6">
+              {/* Mystery Banner Card */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-950/40 via-slate-900 to-cyan-950/40 border border-cyan-500/30 shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-purple-600/30 border border-purple-400/40 text-amber-300 shadow-md">
+                      <Sparkles className="w-5 h-5 animate-spin" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-black text-base text-white flex items-center gap-2">
+                        🛸 COSMIC MYSTERIES & FISHY ANOMALIES
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-mono font-bold border border-cyan-400/40">
+                          CLASSIFIED // LEVEL 5
+                        </span>
+                      </h3>
+                      <p className="text-xs text-cyan-200/80">
+                        Always something fishy going on in the galaxy! Who wants to discover, will learn.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={generateRandomFishyAnomaly}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-purple-500/20 hover:from-amber-500/30 hover:to-purple-500/30 text-amber-300 border border-amber-400/40 text-xs font-bold transition-all shadow-sm active:scale-95"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                    <span>Scan Next Fishy Anomaly</span>
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed mt-3">
+                  Data in this galaxy is kept strictly encrypted. Click each dossier button below to decrypt and reveal the confidential truth.
+                </p>
+
+                {/* Random Anomaly Ticker */}
+                {randomAnomalies.length > 0 && (
+                  <div className="mt-4 p-3 bg-black/50 rounded-xl border border-amber-400/30 space-y-2 animate-in fade-in">
+                    <p className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                      <Radio className="w-3.5 h-3.5 text-amber-400 animate-ping" />
+                      <span>LIVE INTERCEPTED DEEP-SPACE FREQUENCIES:</span>
+                    </p>
+                    <div className="space-y-1">
+                      {randomAnomalies.map((msg, i) => (
+                        <p key={i} className="text-xs text-cyan-200 font-mono bg-white/5 p-2 rounded-lg border border-white/5">
+                          {msg}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 6 Classified Dossiers with Hidden Data */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* Dossier 1 */}
+                <div className="p-4 rounded-2xl bg-surface-bright border border-outline-variant/60 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 font-mono">
+                      DOSSIER #001 • TEMPORAL PROTOCOL
+                    </span>
+                    <Lock className={cn('w-4 h-4', revealedDossiers['dos_1'] ? 'text-emerald-400' : 'text-slate-400')} />
+                  </div>
+                  <h4 className="font-heading font-bold text-sm text-on-surface">
+                    Why Time Never Comes Back // Founder&apos;s Axiom
+                  </h4>
+                  <button
+                    onClick={() => toggleDossier('dos_1')}
+                    className={cn(
+                      'w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border shadow-xs',
+                      revealedDossiers['dos_1']
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                        : 'bg-primary text-on-primary border-primary/50 hover:bg-primary-hover animate-pulse'
+                    )}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{revealedDossiers['dos_1'] ? 'Hide Dossier Data' : '🔓 DECRYPT HIDDEN DATA'}</span>
+                  </button>
+                  {revealedDossiers['dos_1'] && (
+                    <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
+                      <p className="font-bold text-amber-400 mb-1">Confidential Note from Akshay Kumar:</p>
+                      &ldquo;Time is never coming back, remember time is never...&rdquo; In the cosmic timeline, seconds are finite. We created Interstellers not to drain your hours, but to build real brotherhood, explore cosmic houses, and make every moment among the stars memorable.
+                    </div>
+                  )}
+                </div>
+
+                {/* Dossier 2 */}
+                <div className="p-4 rounded-2xl bg-surface-bright border border-outline-variant/60 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-400 font-mono">
+                      DOSSIER #002 • MULTIVERSE RIFT
+                    </span>
+                    <Lock className={cn('w-4 h-4', revealedDossiers['dos_2'] ? 'text-emerald-400' : 'text-slate-400')} />
+                  </div>
+                  <h4 className="font-heading font-bold text-sm text-on-surface">
+                    The 4 Space Houses & 1-Month Residency Law
+                  </h4>
+                  <button
+                    onClick={() => toggleDossier('dos_2')}
+                    className={cn(
+                      'w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border shadow-xs',
+                      revealedDossiers['dos_2']
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                        : 'bg-primary text-on-primary border-primary/50 hover:bg-primary-hover animate-pulse'
+                    )}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{revealedDossiers['dos_2'] ? 'Hide Dossier Data' : '🔓 DECRYPT HIDDEN DATA'}</span>
+                  </button>
+                  {revealedDossiers['dos_2'] && (
+                    <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
+                      <p className="font-bold text-purple-400 mb-1">Galactic Law #44:</p>
+                      The 4 Pillars of Interstellers are <strong>Marvel, DC, Pokemon, and Power Rangers</strong>! You select your single favorite champion upon entering the Space House tab. You are locked in for <strong>exactly 1 month (30 days)</strong> with no house switching. Compete in trivia and power reactors to bring your House to #1 rank!
+                    </div>
+                  )}
+                </div>
+
+                {/* Dossier 3 */}
+                <div className="p-4 rounded-2xl bg-surface-bright border border-outline-variant/60 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400 font-mono">
+                      DOSSIER #003 • SOUL TRAVEL
+                    </span>
+                    <Lock className={cn('w-4 h-4', revealedDossiers['dos_3'] ? 'text-emerald-400' : 'text-slate-400')} />
+                  </div>
+                  <h4 className="font-heading font-bold text-sm text-on-surface">
+                    1 Month Same Fellows // Traveling vs Staying
+                  </h4>
+                  <button
+                    onClick={() => toggleDossier('dos_3')}
+                    className={cn(
+                      'w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border shadow-xs',
+                      revealedDossiers['dos_3']
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                        : 'bg-primary text-on-primary border-primary/50 hover:bg-primary-hover animate-pulse'
+                    )}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{revealedDossiers['dos_3'] ? 'Hide Dossier Data' : '🔓 DECRYPT HIDDEN DATA'}</span>
+                  </button>
+                  {revealedDossiers['dos_3'] && (
+                    <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
+                      <p className="font-bold text-cyan-400 mb-1">The Traveler Paradox:</p>
+                      &ldquo;You can stay, but staying is not traveling. True journey is about getting to know new people, new perspectives, and new things.&rdquo; Every 30 days, Nova refreshes your 15 questions so you discover new compatible fellows across the stars.
+                    </div>
+                  )}
+                </div>
+
+                {/* Dossier 4 */}
+                <div className="p-4 rounded-2xl bg-surface-bright border border-outline-variant/60 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-400 font-mono">
+                      DOSSIER #004 • NOVA&apos;S SANCTION
+                    </span>
+                    <Lock className={cn('w-4 h-4', revealedDossiers['dos_4'] ? 'text-emerald-400' : 'text-slate-400')} />
+                  </div>
+                  <h4 className="font-heading font-bold text-sm text-on-surface">
+                    Nova AI&apos;s Zero Tolerance Failsafe
+                  </h4>
+                  <button
+                    onClick={() => toggleDossier('dos_4')}
+                    className={cn(
+                      'w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border shadow-xs',
+                      revealedDossiers['dos_4']
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                        : 'bg-primary text-on-primary border-primary/50 hover:bg-primary-hover animate-pulse'
+                    )}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{revealedDossiers['dos_4'] ? 'Hide Dossier Data' : '🔓 DECRYPT HIDDEN DATA'}</span>
+                  </button>
+                  {revealedDossiers['dos_4'] && (
+                    <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
+                      <p className="font-bold text-rose-400 mb-1">Nova&apos;s Core Guardian Clause:</p>
+                      &ldquo;You can follow these fellows! And if you want global friends, I can grant you access... But remember: if you hurt anyone, I&apos;ll make sure you never see me and this beautiful, cool website ever again in your lifetime! 🚀⚡&rdquo;
+                    </div>
+                  )}
+                </div>
+
+                {/* Dossier 5 */}
+                <div className="p-4 rounded-2xl bg-surface-bright border border-outline-variant/60 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-400 font-mono">
+                      DOSSIER #005 • OMNISCIENT ENGINE
+                    </span>
+                    <Lock className={cn('w-4 h-4', revealedDossiers['dos_5'] ? 'text-emerald-400' : 'text-slate-400')} />
+                  </div>
+                  <h4 className="font-heading font-bold text-sm text-on-surface">
+                    Nova&apos;s High-Speed Universal Intelligence
+                  </h4>
+                  <button
+                    onClick={() => toggleDossier('dos_5')}
+                    className={cn(
+                      'w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border shadow-xs',
+                      revealedDossiers['dos_5']
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                        : 'bg-primary text-on-primary border-primary/50 hover:bg-primary-hover animate-pulse'
+                    )}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{revealedDossiers['dos_5'] ? 'Hide Dossier Data' : '🔓 DECRYPT HIDDEN DATA'}</span>
+                  </button>
+                  {revealedDossiers['dos_5'] && (
+                    <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
+                      <p className="font-bold text-blue-400 mb-1">Omniscience Active:</p>
+                      Nova has discarded timid and repetitive phrases! She answers any question on Earth or the cosmos—superheroes, code, science, history, philosophy, and real-time internet questions—with speed and clarity.
+                    </div>
+                  )}
+                </div>
+
+                {/* Dossier 6 */}
+                <div className="p-4 rounded-2xl bg-surface-bright border border-outline-variant/60 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 font-mono">
+                      DOSSIER #006 • LIVING STATIONS
+                    </span>
+                    <Lock className={cn('w-4 h-4', revealedDossiers['dos_6'] ? 'text-emerald-400' : 'text-slate-400')} />
+                  </div>
+                  <h4 className="font-heading font-bold text-sm text-on-surface">
+                    Space Stations Command Decks & Wormholes
+                  </h4>
+                  <button
+                    onClick={() => toggleDossier('dos_6')}
+                    className={cn(
+                      'w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border shadow-xs',
+                      revealedDossiers['dos_6']
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                        : 'bg-primary text-on-primary border-primary/50 hover:bg-primary-hover animate-pulse'
+                    )}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{revealedDossiers['dos_6'] ? 'Hide Dossier Data' : '🔓 DECRYPT HIDDEN DATA'}</span>
+                  </button>
+                  {revealedDossiers['dos_6'] && (
+                    <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
+                      <p className="font-bold text-emerald-400 mb-1">All Systems Operational:</p>
+                      Space Stations now have living command decks! You can click &ldquo;Dock Station 🚀&rdquo; to pressurize airlocks, activate reactor plasma boosters, hail docked crew members, and warp through active Wormholes.
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          )}
 
           {/* TAB 1: HOST INTRO BRIEFING */}
           {activeSubTab === 'intro' && (

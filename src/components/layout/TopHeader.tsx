@@ -38,6 +38,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     pendingRegistrationsCount,
     activeDevicesCount,
     isAdmin,
+    openUserProfile,
   } = useApp();
   const { isPlaying, togglePlay, userPlayCount, totalPlayCount } = useMusic();
 
@@ -48,8 +49,23 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   return (
     <header className="bg-surface-bright/95 backdrop-blur-md sticky top-0 z-30 border-b border-outline-variant/60 px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-      {/* Left: Mobile Brand or Page Title */}
+      {/* Left: Profile Pic / Mobile Brand or Page Title */}
       <div className="flex items-center gap-3 min-w-0">
+        {/* Left top profile pic button */}
+        <button
+          onClick={() => openUserProfile(currentUser)}
+          className="flex items-center gap-2 p-0.5 rounded-full ring-2 ring-primary/30 hover:ring-primary transition-all active:scale-95 shrink-0"
+          title={`View Profile: ${currentUser.name}`}
+        >
+          <Avatar
+            src={currentUser.avatar}
+            name={currentUser.name}
+            status="online"
+            showStatus
+            size="sm"
+          />
+        </button>
+
         <Link href="/" className="md:hidden flex items-center gap-2 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={INTERSTELLERS_LOGO} alt="Interstellers" className="w-8 h-8 rounded-lg object-cover" />
@@ -206,16 +222,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         <NotificationDropdown />
 
-        <Link href="/settings" className="pl-1">
+        <button
+          onClick={() => openUserProfile(currentUser)}
+          className="pl-1 transition-transform active:scale-95"
+          title={`View Profile: ${currentUser.name}`}
+        >
           <Avatar
             src={currentUser.avatar}
             name={currentUser.name}
             status="online"
             showStatus
             size="sm"
-            className="ring-2 ring-primary/20 hover:ring-primary transition-all"
+            className="ring-2 ring-primary/40 hover:ring-primary transition-all cursor-pointer"
           />
-        </Link>
+        </button>
       </div>
     </header>
   );

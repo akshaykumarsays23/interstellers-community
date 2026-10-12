@@ -6,7 +6,7 @@ import { MessagesDashboard } from '@/components/messages/MessagesDashboard';
 
 export default function MessagesPage() {
   return (
-    <AppShell title="Direct Messages" subtitle="Encrypted real-time communications">
+    <AppShell title="Fellows" subtitle="Cosmic Fellow Connections • 15 Questions Protocol • Real-Time Chat">
       <MessagesDashboard />
     </AppShell>
   );

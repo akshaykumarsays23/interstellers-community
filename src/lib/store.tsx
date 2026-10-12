@@ -187,6 +187,7 @@ interface AppContextType {
   crews: Crew[];
   stations: SpaceStation[];
   timeCapsules: TimeCapsule[];
+  createTimeCapsule: (content: string, unlockAt: string, mediaUrl?: string) => void;
   shopItems: StarCreditItem[];
   recordGameScore: (gameId: GameId, score: number, statsDetails: string) => Promise<{ xpEarned: number; starCreditsEarned: number }>;
   addXP: (amount: number, starCreditsAmount?: number) => void;
@@ -197,9 +198,24 @@ interface AppContextType {
   equipCosmetic: (type: 'background' | 'frame' | 'nameEffect' | 'chatTheme', idOrClass?: string) => void;
   toggleJoinCrew: (crewId: string) => void;
   useEmergencyWarpPass: () => boolean;
-  createTimeCapsule: (content: string, unlockAt: string, mediaUrl?: string) => void;
   restoreGhostOrbit: () => void;
 
+  // User Profile Inspection & Zoom
+  selectedProfileUser: User | null;
+  openUserProfile: (user: User) => void;
+  closeUserProfile: () => void;
+
+  // Space Houses (Marvel, DC, Pokemon, Power Rangers)
+  userHouse: 'marvel' | 'dc' | 'pokemon' | 'power_rangers' | null;
+  userHouseCharacter: string | null;
+  userHouseAssignedAt: number | null;
+  houseScores: { marvel: number; dc: number; pokemon: number; power_rangers: number };
+  assignUserHouse: (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', character: string) => void;
+  addHousePoints: (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', points: number) => void;
+
+  // 15-Question Fellows Compatibility Protocol
+  fellowsAnswers: Record<string, string> | null;
+  saveFellowsAnswers: (answers: Record<string, string>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -681,6 +697,74 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isVideoOff: false,
     duration: 0,
   });
+
+  // User Profile Modal State
+  const [selectedProfileUser, setSelectedProfileUser] = useState<User | null>(null);
+  const openUserProfile = (user: User) => setSelectedProfileUser(user);
+  const closeUserProfile = () => setSelectedProfileUser(null);
+
+  // Space Houses (Marvel, DC, Pokemon, Power Rangers)
+  const [userHouse, setUserHouse] = useState<'marvel' | 'dc' | 'pokemon' | 'power_rangers' | null>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('interstellers_user_house') as any) || null;
+    }
+    return null;
+  });
+  const [userHouseCharacter, setUserHouseCharacter] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('interstellers_house_char') || null;
+    }
+    return null;
+  });
+  const [userHouseAssignedAt, setUserHouseAssignedAt] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem('interstellers_house_assigned_at');
+      return v ? parseInt(v, 10) : null;
+    }
+    return null;
+  });
+  const [houseScores, setHouseScores] = useState<{ marvel: number; dc: number; pokemon: number; power_rangers: number }>({
+    marvel: 14250,
+    dc: 13980,
+    pokemon: 15420,
+    power_rangers: 12890,
+  });
+
+  const assignUserHouse = (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', character: string) => {
+    const now = Date.now();
+    setUserHouse(house);
+    setUserHouseCharacter(character);
+    setUserHouseAssignedAt(now);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('interstellers_user_house', house);
+      localStorage.setItem('interstellers_house_char', character);
+      localStorage.setItem('interstellers_house_assigned_at', now.toString());
+    }
+    setHouseScores((prev) => ({ ...prev, [house]: prev[house] + 100 }));
+  };
+
+  const addHousePoints = (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', points: number) => {
+    setHouseScores((prev) => ({ ...prev, [house]: prev[house] + points }));
+  };
+
+  // 15-Question Fellows Compatibility Protocol
+  const [fellowsAnswers, setFellowsAnswers] = useState<Record<string, string> | null>(() => {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('interstellers_fellows_answers');
+      if (raw) {
+        try { return JSON.parse(raw); } catch (_) {}
+      }
+    }
+    return null;
+  });
+
+  const saveFellowsAnswers = (answers: Record<string, string>) => {
+    setFellowsAnswers(answers);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('interstellers_fellows_answers', JSON.stringify(answers));
+      localStorage.setItem('interstellers_fellows_answers_date', Date.now().toString());
+    }
+  };
 
   const isAdmin =
     isAuthenticated &&
@@ -2319,6 +2403,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         createTimeCapsule,
         restoreGhostOrbit,
 
+        // User Profile Inspection & Zoom
+        selectedProfileUser,
+        openUserProfile,
+        closeUserProfile,
+
+        // Space Houses
+        userHouse,
+        userHouseCharacter,
+        userHouseAssignedAt,
+        houseScores,
+        assignUserHouse,
+        addHousePoints,
+
+        // 15-Question Fellows Compatibility Protocol
+        fellowsAnswers,
+        saveFellowsAnswers,
       }}
     >
       {children}

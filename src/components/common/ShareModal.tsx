@@ -25,10 +25,13 @@ export const ShareModal: React.FC = () => {
 
   if (!isShareModalOpen) return null;
 
-  const liveGlobalUrl = 'https://akshayweb.loca.lt';
-  const officialDomain = 'https://www.akshayweb.com';
-  const networkLink = 'http://192.168.29.34:3000';
-  const shareText = `Join me on Interstellers! "Time is never coming back, remember time is never..." Register with your Gmail here: ${liveGlobalUrl}`;
+  // Official Live Vercel Production Website
+  const liveGlobalUrl = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+    ? window.location.origin
+    : 'https://interstellers.vercel.app';
+  const officialDomain = 'https://interstellers.vercel.app';
+  const networkLink = 'http://localhost:3000';
+  const shareText = `Join me on Interstellers! "Time is never coming back, remember time is never..." Explore our galaxy here: ${liveGlobalUrl}`;
 
   const copyToClipboard = (text: string, type: 'live' | 'domain' | 'network') => {
     navigator.clipboard.writeText(text);
@@ -128,8 +131,9 @@ export const ShareModal: React.FC = () => {
               <span>{copiedLive ? 'Copied!' : 'Copy Link'}</span>
             </button>
           </div>
-          <p className="text-[10px] text-on-surface-variant">
-            Password if prompted: <code className="font-mono bg-surface-container px-1.5 py-0.5 rounded text-primary font-bold">49.43.232.229</code>
+          <p className="text-[10px] text-on-surface-variant flex items-center gap-1 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Official live cloud network powered by Vercel Global Edge.
           </p>
         </div>
 

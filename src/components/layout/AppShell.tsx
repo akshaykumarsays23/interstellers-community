@@ -13,6 +13,7 @@ import { AuthLandingView } from '@/components/auth/AuthLandingView';
 import { NovaVoiceModal } from '@/components/ai/NovaVoiceModal';
 import { GalaxyTelescopeModal } from '@/components/common/GalaxyTelescopeModal';
 import { TimeCapsuleModal } from '@/components/common/TimeCapsuleModal';
+import { UserProfileModal } from '@/components/common/UserProfileModal';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -81,6 +82,9 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* Time Capsule Future Transmission Modal */}
       <TimeCapsuleModal isOpen={isCapsuleOpen} onClose={() => setIsCapsuleOpen(false)} />
+
+      {/* Full User Profile & Lightbox Zoom Modal */}
+      <UserProfileModal />
     </div>
   );
 };

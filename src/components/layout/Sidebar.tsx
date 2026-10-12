@@ -38,6 +38,7 @@ export const Sidebar: React.FC = () => {
     logout,
     chats,
     friendRequests,
+    openUserProfile,
   } = useApp();
 
   const unreadChats = chats.reduce((acc, c) => acc + c.unreadCount, 0);
@@ -58,7 +59,7 @@ export const Sidebar: React.FC = () => {
       badge: 'HOT 🔥',
     },
     {
-      label: 'Messages',
+      label: 'Fellows',
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
@@ -78,10 +79,11 @@ export const Sidebar: React.FC = () => {
       active: pathname.startsWith('/stations'),
     },
     {
-      label: 'Group Hub & Spaces',
+      label: 'Space House',
       href: '/groups',
       icon: Layers,
       active: pathname.startsWith('/groups'),
+      badge: 'Houses 🏰',
     },
     {
       label: 'Settings',
@@ -116,9 +118,13 @@ export const Sidebar: React.FC = () => {
         </div>
       </Link>
 
-      {/* Quote Banner */}
-      <div className="mb-5 mx-1 p-3 bg-surface-container rounded-xl border border-outline-variant/40">
-        <p className="text-[11px] text-primary italic font-medium leading-tight">
+      {/* High-Contrast Cosmic Quote Banner */}
+      <div className="mb-5 mx-1 p-3.5 bg-gradient-to-br from-purple-950/70 via-slate-900/90 to-amber-950/40 rounded-2xl border border-amber-400/40 shadow-[0_0_18px_rgba(251,191,36,0.25)] relative overflow-hidden group">
+        <div className="flex items-center gap-1.5 mb-1 text-[10px] uppercase tracking-wider font-black text-amber-300">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+          <span>Cosmic Axiom</span>
+        </div>
+        <p className="text-[12px] text-amber-300 dark:text-amber-300 font-extrabold italic leading-snug drop-shadow-[0_0_10px_rgba(251,191,36,0.45)]">
           &ldquo;Time is never coming back, remember time is never...&rdquo;
         </p>
       </div>
@@ -229,9 +235,11 @@ export const Sidebar: React.FC = () => {
 
       {/* Bottom Profile Summary & Sign Out */}
       <div className="pt-4 border-t border-outline-variant/60 flex items-center justify-between px-1">
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 hover:opacity-85 transition-opacity min-w-0 flex-1"
+        <button
+          type="button"
+          onClick={() => openUserProfile(currentUser)}
+          className="flex items-center gap-3 hover:opacity-85 transition-opacity min-w-0 flex-1 text-left"
+          title={`View Profile: ${currentUser.name}`}
         >
           <Avatar
             src={currentUser.avatar}
@@ -239,12 +247,13 @@ export const Sidebar: React.FC = () => {
             status="online"
             showStatus
             size="md"
+            className="ring-2 ring-primary/30 hover:ring-primary transition-all"
           />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-on-surface truncate">{currentUser.name}</p>
             <p className="text-xs text-on-surface-variant truncate">@{currentUser.handle}</p>
           </div>
-        </Link>
+        </button>
 
         <button
           onClick={logout}

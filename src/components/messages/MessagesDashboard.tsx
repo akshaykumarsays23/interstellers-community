@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { cn, formatMessageDate, formatDate } from '@/lib/utils';
 
+import { NovaFellowsProtocol } from './NovaFellowsProtocol';
+
 export const MessagesDashboard: React.FC = () => {
   const {
     chats,
@@ -45,8 +47,10 @@ export const MessagesDashboard: React.FC = () => {
     toggleChatPin,
     toggleChatArchive,
     setIsNovaVoiceOpen,
+    openUserProfile,
   } = useApp();
 
+  const [viewMode, setViewMode] = useState<'chats' | 'fellows_protocol'>('chats');
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'archived'>('all');
   const [chatSearch, setChatSearch] = useState('');
   const [messageText, setMessageText] = useState('');
@@ -124,10 +128,47 @@ export const MessagesDashboard: React.FC = () => {
         {/* Search & Header */}
         <div className="p-4 border-b border-outline-variant/60 bg-surface-bright space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-heading font-bold text-xl text-on-surface">Chats</h2>
+            <div>
+              <h2 className="font-heading font-bold text-xl text-on-surface">Fellows</h2>
+              <p className="text-[10px] text-on-surface-variant font-medium">Cosmic Kinship & Transmissions</p>
+            </div>
             <Badge variant="primary" size="sm">
               {chats.length} active
             </Badge>
+          </div>
+
+          {/* Mode Switcher */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-surface-container rounded-xl">
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('chats');
+                setShowMobileChat(false);
+              }}
+              className={cn(
+                'py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all',
+                viewMode === 'chats'
+                  ? 'bg-primary text-on-primary shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              )}
+            >
+              <span>💬 Direct</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('fellows_protocol');
+                setShowMobileChat(true);
+              }}
+              className={cn(
+                'py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border',
+                viewMode === 'fellows_protocol'
+                  ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white border-transparent shadow-xs font-bold'
+                  : 'border-purple-500/30 text-purple-400 hover:bg-purple-950/30'
+              )}
+            >
+              <span>✨ 15Q Matcher</span>
+            </button>
           </div>
 
           {/* Search Bar */}
@@ -137,7 +178,7 @@ export const MessagesDashboard: React.FC = () => {
               type="text"
               value={chatSearch}
               onChange={(e) => setChatSearch(e.target.value)}
-              placeholder="Search messages..."
+              placeholder="Search fellows & messages..."
               className="w-full bg-surface-container rounded-full py-2 pl-9 pr-4 text-xs text-on-surface placeholder:text-on-surface-variant border border-transparent focus:border-primary focus:bg-surface-bright outline-none transition-all"
             />
           </div>
@@ -204,13 +245,22 @@ export const MessagesDashboard: React.FC = () => {
                       : 'border-transparent hover:bg-surface-container-low/60'
                   )}
                 >
-                  <Avatar
-                    src={thread.participant.avatar}
-                    name={thread.participant.name}
-                    status={thread.participant.status}
-                    showStatus
-                    size="md"
-                  />
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openUserProfile(thread.participant);
+                    }}
+                    className="hover:scale-105 transition-transform shrink-0"
+                    title="Click to view full profile & zoom avatar"
+                  >
+                    <Avatar
+                      src={thread.participant.avatar}
+                      name={thread.participant.name}
+                      status={thread.participant.status}
+                      showStatus
+                      size="md"
+                    />
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-0.5">
@@ -261,8 +311,38 @@ export const MessagesDashboard: React.FC = () => {
         </div>
       </aside>
 
-      {/* Right Pane: Active Chat Conversation */}
-      {activeChat ? (
+      {/* Right Pane: Active Chat Conversation or Nova Fellows Protocol */}
+      {viewMode === 'fellows_protocol' ? (
+        <section
+          className={cn(
+            'flex-1 flex flex-col bg-surface-container-lowest h-full relative overflow-y-auto',
+            !showMobileChat ? 'hidden md:flex' : 'flex'
+          )}
+        >
+          <div className="p-4 sm:p-6 max-w-4xl mx-auto w-full">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-outline-variant/40">
+              <button
+                onClick={() => setShowMobileChat(false)}
+                className="md:hidden p-1.5 text-on-surface-variant hover:text-primary rounded-lg flex items-center gap-1 text-xs"
+              >
+                <ChevronLeft className="w-4 h-4" /> Back to Fellows
+              </button>
+              <button
+                onClick={() => setViewMode('chats')}
+                className="text-xs px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-colors ml-auto font-medium"
+              >
+                Exit to Direct Transmissions
+              </button>
+            </div>
+            <NovaFellowsProtocol
+              onFellowSelected={(user) => {
+                setViewMode('chats');
+                openUserProfile(user);
+              }}
+            />
+          </div>
+        </section>
+      ) : activeChat ? (
         <section
           className={cn(
             'flex-1 flex flex-col bg-surface-container-lowest h-full relative',
@@ -271,9 +351,17 @@ export const MessagesDashboard: React.FC = () => {
         >
           {/* Chat Top Header */}
           <header className="bg-surface-bright px-4 sm:px-6 h-16 border-b border-outline-variant/60 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3 cursor-pointer group"
+              onClick={() => openUserProfile(activeChat.participant)}
+              title="Click to view profile & zoom avatar"
+            >
               <button
-                onClick={() => setShowMobileChat(false)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMobileChat(false);
+                }}
                 className="md:hidden p-1.5 text-on-surface-variant hover:text-primary rounded-lg"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -285,10 +373,11 @@ export const MessagesDashboard: React.FC = () => {
                 status={activeChat.participant.status}
                 showStatus
                 size="md"
+                className="group-hover:ring-2 ring-primary transition-all"
               />
 
               <div>
-                <h2 className="font-heading font-semibold text-sm sm:text-base text-on-surface">
+                <h2 className="font-heading font-semibold text-sm sm:text-base text-on-surface group-hover:text-primary transition-colors">
                   {activeChat.participant.name}
                 </h2>
                 <p className="text-xs text-on-surface-variant flex items-center gap-1.5">
@@ -567,10 +656,24 @@ export const MessagesDashboard: React.FC = () => {
           </form>
         </section>
       ) : (
-        <div className="hidden md:flex flex-1 items-center justify-center text-center p-8 bg-surface-container-lowest">
-          <div>
-            <Avatar name="Interstellers" size="2xl" className="mx-auto mb-3" />
-            <h3 className="font-heading font-semibold text-lg text-on-surface mb-1">Select a Conversation</h3>
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center text-center p-8 bg-surface-container-lowest">
+          <div className="max-w-md space-y-4">
+            <Avatar name="Interstellers" size="2xl" className="mx-auto mb-2 ring-4 ring-primary/20 shadow-xl" />
+            <h3 className="font-heading font-bold text-xl text-on-surface">Fellows Transmission Deck</h3>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Select a conversation to transmit secure interstellar messages, or run Nova’s 15-Question Protocol to discover and connect with kindred voyagers across the cosmos.
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setViewMode('fellows_protocol');
+                  setShowMobileChat(true);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 text-white font-bold text-xs shadow-lg hover:shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 mx-auto active:scale-95"
+              >
+                <span>✨ Launch Nova’s 15Q Fellow Matcher</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

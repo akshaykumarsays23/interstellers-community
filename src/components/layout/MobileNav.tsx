@@ -18,7 +18,7 @@ export const MobileNav: React.FC = () => {
     { label: 'Feed', href: '/', icon: Compass, active: pathname === '/' || pathname === '/feed' },
     { label: 'Arcade', href: '/arcade', icon: Gamepad2, active: pathname.startsWith('/arcade') },
     {
-      label: 'Messages',
+      label: 'Fellows',
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
@@ -31,7 +31,7 @@ export const MobileNav: React.FC = () => {
       active: pathname.startsWith('/friends'),
       badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
     },
-    { label: 'Groups', href: '/groups', icon: Layers, active: pathname.startsWith('/groups') },
+    { label: 'Space House', href: '/groups', icon: Layers, active: pathname.startsWith('/groups') },
     { label: 'Settings', href: '/settings', icon: Settings, active: pathname.startsWith('/settings') },
   ];
 

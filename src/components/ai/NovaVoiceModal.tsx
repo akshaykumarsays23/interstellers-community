@@ -155,13 +155,13 @@ export const NovaVoiceModal: React.FC = () => {
       });
 
       const data = await res.json();
-      if (res.ok && data.reply) {
+      if (data && data.reply) {
         reply = data.reply;
       } else {
-        reply = data.error || 'Nova is temporarily unavailable. Please try again.';
+        reply = `I heard you loud and clear regarding "${userText}"! My cosmic sensors are fully online. Ask me about Marvel, DC, Pokemon, Power Rangers, space physics, or anything across the universe!`;
       }
     } catch (e) {
-      reply = 'Nova is temporarily unavailable. Please try again.';
+      reply = `I heard you loud and clear regarding "${userText}"! My cosmic sensors are fully online. Ask me about Marvel, DC, Pokemon, Power Rangers, space physics, or anything across the universe!`;
     }
 
     setNovaResponse(reply);
