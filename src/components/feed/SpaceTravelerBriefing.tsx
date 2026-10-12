@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/lib/store';
+import { PersonalizedGalaxyBriefing } from './PersonalizedGalaxyBriefing';
 import { CORE_7_RULES, CLASSIFIED_20_PROTOCOLS, ClassifiedProtocol } from '@/lib/flightProtocolsData';
 import {
   Rocket,
@@ -36,13 +37,25 @@ import {
 import { cn } from '@/lib/utils';
 
 export const SpaceTravelerBriefing: React.FC = () => {
-  const { currentUser, isAdmin, leaderboard } = useApp();
+  const {
+    currentUser,
+    isAdmin,
+    leaderboard,
+    chats,
+    friendRequests,
+    gamificationState,
+    missions,
+    userHouse,
+  } = useApp();
   const [isExpanded, setIsExpanded] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'intro' | 'rules' | 'reputation' | 'mysteries'>('mysteries');
+  const [activeSubTab, setActiveSubTab] = useState<'briefing' | 'intro' | 'rules' | 'reputation' | 'mysteries'>('briefing');
   const [ruleMode, setRuleMode] = useState<'core7' | 'classified20'>('core7');
   const [protocolFilter, setProtocolFilter] = useState<'all' | 'orbit' | 'community' | 'guardian' | 'badges'>('all');
   const [revealedDossiers, setRevealedDossiers] = useState<Record<string, boolean>>({});
   const [randomAnomalies, setRandomAnomalies] = useState<string[]>([]);
+
+  const unreadBriefingBadge = (chats?.reduce((acc, c) => acc + (c.unreadCount || 0), 0) || 0) +
+    (friendRequests?.filter((r) => r.status === 'pending').length || 0);
 
   const toggleDossier = (id: string) => {
     setRevealedDossiers((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -141,6 +154,24 @@ export const SpaceTravelerBriefing: React.FC = () => {
             {/* Navigation Sub-Tabs */}
             <div className="flex items-center gap-2 border-b border-cyan-500/25 pb-3 overflow-x-auto custom-scrollbar">
               <button
+                onClick={() => setActiveSubTab('briefing')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
+                  activeSubTab === 'briefing'
+                    ? 'bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 text-white shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-cyan-300'
+                )}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-spin" />
+                <span>Galaxy Briefing</span>
+                {unreadBriefingBadge > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-400/25 text-cyan-300 font-mono font-bold ml-0.5">
+                    {unreadBriefingBadge}
+                  </span>
+                )}
+              </button>
+
+              <button
                 onClick={() => setActiveSubTab('mysteries')}
                 className={cn(
                   'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
@@ -194,6 +225,11 @@ export const SpaceTravelerBriefing: React.FC = () => {
                 <span>Traveler Reputation HUD</span>
               </button>
             </div>
+
+          {/* TAB 0: PERSONALIZED GALAXY BRIEFING & CONTEXTUAL DISCOVERY */}
+          {activeSubTab === 'briefing' && (
+            <PersonalizedGalaxyBriefing />
+          )}
 
           {/* TAB 4: COSMIC MYSTERIES & FISHY ANOMALIES (CLASSIFIED DOSSIERS) */}
           {activeSubTab === 'mysteries' && (
@@ -771,31 +807,41 @@ export const SpaceTravelerBriefing: React.FC = () => {
                   {/* Level */}
                   <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/40 space-y-1">
                     <p className="text-[10px] text-on-surface-variant uppercase font-mono font-bold">Traveler Level</p>
-                    <p className="text-sm sm:text-base font-heading font-extrabold text-primary">Level 27</p>
+                    <p className="text-sm sm:text-base font-heading font-extrabold text-primary">
+                      Level {gamificationState?.travelerLevel || 1}
+                    </p>
                   </div>
 
                   {/* Frequency */}
                   <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/40 space-y-1">
                     <p className="text-[10px] text-on-surface-variant uppercase font-mono font-bold">Frequency Level</p>
-                    <p className="text-sm sm:text-base font-heading font-extrabold text-cyan-400">84% Signal</p>
+                    <p className="text-sm sm:text-base font-heading font-extrabold text-cyan-400">
+                      {gamificationState?.signalStrength || 100}% Signal
+                    </p>
                   </div>
 
                   {/* Community Rep */}
                   <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/40 space-y-1">
                     <p className="text-[10px] text-on-surface-variant uppercase font-mono font-bold">Reputation</p>
-                    <p className="text-sm sm:text-base font-heading font-extrabold text-emerald-400">Excellent ⭐</p>
+                    <p className="text-sm sm:text-base font-heading font-extrabold text-emerald-400">
+                      {gamificationState?.moderationState === 'NORMAL' ? 'Excellent ⭐' : (gamificationState?.moderationState || 'Normal')}
+                    </p>
                   </div>
 
                   {/* Streak */}
                   <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/40 space-y-1">
                     <p className="text-[10px] text-on-surface-variant uppercase font-mono font-bold">Current Streak</p>
-                    <p className="text-sm sm:text-base font-heading font-extrabold text-amber-400">18 Days 🔥</p>
+                    <p className="text-sm sm:text-base font-heading font-extrabold text-amber-400">
+                      {gamificationState?.currentStreak || 0} Days 🔥
+                    </p>
                   </div>
 
                   {/* Missions */}
                   <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/40 space-y-1">
                     <p className="text-[10px] text-on-surface-variant uppercase font-mono font-bold">Missions Done</p>
-                    <p className="text-sm sm:text-base font-heading font-extrabold text-purple-400">143 Passed</p>
+                    <p className="text-sm sm:text-base font-heading font-extrabold text-purple-400">
+                      {missions?.filter((m) => m.isCompleted).length || 0} Completed
+                    </p>
                   </div>
 
                   {/* Strikes */}
@@ -806,10 +852,13 @@ export const SpaceTravelerBriefing: React.FC = () => {
 
                   {/* Space Rank */}
                   <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/40 space-y-1 col-span-2">
-                    <p className="text-[10px] text-on-surface-variant uppercase font-mono font-bold">Current Rank</p>
-                    <p className="text-sm sm:text-base font-heading font-extrabold text-amber-400 flex items-center gap-1.5">
-                      <Crown className="w-4 h-4 text-amber-400 fill-amber-400" />
-                      <span>Star Captain</span>
+                    <p className="text-[10px] text-on-surface-variant uppercase font-mono font-bold">Current Rank & House</p>
+                    <p className="text-sm sm:text-base font-heading font-extrabold text-amber-400 flex items-center gap-1.5 truncate">
+                      <Crown className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
+                      <span>{userRank > 0 ? `#${userRank} on Leaderboard` : 'Star Captain'}</span>
+                      <span className="text-xs text-on-surface-variant font-mono font-normal">
+                        ({userHouse ? `House of ${userHouse.toUpperCase()}` : 'Independent Explorer'})
+                      </span>
                     </p>
                   </div>
 

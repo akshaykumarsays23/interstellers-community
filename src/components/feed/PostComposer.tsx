@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
-import { Image as ImageIcon, Sparkles, Send, Tag, Smile, X, Upload, Lock, Search, Grid, Shuffle } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, Send, Tag, Smile, X, Upload, Lock, Search, Grid, Shuffle, Video, Film } from 'lucide-react';
 import { SPACE_IMAGES, SpaceImage } from '@/lib/spaceImages';
 
 interface PostComposerProps {
@@ -14,6 +14,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
   const { currentUser, createPost } = useApp();
   const [content, setContent] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [showMediaInput, setShowMediaInput] = useState(false);
   const [selectedTag, setSelectedTag] = useState('#CommunityUpdate');
   const [isPosting, setIsPosting] = useState(false);
@@ -33,6 +34,20 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.type.startsWith('video/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const rawUrl = event.target?.result as string;
+        if (rawUrl) {
+          setMediaUrl(rawUrl);
+          setMediaType('video');
+        }
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -64,9 +79,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
         ctx?.drawImage(img, 0, 0, width, height);
         const dataUrl = canvas.toDataURL(file.type || 'image/jpeg', 0.85);
         setMediaUrl(dataUrl);
+        setMediaType('image');
       };
       img.onerror = () => {
         setMediaUrl(rawUrl);
+        setMediaType('image');
       };
       img.src = rawUrl;
     };
@@ -77,6 +94,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
   const handlePickRandomSpaceImage = () => {
     const randomIdx = Math.floor(Math.random() * SPACE_IMAGES.length);
     setMediaUrl(SPACE_IMAGES[randomIdx].url);
+    setMediaType('image');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -85,14 +103,21 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
 
     setIsPosting(true);
     setTimeout(() => {
+      const isVideo =
+        mediaType === 'video' ||
+        /\.(mp4|webm|ogg|mov)($|\?)/i.test(mediaUrl) ||
+        mediaUrl.includes('Video%20Project%201.mp4') ||
+        mediaUrl.includes('Video Project 1.mp4');
+
       createPost(
         content,
         mediaUrl || undefined,
-        mediaUrl ? 'image' : undefined,
+        mediaUrl ? (isVideo ? 'video' : 'image') : undefined,
         [selectedTag]
       );
       setContent('');
       setMediaUrl('');
+      setMediaType('image');
       setShowMediaInput(false);
       setIsPosting(false);
       onSuccess?.();
@@ -101,12 +126,12 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
 
   return (
     <div id="post-composer" className="bg-surface-container-lowest rounded-2xl border border-cyan-500/30 p-5 sm:p-6 lg:p-7 shadow-[0_4px_25px_rgba(0,240,255,0.12)] transition-all hover:border-cyan-400/60 hover:shadow-[0_4px_30px_rgba(0,240,255,0.22)] mb-6">
-      {/* Hidden File Input for Uploading Photos from Computer */}
+      {/* Hidden File Input for Uploading Photos or Videos from Computer */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileUpload}
-        accept="image/*"
+        accept="image/*,video/mp4,video/webm"
         className="hidden"
       />
 
@@ -151,6 +176,17 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
                 >
                   <Upload className="w-3.5 h-3.5" />
                   Upload from Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMediaUrl('/Video Project 1.mp4');
+                    setMediaType('video');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border border-cyan-400/40 text-xs font-semibold hover:border-cyan-300 flex items-center gap-1.5 shrink-0 transition-all shadow-[0_0_10px_rgba(0,240,255,0.15)]"
+                >
+                  <Video className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                  Attach Public Video Message
                 </button>
                 <button
                   type="button"
@@ -241,23 +277,44 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
           )}
 
           {/* Media Preview with Locked Indicator */}
-          {mediaUrl && (
-            <div className="mt-3 relative rounded-xl overflow-hidden max-h-56 border border-outline-variant/40 group">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={mediaUrl} alt="Attached preview" className="w-full h-full object-cover" />
-              <div className="absolute top-2 left-2 px-2.5 py-1 rounded-md bg-black/75 text-emerald-300 text-[11px] font-medium flex items-center gap-1 backdrop-blur-xs border border-emerald-500/30 shadow-xs">
-                <Lock className="w-3 h-3 text-emerald-400" />
-                <span>Photo Ready & Locked</span>
+          {mediaUrl && (() => {
+            const isVideoPreview =
+              mediaType === 'video' ||
+              /\.(mp4|webm|ogg|mov)($|\?)/i.test(mediaUrl) ||
+              mediaUrl.includes('Video%20Project%201.mp4') ||
+              mediaUrl.includes('Video Project 1.mp4');
+
+            return (
+              <div className="mt-3 relative rounded-xl overflow-hidden max-h-56 border border-outline-variant/40 group bg-black">
+                {isVideoPreview ? (
+                  <video src={mediaUrl} controls className="w-full max-h-56 object-contain bg-black" />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={mediaUrl} alt="Attached preview" className="w-full h-full object-cover" />
+                )}
+                <div className="absolute top-2 left-2 px-2.5 py-1 rounded-md bg-black/75 text-emerald-300 text-[11px] font-medium flex items-center gap-1 backdrop-blur-xs border border-emerald-500/30 shadow-xs pointer-events-none">
+                  {isVideoPreview ? (
+                    <>
+                      <Video className="w-3 h-3 text-cyan-400 animate-pulse" />
+                      <span>Video Ready & Synced</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-3 h-3 text-emerald-400" />
+                      <span>Photo Ready & Locked</span>
+                    </>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMediaUrl('')}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black transition-colors z-10"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setMediaUrl('')}
-                className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Controls Bar */}
           <div className="mt-3 pt-3 border-t border-outline-variant/30 flex flex-wrap items-center justify-between gap-2">

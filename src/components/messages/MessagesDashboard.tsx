@@ -507,9 +507,13 @@ export const MessagesDashboard: React.FC = () => {
 
                       {/* Attached Media */}
                       {msg.mediaUrl && (
-                        <div className="mt-2 rounded-xl overflow-hidden max-h-56 border border-white/20">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={msg.mediaUrl} alt="Chat attachment" className="w-full h-full object-cover" />
+                        <div className="mt-2 rounded-xl overflow-hidden max-h-56 border border-white/20 bg-black">
+                          {/\.(mp4|webm|ogg|mov)($|\?)/i.test(msg.mediaUrl) || msg.mediaUrl.includes('Video') ? (
+                            <video src={msg.mediaUrl} controls playsInline className="w-full max-h-56 object-contain bg-black" />
+                          ) : (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={msg.mediaUrl} alt="Chat attachment" className="w-full h-full object-cover" />
+                          )}
                         </div>
                       )}
 

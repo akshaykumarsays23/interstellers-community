@@ -22,7 +22,9 @@ import {
   X,
   Upload,
   Save,
-  ImageIcon
+  ImageIcon,
+  Video,
+  Film
 } from 'lucide-react';
 import { cn, formatPostDate, formatMessageDate } from '@/lib/utils';
 
@@ -167,41 +169,70 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         )}
 
         {/* Embedded Media */}
-        {post.mediaUrl && (
-          <>
-            <div
-              onClick={() => setIsImageModalOpen(true)}
-              className="relative rounded-xl overflow-hidden border border-outline-variant/40 max-h-[520px] shadow-xs mt-2 group cursor-zoom-in"
-              title="Click to open full-screen zoomable view"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={post.mediaUrl}
-                alt="Post attachment"
-                className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                loading="lazy"
-              />
-              <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/75 text-emerald-300 text-[10px] font-medium flex items-center gap-1 backdrop-blur-xs border border-emerald-500/30 z-10">
-                <Lock className="w-2.5 h-2.5 text-emerald-400" />
-                <span>Locked Photo</span>
-              </div>
-              <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                <span className="px-3.5 py-1.5 rounded-full bg-black/80 text-white text-xs font-semibold backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-xl">
-                  <Maximize2 className="w-4 h-4 text-emerald-400" />
-                  Click to Expand & Zoom
-                </span>
-              </div>
-            </div>
+        {post.mediaUrl && (() => {
+          const isVideo =
+            post.mediaType === 'video' ||
+            /\.(mp4|webm|ogg|mov)($|\?)/i.test(post.mediaUrl) ||
+            post.mediaUrl.includes('Video%20Project%201.mp4') ||
+            post.mediaUrl.includes('Video Project 1.mp4');
 
-            <ImageModal
-              isOpen={isImageModalOpen}
-              src={post.mediaUrl}
-              alt={post.content || 'Post image'}
-              authorName={post.author.name}
-              onClose={() => setIsImageModalOpen(false)}
-            />
-          </>
-        )}
+          if (isVideo) {
+            return (
+              <div className="relative rounded-2xl overflow-hidden border border-cyan-500/40 bg-black shadow-[0_0_30px_rgba(0,240,255,0.18)] mt-3">
+                <div className="absolute top-2.5 left-3 z-10 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-cyan-400/50 text-[10px] font-mono font-bold text-cyan-300 flex items-center gap-1.5 shadow-md pointer-events-none">
+                  <Video className="w-3 h-3 text-cyan-400 animate-pulse" />
+                  <span>Public Video Message</span>
+                </div>
+                <video
+                  src={post.mediaUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full max-h-[520px] rounded-2xl object-contain bg-black"
+                >
+                  <source src={post.mediaUrl} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            );
+          }
+
+          return (
+            <>
+              <div
+                onClick={() => setIsImageModalOpen(true)}
+                className="relative rounded-xl overflow-hidden border border-outline-variant/40 max-h-[520px] shadow-xs mt-2 group cursor-zoom-in"
+                title="Click to open full-screen zoomable view"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={post.mediaUrl}
+                  alt="Post attachment"
+                  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                  loading="lazy"
+                />
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/75 text-emerald-300 text-[10px] font-medium flex items-center gap-1 backdrop-blur-xs border border-emerald-500/30 z-10">
+                  <Lock className="w-2.5 h-2.5 text-emerald-400" />
+                  <span>Locked Photo</span>
+                </div>
+                <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                  <span className="px-3.5 py-1.5 rounded-full bg-black/80 text-white text-xs font-semibold backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-xl">
+                    <Maximize2 className="w-4 h-4 text-emerald-400" />
+                    Click to Expand & Zoom
+                  </span>
+                </div>
+              </div>
+
+              <ImageModal
+                isOpen={isImageModalOpen}
+                src={post.mediaUrl}
+                alt={post.content || 'Post image'}
+                authorName={post.author.name}
+                onClose={() => setIsImageModalOpen(false)}
+              />
+            </>
+          );
+        })()}
 
         {/* Interactive Poll Component */}
         {post.poll && (

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { PostComposer } from './PostComposer';
 import { SpaceTravelerBriefing } from './SpaceTravelerBriefing';
+import { PublicVideoTransmission } from './PublicVideoTransmission';
 import { PostCard } from './PostCard';
 import { TrendingPanel } from './TrendingPanel';
 import { Compass, Sparkles, Filter, Bookmark, Flame } from 'lucide-react';
@@ -35,6 +36,9 @@ export const FeedView: React.FC = () => {
         <div className="flex-1 min-w-0">
           {/* Space Traveler Flight Briefing */}
           <SpaceTravelerBriefing />
+
+          {/* Live Public Video Transmission */}
+          <PublicVideoTransmission />
 
           {/* Post Composer */}
           <PostComposer />

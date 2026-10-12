@@ -48,6 +48,22 @@ export const INITIAL_USERS: User[] = [
 
 export const INITIAL_POSTS: Post[] = [
   {
+    id: "post_video_message_1",
+    author: HOST_USER,
+    content: "🎥 **Public Video Message • Transmission Online!** 🚀\n\nWelcome to all explorers across the galaxy! Tune in to our official public video transmission directly from the bridge. Press play below to watch! ✨🌌",
+    createdAt: new Date().toISOString(),
+    timestamp: "Just now",
+    likes: 18,
+    commentsCount: 2,
+    sharesCount: 6,
+    isLiked: true,
+    isBookmarked: true,
+    tags: ["#VideoMessage", "#PublicTransmission", "#CommunityUpdate"],
+    mediaUrl: "/Video Project 1.mp4",
+    mediaType: "video",
+    comments: []
+  },
+  {
     id: "post_welcome",
     author: HOST_USER,
     content: "🪐 Welcome to **Interstellers**!\n\n\"Time is never coming back, remember time is never...\"\n\nConnect with your friends, start discussions in channels, and collaborate in real-time across galactic spaces! ✨",

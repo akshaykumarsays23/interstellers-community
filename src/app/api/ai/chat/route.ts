@@ -163,13 +163,14 @@ AUTHENTICATED USER CONTEXT:
     const openaiKey = process.env.OPENAI_API_KEY?.trim();
     const groqKey = process.env.GROQ_API_KEY?.trim();
 
-    // Priority 1: Google Gemini (gemini-2.0-flash / gemini-1.5-flash / gemini-1.5-pro)
+    // Priority 1: Google Gemini (gemini-flash-latest / gemini-3.8-flash / gemini-3.5-flash)
     if (geminiKey) {
       try {
         const geminiModels = [
-          'gemini-2.0-flash',
-          'gemini-1.5-flash',
-          'gemini-1.5-pro',
+          'gemini-flash-latest',
+          'gemini-3.8-flash',
+          'gemini-3.5-flash',
+          'gemini-2.5-pro',
         ];
         let data: any = null;
         let lastErrText = '';
@@ -188,7 +189,7 @@ AUTHENTICATED USER CONTEXT:
         for (const model of geminiModels) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 7000);
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
 
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
             const response = await fetch(geminiUrl, {
@@ -229,20 +230,9 @@ AUTHENTICATED USER CONTEXT:
           return NextResponse.json({ reply: reply.trim() });
         }
 
-        console.error('All Gemini model fallbacks exhausted. Last error:', lastErrText);
-        return NextResponse.json(
-          {
-            error: 'Nova is temporarily experiencing high demand from Google AI. Please try your message again in a moment.',
-            details: lastErrText || 'All Gemini models busy',
-          },
-          { status: 502 }
-        );
+        console.warn('All Gemini models attempted, falling through to secondary providers. Last error:', lastErrText);
       } catch (err: any) {
-        console.error('Gemini provider error:', err);
-        return NextResponse.json(
-          { error: 'Nova is temporarily unavailable. Please try again.', details: err?.message },
-          { status: 502 }
-        );
+        console.warn('Gemini provider error, falling through to secondary providers:', err?.message || err);
       }
     }
 
@@ -423,11 +413,30 @@ function generateOmniscientNovaResponse(query: string, userName: string): string
     return `You are ${userName}, a verified traveler in the Interstellers galaxy. You have full clearance to explore our Space Houses, Space Stations, and connect with fellow explorers.`;
   }
 
-  // Science / Universe queries
-  if (q.includes('black hole') || q.includes('space') || q.includes('wormhole') || q.includes('universe')) {
+  // Science / Quantum & Physics queries
+  if (q.includes('quantum') || q.includes('qubit') || q.includes('superposition') || q.includes('entanglement')) {
+    return `In physics, "quantum" refers to the smallest discrete quantity of any physical property (like energy or matter). 
+
+Quantum computers leverage the counter-intuitive principles of quantum mechanics:
+1. **Superposition:** Unlike classical bits that can only be 0 or 1, quantum bits (qubits) can exist in a combination of both states simultaneously.
+2. **Entanglement:** Qubits can become interconnected such that the state of one instantaneously influences another.
+
+This allows quantum computers to process complex multi-variable calculations (like molecular simulation, cryptography, and optimization) exponentially faster than standard classical supercomputers!`;
+  }
+
+  if (q.includes('explain above') || q.includes('explain that') || q.includes('elaborate')) {
+    return `Expanding on that: Classical computers calculate by flipping binary switches (transistors) one step at a time. A quantum computer operates in a multi-dimensional state space—exploring many possible outcomes in parallel. While still in early development requiring near-absolute-zero refrigeration, they represent the next frontier of computational power!`;
+  }
+
+  if (q.includes('black hole') || q.includes('space') || q.includes('wormhole') || q.includes('universe') || q.includes('cosmos')) {
     return `The universe spans over 93 billion light-years in the observable realm. Black holes distort spacetime where gravity prevents even light from escaping. In Interstellers, our 7 Space Stations utilize simulated wormholes to bridge distant quadrants in real time!`;
   }
 
+  // Technology & Code
+  if (q.includes('code') || q.includes('programming') || q.includes('javascript') || q.includes('python') || q.includes('react')) {
+    return `In software engineering and digital systems, clean architecture, responsive components, and robust APIs form the backbone of modern web applications—just like the Next.js and TypeScript engine powering Interstellers! Let me know what language or concept you'd like to explore.`;
+  }
+
   // General questions fallback with conversational brilliance
-  return `I have processed your query across our interstellar network! Regarding "${query.slice(0, 80)}": Everything in this digital cosmos connects back to knowledge, exploration, and community. Whether you want to discuss Marvel vs DC, Pokemon stats, code algorithms, or galactic secrets—I am ready with instant answers! What's your next thought?`;
+  return `Transmission received across the quantum grid! Regarding "${query.slice(0, 100).trim()}": In our digital cosmos, knowledge spans quantum science, superhero lore, space stations, and human exploration. Let me know what specific aspect you would like to explore next!`;
 }
