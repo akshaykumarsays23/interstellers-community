@@ -262,13 +262,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
           <button
             onClick={() => toggleLikePost(post.id)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
               post.isLiked
-                ? 'text-rose-600 bg-rose-50 dark:bg-rose-950/30 font-semibold'
-                : 'hover:bg-surface-container hover:text-on-surface'
+                ? 'text-pink-400 bg-pink-500/20 font-bold border border-pink-500/40 shadow-[0_0_12px_rgba(244,63,94,0.35)]'
+                : 'hover:bg-pink-500/10 hover:text-pink-300'
             )}
           >
-            <Heart className={cn('w-4 h-4', post.isLiked && 'fill-rose-600')} />
+            <Heart className={cn('w-4 h-4', post.isLiked && 'fill-pink-500 text-pink-400 drop-shadow-[0_0_8px_#ec4899]')} />
             <span>{post.likes}</span>
           </button>
 
@@ -276,20 +276,22 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
           <button
             onClick={() => setShowComments(!showComments)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-surface-container hover:text-on-surface transition-colors',
-              showComments && 'text-primary bg-primary-fixed/30 font-semibold'
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
+              showComments
+                ? 'text-cyan-300 bg-cyan-500/20 font-bold border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.35)]'
+                : 'hover:bg-cyan-500/10 hover:text-cyan-300'
             )}
           >
-            <MessageCircle className="w-4 h-4" />
+            <MessageCircle className="w-4 h-4 text-cyan-400" />
             <span>{post.commentsCount}</span>
           </button>
 
           {/* Share */}
           <button
             onClick={handleShare}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-surface-container hover:text-on-surface transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-purple-500/15 hover:text-purple-300 transition-colors"
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-4 h-4 text-purple-400" />
             <span>{copied ? 'Copied link!' : post.sharesCount}</span>
           </button>
         </div>
@@ -298,12 +300,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         <button
           onClick={() => toggleBookmarkPost(post.id)}
           className={cn(
-            'p-2 rounded-lg hover:bg-surface-container hover:text-primary transition-colors',
-            post.isBookmarked && 'text-primary bg-primary-fixed/20'
+            'p-2 rounded-lg transition-all',
+            post.isBookmarked
+              ? 'text-amber-300 bg-amber-500/20 border border-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.35)]'
+              : 'hover:bg-amber-500/10 hover:text-amber-300'
           )}
           title="Save post"
         >
-          <Bookmark className={cn('w-4 h-4', post.isBookmarked && 'fill-primary')} />
+          <Bookmark className={cn('w-4 h-4', post.isBookmarked && 'fill-amber-400 text-amber-300 drop-shadow-[0_0_8px_#fbbf24]')} />
         </button>
       </div>
 

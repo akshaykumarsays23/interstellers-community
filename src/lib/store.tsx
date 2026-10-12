@@ -777,18 +777,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Load session, saved server profile & saved posts on start
   useEffect(() => {
     try {
-      // 0. Sync saved theme from localStorage on start
+      // 0. Sync saved theme from localStorage on start (defaults to vivid cosmic dark)
       if (typeof window !== 'undefined') {
         const savedTheme = localStorage.getItem('interstellers_theme');
-        if (savedTheme === 'dark' || savedTheme === 'cosmic') {
+        if (savedTheme === 'light') {
+          document.documentElement.classList.add('light');
+          document.documentElement.classList.remove('dark');
+          document.body.classList.remove('dark');
+          setSettings((prev) => ({ ...prev, theme: 'light' }));
+        } else {
           document.documentElement.classList.add('dark');
           document.documentElement.classList.remove('light');
           document.body.classList.add('dark');
           setSettings((prev) => ({ ...prev, theme: 'dark' }));
-        } else {
-          document.documentElement.classList.add('light');
-          document.documentElement.classList.remove('dark');
-          document.body.classList.remove('dark');
         }
       }
 

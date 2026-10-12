@@ -169,7 +169,7 @@ export const SpaceStationsView: React.FC = () => {
           <div
             key={station.id}
             onClick={() => handleDockStation(station)}
-            className="rounded-3xl border border-outline-variant/60 bg-surface-container-lowest overflow-hidden hover:border-primary/60 transition-all flex flex-col justify-between shadow-card hover:shadow-xl group cursor-pointer"
+            className="rounded-3xl border border-cyan-500/30 bg-surface-container-lowest overflow-hidden hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(0,240,255,0.3)] transition-all flex flex-col justify-between shadow-card group cursor-pointer"
           >
             {/* Station Banner */}
             <div className="h-36 relative overflow-hidden bg-slate-950">
@@ -183,20 +183,20 @@ export const SpaceStationsView: React.FC = () => {
 
               {/* Icon & Title Overlay */}
               <div className="absolute bottom-3 left-4 flex items-center gap-3">
-                <span className="text-3xl p-2 rounded-2xl bg-black/60 backdrop-blur-md shadow-md border border-white/20">
+                <span className="text-3xl p-2 rounded-2xl bg-black/60 backdrop-blur-md shadow-md border border-cyan-400/30">
                   {station.icon}
                 </span>
                 <div>
                   <h3 className="text-base font-black text-white drop-shadow-md">{station.name}</h3>
                   <span className="text-[10px] text-cyan-300 font-mono flex items-center gap-1">
-                    <Radio className="w-2.5 h-2.5 animate-pulse" /> Channel Active
+                    <Radio className="w-2.5 h-2.5 animate-pulse text-cyan-400" /> Channel Active
                   </span>
                 </div>
               </div>
 
               {/* Active Wormhole Badge */}
               {station.activeWormhole && (
-                <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-purple-600/90 text-white font-extrabold text-[10px] flex items-center gap-1 border border-purple-300 shadow-lg animate-pulse">
+                <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-extrabold text-[10px] flex items-center gap-1 border border-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.5)] animate-pulse">
                   <Sparkles className="w-3 h-3 text-amber-300" />
                   <span>WORMHOLE ACTIVE</span>
                 </div>
@@ -209,13 +209,13 @@ export const SpaceStationsView: React.FC = () => {
                 {station.description}
               </p>
 
-              <div className="flex items-center justify-between text-xs pt-3 border-t border-outline-variant/40 text-on-surface-variant">
+              <div className="flex items-center justify-between text-xs pt-3 border-t border-cyan-500/20 text-on-surface-variant">
                 <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1 font-semibold text-xs">
-                    <Users className="w-3.5 h-3.5 text-primary" /> {station.membersCount}
+                  <span className="flex items-center gap-1 font-semibold text-xs text-cyan-300">
+                    <Users className="w-3.5 h-3.5 text-cyan-400" /> {station.membersCount}
                   </span>
-                  <span className="flex items-center gap-1 font-semibold text-xs">
-                    <MessageSquare className="w-3.5 h-3.5 text-emerald-400" /> {station.postsCount}
+                  <span className="flex items-center gap-1 font-semibold text-xs text-fuchsia-300">
+                    <MessageSquare className="w-3.5 h-3.5 text-fuchsia-400" /> {station.postsCount}
                   </span>
                 </div>
 
@@ -225,7 +225,7 @@ export const SpaceStationsView: React.FC = () => {
                     e.stopPropagation();
                     handleDockStation(station);
                   }}
-                  className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-black text-xs transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-500 hover:shadow-[0_0_20px_rgba(0,240,255,0.5)] text-white font-black text-xs transition-all shadow-md flex items-center gap-1.5 active:scale-95"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-300" />
                   <span>Dock Station 🚀</span>

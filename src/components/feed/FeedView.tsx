@@ -40,18 +40,18 @@ export const FeedView: React.FC = () => {
           <PostComposer />
 
           {/* Feed Filter Tabs */}
-          <div className="flex items-center justify-between mb-4 bg-surface-container-low p-1.5 rounded-xl border border-outline-variant/40">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between mb-4 bg-surface-container-low p-1.5 rounded-xl border border-cyan-500/25 shadow-[0_0_15px_rgba(0,240,255,0.08)]">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setActiveTab('all')}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
                   activeTab === 'all'
-                    ? 'bg-surface-container-lowest text-primary shadow-xs'
-                    : 'text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 font-bold border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+                    : 'text-on-surface-variant hover:text-cyan-300'
                 )}
               >
-                <Compass className="w-3.5 h-3.5" />
+                <Compass className="w-3.5 h-3.5 text-cyan-400" />
                 <span>All Updates</span>
               </button>
 
@@ -60,11 +60,11 @@ export const FeedView: React.FC = () => {
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
                   activeTab === 'popular'
-                    ? 'bg-surface-container-lowest text-primary shadow-xs'
-                    : 'text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-300 font-bold border border-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+                    : 'text-on-surface-variant hover:text-amber-300'
                 )}
               >
-                <Flame className="w-3.5 h-3.5 text-amber-500" />
+                <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                 <span>Popular</span>
               </button>
 
@@ -73,16 +73,16 @@ export const FeedView: React.FC = () => {
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
                   activeTab === 'saved'
-                    ? 'bg-surface-container-lowest text-primary shadow-xs'
-                    : 'text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-200 font-bold border border-purple-400/40 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
+                    : 'text-on-surface-variant hover:text-purple-300'
                 )}
               >
-                <Bookmark className="w-3.5 h-3.5" />
+                <Bookmark className="w-3.5 h-3.5 text-purple-400" />
                 <span>Saved</span>
               </button>
             </div>
 
-            <span className="text-xs text-on-surface-variant/70 hidden sm:inline px-2">
+            <span className="text-xs font-mono text-cyan-300/80 hidden sm:inline px-2">
               {filteredPosts.length} posts
             </span>
           </div>

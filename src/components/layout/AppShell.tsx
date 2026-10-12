@@ -37,7 +37,12 @@ export const AppShell: React.FC<AppShellProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-background text-on-background flex flex-col antialiased">
+    <div className="min-h-screen bg-background text-on-background flex flex-col antialiased relative selection:bg-cyan-500 selection:text-white">
+      {/* Cockpit Bridge Ambient Nebula Glows */}
+      <div className="fixed top-0 left-1/4 w-[550px] h-[300px] bg-cyan-500/10 rounded-full blur-[130px] pointer-events-none -z-10" />
+      <div className="fixed top-1/3 right-1/4 w-[500px] h-[350px] bg-purple-600/12 rounded-full blur-[140px] pointer-events-none -z-10" />
+      <div className="fixed bottom-0 left-1/3 w-[600px] h-[300px] bg-pink-500/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+
       <div className="flex-1 flex h-screen overflow-hidden">
         {/* Docked Sidebar (Desktop) */}
         <Sidebar />

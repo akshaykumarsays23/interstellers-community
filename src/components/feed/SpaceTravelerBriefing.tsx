@@ -111,9 +111,9 @@ export const SpaceTravelerBriefing: React.FC = () => {
   };
 
   return (
-    <div className="mb-6 rounded-3xl border border-outline-variant/60 bg-surface-container-lowest overflow-hidden shadow-card transition-all duration-300">
+    <div className="mb-6 rounded-3xl border-2 border-cyan-400/40 bg-surface-container-lowest overflow-hidden shadow-[0_0_30px_rgba(0,240,255,0.22)] transition-all duration-300">
         {/* Uncropped Banner Image Header */}
-        <div className="relative w-full bg-slate-950 overflow-hidden border-b border-outline-variant/40">
+        <div className="relative w-full bg-slate-950 overflow-hidden border-b-2 border-cyan-400/40">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/neon_interstellar_welcome_crew.png"
@@ -125,11 +125,11 @@ export const SpaceTravelerBriefing: React.FC = () => {
           <div className="absolute top-3 right-3 z-10">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md border border-white/20 text-xs font-semibold text-white hover:bg-slate-900 hover:border-primary transition-all shadow-md"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950/90 backdrop-blur-md border border-cyan-400/50 text-xs font-bold text-cyan-300 hover:border-cyan-300 hover:shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all shadow-md"
             >
-              <Rocket className="w-3.5 h-3.5 text-primary" />
+              <Rocket className="w-3.5 h-3.5 text-cyan-400" />
               <span>{isExpanded ? 'Hide Briefing' : 'Show Briefing'}</span>
-              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-300" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-300" />}
+              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-cyan-300" /> : <ChevronDown className="w-3.5 h-3.5 text-cyan-300" />}
             </button>
           </div>
         </div>
@@ -139,14 +139,14 @@ export const SpaceTravelerBriefing: React.FC = () => {
           <div className="p-5 sm:p-7 space-y-6 bg-surface-container-lowest">
             
             {/* Navigation Sub-Tabs */}
-            <div className="flex items-center gap-2 border-b border-outline-variant/40 pb-3 overflow-x-auto custom-scrollbar">
+            <div className="flex items-center gap-2 border-b border-cyan-500/25 pb-3 overflow-x-auto custom-scrollbar">
               <button
                 onClick={() => setActiveSubTab('mysteries')}
                 className={cn(
                   'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
                   activeSubTab === 'mysteries'
-                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white shadow-md'
-                    : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-cyan-300'
                 )}
               >
                 <Eye className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
@@ -159,8 +159,8 @@ export const SpaceTravelerBriefing: React.FC = () => {
                 className={cn(
                   'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
                   activeSubTab === 'intro'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-500 text-white shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-cyan-300'
                 )}
               >
                 <Mic className="w-3.5 h-3.5" />
@@ -172,8 +172,8 @@ export const SpaceTravelerBriefing: React.FC = () => {
                 className={cn(
                   'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
                   activeSubTab === 'rules'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-500 text-white shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-cyan-300'
                 )}
               >
                 <Rocket className="w-3.5 h-3.5" />
@@ -186,8 +186,8 @@ export const SpaceTravelerBriefing: React.FC = () => {
                 className={cn(
                   'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0',
                   activeSubTab === 'reputation'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-bright text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-500 text-white shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                    : 'bg-surface-bright text-on-surface-variant hover:text-cyan-300'
                 )}
               >
                 <Activity className="w-3.5 h-3.5" />

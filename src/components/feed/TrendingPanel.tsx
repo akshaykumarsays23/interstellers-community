@@ -121,16 +121,16 @@ export const TrendingPanel: React.FC = () => {
       )}
 
       {/* Dynamic Trending Topics Card */}
-      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 p-4 shadow-card">
-        <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-outline-variant/40">
+      <div className="bg-surface-container-lowest rounded-2xl border border-cyan-500/30 p-4 shadow-[0_0_20px_rgba(0,240,255,0.12)]">
+        <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-cyan-500/20">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary-fixed text-primary">
+            <div className="p-1.5 rounded-lg bg-gradient-to-tr from-cyan-500 to-purple-600 text-white shadow-[0_0_10px_rgba(0,240,255,0.4)]">
               <TrendingUp className="w-4 h-4" />
             </div>
-            <h3 className="font-heading font-semibold text-sm text-on-surface">Trending in Galaxy</h3>
+            <h3 className="font-heading font-bold text-sm text-on-surface">Trending in Galaxy</h3>
           </div>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-            Real Feed Data
+          <span className="text-[10px] text-cyan-300 font-bold bg-cyan-500/15 px-2 py-0.5 rounded-full border border-cyan-400/30 shadow-[0_0_8px_rgba(0,240,255,0.2)]">
+            Live Telemetry
           </span>
         </div>
 
@@ -143,22 +143,22 @@ export const TrendingPanel: React.FC = () => {
                 onClick={() => handleTagClick(topic.tag)}
                 className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer border ${
                   isSelected
-                    ? 'bg-primary/15 border-primary/40 font-bold'
-                    : 'border-transparent hover:bg-surface-container-low hover:border-outline-variant/30'
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.3)] font-bold'
+                    : 'border-transparent hover:bg-cyan-500/10 hover:border-cyan-400/30'
                 }`}
               >
                 <div>
-                  <span className="text-[10px] text-on-surface-variant uppercase font-semibold tracking-wider">
+                  <span className="text-[10px] text-cyan-400/80 uppercase font-bold tracking-wider">
                     {topic.category}
                   </span>
-                  <p className="text-xs font-semibold text-on-surface group-hover:text-primary transition-colors">
+                  <p className="text-xs font-bold text-cyan-200 group-hover:text-cyan-100 transition-colors">
                     {topic.tag}
                   </p>
-                  <span className="text-[11px] text-on-surface-variant/80">
+                  <span className="text-[11px] text-slate-400">
                     {topic.count} {topic.count === 1 ? 'real post' : 'real posts'}
                   </span>
                 </div>
-                <ArrowUpRight className={`w-3.5 h-3.5 transition-colors ${isSelected ? 'text-primary' : 'text-on-surface-variant'}`} />
+                <ArrowUpRight className={`w-3.5 h-3.5 transition-colors ${isSelected ? 'text-cyan-300' : 'text-slate-400'}`} />
               </div>
             );
           })}
@@ -166,15 +166,15 @@ export const TrendingPanel: React.FC = () => {
       </div>
 
       {/* Real Popular Spaces / Groups */}
-      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 p-4 shadow-card">
-        <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-outline-variant/40">
+      <div className="bg-surface-container-lowest rounded-2xl border border-purple-500/30 p-4 shadow-[0_0_20px_rgba(168,85,247,0.12)]">
+        <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-purple-500/20">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <div className="p-1.5 rounded-lg bg-gradient-to-tr from-purple-600 to-pink-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.4)]">
               <Users className="w-4 h-4" />
             </div>
-            <h3 className="font-heading font-semibold text-sm text-on-surface">Popular Spaces</h3>
+            <h3 className="font-heading font-bold text-sm text-on-surface">Popular Spaces</h3>
           </div>
-          <Link href="/groups" className="text-xs text-primary hover:underline font-medium">
+          <Link href="/groups" className="text-xs text-purple-300 hover:text-purple-200 hover:underline font-semibold">
             Explore
           </Link>
         </div>

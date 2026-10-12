@@ -110,65 +110,85 @@ export const SpaceCanvasBackground: React.FC = () => {
     let shootingStars: ShootingStar[] = [];
     let nebulae: NebulaPoint[] = [];
 
-    const STAR_COLORS = ['#ffffff', '#a78bfa', '#38bdf8', '#c084fc', '#fef08a', '#60a5fa', '#e0e7ff'];
+    const STAR_COLORS = [
+      '#ffffff',
+      '#00f0ff',
+      '#38bdf8',
+      '#c084fc',
+      '#e879f9',
+      '#facc15',
+      '#f472b6',
+      '#a78bfa',
+      '#67e8f9',
+    ];
     const NEBULA_COLORS = [
-      'rgba(124, 58, 237, 0.28)',
-      'rgba(14, 165, 233, 0.25)',
-      'rgba(236, 72, 153, 0.20)',
-      'rgba(99, 102, 241, 0.24)',
+      'rgba(0, 240, 255, 0.35)',   // Electric Cyan
+      'rgba(168, 85, 247, 0.32)',  // Ultraviolet Purple
+      'rgba(236, 72, 153, 0.28)',  // Radiant Laser Magenta
+      'rgba(99, 102, 241, 0.30)',  // Deep Cosmic Indigo
     ];
 
     const initElements = () => {
       // Create Stars with 3D Depth
-      const starCount = Math.min(Math.floor((width * height) / 1600), 550);
+      const starCount = Math.min(Math.floor((width * height) / 1400), 600);
       stars = [];
       for (let i = 0; i < starCount; i++) {
-        const baseAlpha = Math.random() * 0.75 + 0.25;
+        const baseAlpha = Math.random() * 0.8 + 0.25;
         stars.push({
           x: (Math.random() - 0.5) * width * 2,
           y: (Math.random() - 0.5) * height * 2,
           z: Math.random() * 1000 + 1,
-          size: Math.random() * 2.4 + 0.6,
+          size: Math.random() * 2.8 + 0.6,
           color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)],
           alpha: baseAlpha,
           baseAlpha,
-          twinkleSpeed: Math.random() * 0.04 + 0.008,
+          twinkleSpeed: Math.random() * 0.045 + 0.01,
           vx: (Math.random() - 0.5) * 0.3,
           vy: (Math.random() - 0.5) * 0.3,
         });
       }
 
-      // Create Nebula Glow Points
+      // Create Vivid Nebula Glow Points
       nebulae = [
         {
-          x: width * 0.2,
-          y: height * 0.3,
-          baseX: width * 0.2,
-          baseY: height * 0.3,
-          radius: Math.min(width, height) * 0.55,
+          x: width * 0.25,
+          y: height * 0.25,
+          baseX: width * 0.25,
+          baseY: height * 0.25,
+          radius: Math.min(width, height) * 0.6,
           color: NEBULA_COLORS[0],
           vx: 0.25,
           vy: 0.15,
         },
         {
-          x: width * 0.8,
-          y: height * 0.7,
-          baseX: width * 0.8,
-          baseY: height * 0.7,
-          radius: Math.min(width, height) * 0.6,
+          x: width * 0.82,
+          y: height * 0.65,
+          baseX: width * 0.82,
+          baseY: height * 0.65,
+          radius: Math.min(width, height) * 0.65,
           color: NEBULA_COLORS[1],
           vx: -0.2,
           vy: -0.25,
         },
         {
           x: width * 0.5,
-          y: height * 0.4,
+          y: height * 0.45,
           baseX: width * 0.5,
-          baseY: height * 0.4,
-          radius: Math.min(width, height) * 0.48,
+          baseY: height * 0.45,
+          radius: Math.min(width, height) * 0.55,
           color: NEBULA_COLORS[2],
           vx: 0.15,
           vy: -0.18,
+        },
+        {
+          x: width * 0.15,
+          y: height * 0.8,
+          baseX: width * 0.15,
+          baseY: height * 0.8,
+          radius: Math.min(width, height) * 0.5,
+          color: NEBULA_COLORS[3],
+          vx: -0.18,
+          vy: 0.2,
         },
       ];
     };

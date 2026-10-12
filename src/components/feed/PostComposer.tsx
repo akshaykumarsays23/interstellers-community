@@ -100,7 +100,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div id="post-composer" className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 p-5 sm:p-6 lg:p-7 shadow-card transition-shadow hover:shadow-card-hover mb-6">
+    <div id="post-composer" className="bg-surface-container-lowest rounded-2xl border border-cyan-500/30 p-5 sm:p-6 lg:p-7 shadow-[0_4px_25px_rgba(0,240,255,0.12)] transition-all hover:border-cyan-400/60 hover:shadow-[0_4px_30px_rgba(0,240,255,0.22)] mb-6">
       {/* Hidden File Input for Uploading Photos from Computer */}
       <input
         type="file"
@@ -120,7 +120,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
             onChange={(e) => setContent(e.target.value)}
             placeholder="Share an interplanetary update, release note, or space photo..."
             rows={3}
-            className="w-full bg-surface-container-low/60 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant border border-outline-variant/30 focus:border-primary focus:bg-surface-bright focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+            className="w-full bg-[#060c24]/80 rounded-xl p-3 text-sm text-on-surface placeholder:text-slate-400 border border-cyan-500/30 focus:border-cyan-400 focus:bg-[#081030] focus:ring-2 focus:ring-cyan-400/30 focus:shadow-[0_0_15px_rgba(0,240,255,0.25)] transition-all outline-none resize-none"
           />
 
           {/* 100 Space Pictures Media Drawer */}
@@ -268,16 +268,16 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
                 title="Upload photo from computer"
               >
-                <Upload className="w-4 h-4" />
+                <Upload className="w-4 h-4 text-cyan-400" />
                 <span>Upload Photo</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowMediaInput(!showMediaInput)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-fuchsia-300 hover:text-fuchsia-200 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/25 transition-all shadow-[0_0_10px_rgba(217,70,239,0.15)]"
               >
-                <ImageIcon className="w-4 h-4 text-social-blue" />
+                <ImageIcon className="w-4 h-4 text-fuchsia-400" />
                 <span className="hidden sm:inline">100 Space Gallery</span>
               </button>
 
@@ -285,7 +285,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
                 <select
                   value={selectedTag}
                   onChange={(e) => setSelectedTag(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 outline-none transition-colors"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-cyan-200 bg-[#070e28] hover:bg-[#0a1438] border border-cyan-500/30 outline-none transition-colors"
                 >
                   {availableTags.map((tag) => (
                     <option key={tag} value={tag}>
@@ -299,10 +299,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
             <button
               onClick={handleSubmit}
               disabled={!content.trim() || isPosting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover disabled:opacity-40 text-on-primary text-xs font-semibold shadow-xs transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-500 hover:shadow-[0_0_20px_rgba(0,240,255,0.5)] disabled:opacity-40 text-white text-xs font-bold shadow-md transition-all active:scale-95"
             >
-              <Lock className="w-3.5 h-3.5 text-on-primary/80" />
-              <Send className="w-3.5 h-3.5" />
+              <Lock className="w-3.5 h-3.5 text-white/80" />
+              <Send className="w-3.5 h-3.5 text-white" />
               <span>{isPosting ? 'Locking & Publishing...' : 'Publish & Lock'}</span>
             </button>
           </div>

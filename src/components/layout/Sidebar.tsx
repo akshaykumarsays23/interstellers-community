@@ -94,7 +94,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="hidden md:flex flex-col h-full w-[280px] bg-surface-container-low border-r border-outline-variant/60 py-6 px-4 shrink-0 z-20 shadow-xs">
+    <aside className="hidden md:flex flex-col h-full w-[280px] bg-surface-container-low border-r border-cyan-500/25 shadow-[4px_0_25px_rgba(0,240,255,0.08)] py-6 px-4 shrink-0 z-20">
       {/* Brand Header */}
       <Link href="/" className="flex items-center gap-3 mb-6 px-2 group">
         <div className="relative shrink-0">
@@ -102,24 +102,24 @@ export const Sidebar: React.FC = () => {
           <img
             src={INTERSTELLERS_LOGO}
             alt="Interstellers Logo"
-            className="w-11 h-11 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform"
+            className="w-11 h-11 rounded-xl object-cover shadow-[0_0_15px_rgba(0,240,255,0.4)] group-hover:scale-105 transition-transform"
           />
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-surface-container-low animate-pulse" />
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-400 rounded-full border-2 border-[#040817] shadow-[0_0_8px_#00f0ff] animate-pulse" />
         </div>
         <div>
           <div className="flex items-center gap-1">
-            <h1 className="font-heading font-bold text-lg text-primary tracking-tight">Interstellers</h1>
-            <ShieldCheck className="w-4 h-4 text-social-blue" />
+            <h1 className="font-heading font-extrabold text-lg bg-gradient-to-r from-cyan-400 via-purple-300 to-pink-400 bg-clip-text text-transparent tracking-tight">Interstellers</h1>
+            <ShieldCheck className="w-4 h-4 text-cyan-400" />
           </div>
-          <p className="text-[11px] text-on-surface-variant flex items-center gap-1 font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <p className="text-[11px] text-cyan-300/80 flex items-center gap-1 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981]" />
             Galactic Network
           </p>
         </div>
       </Link>
 
       {/* High-Contrast Cosmic Quote Banner */}
-      <div className="mb-5 mx-1 p-3.5 bg-gradient-to-br from-purple-950/70 via-slate-900/90 to-amber-950/40 rounded-2xl border border-amber-400/40 shadow-[0_0_18px_rgba(251,191,36,0.25)] relative overflow-hidden group">
+      <div className="mb-5 mx-1 p-3.5 bg-gradient-to-br from-purple-950/80 via-slate-900/95 to-cyan-950/60 rounded-2xl border border-amber-400/50 shadow-[0_0_20px_rgba(251,191,36,0.3)] relative overflow-hidden group">
         <div className="flex items-center gap-1.5 mb-1 text-[10px] uppercase tracking-wider font-black text-amber-300">
           <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
           <span>Cosmic Axiom</span>
@@ -131,7 +131,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation List */}
       <nav className="flex-1 flex flex-col space-y-1.5">
-        <div className="px-3 py-1 text-[11px] font-semibold text-on-surface-variant/70 uppercase tracking-wider">
+        <div className="px-3 py-1 text-[11px] font-bold text-cyan-400/80 uppercase tracking-wider">
           Main Navigation
         </div>
         {navItems.map((item) => {
@@ -143,21 +143,23 @@ export const Sidebar: React.FC = () => {
               className={cn(
                 'flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all group active:scale-[0.98]',
                 item.active
-                  ? 'bg-surface-container-high text-primary font-semibold border-l-4 border-primary shadow-xs'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60'
+                  ? 'bg-gradient-to-r from-cyan-500/20 via-purple-500/15 to-transparent text-cyan-300 font-bold border-l-4 border-cyan-400 shadow-[inset_0_0_15px_rgba(0,240,255,0.15)]'
+                  : 'text-on-surface-variant hover:text-cyan-200 hover:bg-cyan-500/10'
               )}
             >
               <div className="flex items-center gap-3">
                 <Icon
                   className={cn(
                     'w-5 h-5 transition-colors',
-                    item.active ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'
+                    item.active
+                      ? 'text-cyan-400 drop-shadow-[0_0_8px_#00f0ff]'
+                      : 'text-on-surface-variant group-hover:text-cyan-300'
                   )}
                 />
                 <span>{item.label}</span>
               </div>
               {item.badge !== undefined && (
-                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-primary text-on-primary shadow-xs">
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-500 text-white shadow-[0_0_12px_rgba(0,240,255,0.4)]">
                   {item.badge}
                 </span>
               )}

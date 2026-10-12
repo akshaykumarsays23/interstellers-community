@@ -27,52 +27,71 @@
 }
 
 /* -------------------------------------------------------------
-   GLOBAL DARK THEME OVERRIDES FOR ENTIRE PAGE & ALL CONTAINERS
+   VIVID COSMIC NEON THEME (MATCHES INTERSTELLERS COCKPIT & BRIDGE PIC)
 ---------------------------------------------------------------- */
 html.dark,
 html.dark body {
-  background-color: #080c14 !important;
+  background-color: #030714 !important;
+  background-image: 
+    radial-gradient(ellipse at 15% 10%, rgba(0, 240, 255, 0.15) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 15%, rgba(168, 85, 247, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 50% 85%, rgba(236, 72, 153, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 50% 35%, rgba(14, 165, 233, 0.08) 0%, transparent 60%) !important;
+  background-attachment: fixed !important;
   color: #f1f5f9 !important;
 }
 
 html.dark * {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.22);
 }
 
-/* Background surface transformations - Transparent base so space canvas shines through */
+/* Background surface transformations - Transparent base so space canvas & cosmic nebulae shine through */
 html.dark .bg-surface-bright,
 html.dark .bg-surface,
 html.dark .bg-background {
   background-color: transparent !important;
 }
 
+/* Neon Cyber-Glass Cards & Modals */
 html.dark .bg-surface-container-lowest,
 html.dark .bg-white {
-  background-color: rgba(15, 22, 36, 0.78) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: linear-gradient(135deg, rgba(8, 16, 42, 0.84) 0%, rgba(15, 11, 42, 0.80) 100%) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 255, 0.32) !important;
+  box-shadow: 0 4px 20px -2px rgba(2, 6, 23, 0.8), 0 0 16px rgba(0, 240, 255, 0.15), inset 0 0 16px rgba(168, 85, 247, 0.10) !important;
   color: #f8fafc !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+html.dark .bg-surface-container-lowest:hover {
+  border-color: rgba(0, 240, 255, 0.55) !important;
+  box-shadow: 0 8px 30px -4px rgba(2, 6, 23, 0.9), 0 0 25px rgba(0, 240, 255, 0.28), inset 0 0 22px rgba(217, 70, 239, 0.16) !important;
+}
+
+/* Docked Navigation, Sidebars & Panels */
 html.dark .bg-surface-container-low,
 html.dark .bg-surface-container {
-  background-color: rgba(18, 27, 44, 0.80) !important;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: linear-gradient(180deg, rgba(7, 13, 36, 0.92) 0%, rgba(14, 10, 38, 0.90) 100%) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-color: rgba(0, 240, 255, 0.25) !important;
   color: #f1f5f9 !important;
 }
 
 html.dark .bg-surface-container-high,
 html.dark .bg-surface-container-highest {
-  background-color: rgba(24, 36, 58, 0.85) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: linear-gradient(135deg, rgba(12, 22, 54, 0.88) 0%, rgba(22, 14, 52, 0.85) 100%) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: rgba(168, 85, 247, 0.35) !important;
   color: #f8fafc !important;
 }
 
-/* Text color transformations for readability */
+/* Luminous Text Color Transformations */
 html.dark .text-primary {
-  color: #c084fc !important;
+  color: #38bdf8 !important;
+  text-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
 }
 
 html.dark .text-on-surface,
@@ -81,15 +100,19 @@ html.dark .text-primary-dark {
 }
 
 html.dark .text-on-surface-variant {
-  color: #cbd5e1 !important;
+  color: #94a3b8 !important;
 }
 
 html.dark .text-secondary {
-  color: #e2e8f0 !important;
+  color: #cbd5e1 !important;
 }
 
 html.dark h1,
-html.dark h2,
+html.dark h2 {
+  color: #f8fafc !important;
+  text-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+}
+
 html.dark h3,
 html.dark h4,
 html.dark h5,
@@ -99,16 +122,26 @@ html.dark h6 {
 
 html.dark .quote-axiom {
   color: #fde047 !important;
-  text-shadow: 0 0 12px rgba(250, 204, 21, 0.45);
+  text-shadow: 0 0 16px rgba(250, 204, 21, 0.6);
 }
 
-/* Forms & Inputs in Dark Mode */
+/* Forms & Inputs in Dark Mode - Cockpit HUD Console Look */
 html.dark input,
 html.dark textarea,
 html.dark select {
-  background-color: #162032 !important;
+  background: rgba(8, 16, 42, 0.88) !important;
   color: #f8fafc !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(0, 240, 255, 0.3) !important;
+  box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.08) !important;
+  transition: all 0.2s ease;
+}
+
+html.dark input:focus,
+html.dark textarea:focus,
+html.dark select:focus {
+  border-color: rgba(0, 240, 255, 0.8) !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.45), inset 0 0 12px rgba(168, 85, 247, 0.2) !important;
+  outline: none !important;
 }
 
 html.dark input::placeholder,
@@ -121,21 +154,24 @@ html.dark .border-outline-variant\/60,
 html.dark .border-outline-variant\/40,
 html.dark .border-outline-variant,
 html.dark .border-outline {
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(0, 240, 255, 0.24) !important;
 }
 
 /* Glassmorphism containers in Dark Mode */
 html.dark .glass {
-  background: rgba(17, 24, 39, 0.85) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: linear-gradient(135deg, rgba(8, 16, 42, 0.86) 0%, rgba(15, 11, 40, 0.82) 100%) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(0, 240, 255, 0.32) !important;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.18), inset 0 0 15px rgba(168, 85, 247, 0.12) !important;
 }
 
 /* Dropdown menus & popups in Dark Mode */
 html.dark .bg-surface-container-lowest\/95,
 html.dark .bg-surface-bright\/95 {
-  background-color: rgba(21, 30, 48, 0.95) !important;
+  background: linear-gradient(180deg, rgba(8, 16, 42, 0.96) 0%, rgba(15, 10, 42, 0.96) 100%) !important;
+  border: 1px solid rgba(0, 240, 255, 0.38) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 240, 255, 0.25) !important;
 }
 
 /* Material Symbols & Scrollbars */
@@ -176,11 +212,13 @@ html.dark .bg-surface-bright\/95 {
 }
 
 html.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: linear-gradient(180deg, #00f0ff 0%, #a855f7 100%);
+  border-radius: 9999px;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #7b7487;
+  background: #00f0ff;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -190,19 +228,78 @@ html.dark ::-webkit-scrollbar-thumb {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(123, 116, 135, 0.3);
+  background: linear-gradient(180deg, rgba(0, 240, 255, 0.5) 0%, rgba(168, 85, 247, 0.5) 100%);
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 14, 212, 0.5);
+  background: linear-gradient(180deg, #00f0ff 0%, #d946ef 100%);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.8);
 }
 
 /* Cosmic ambient glows */
 .cosmic-orb-1 {
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, rgba(99, 14, 212, 0.05) 60%, transparent 80%);
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.25) 0%, rgba(124, 58, 237, 0.1) 50%, transparent 80%);
 }
 
 .cosmic-orb-2 {
-  background: radial-gradient(circle, rgba(24, 119, 242, 0.2) 0%, rgba(124, 58, 237, 0.05) 60%, transparent 80%);
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.22) 0%, rgba(0, 240, 255, 0.08) 50%, transparent 80%);
+}
+
+/* Neon Cyberpunk HUD Utilities & Gradients */
+.hud-corner-bracket {
+  position: relative;
+}
+.hud-corner-bracket::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid #00f0ff;
+  border-left: 2px solid #00f0ff;
+  pointer-events: none;
+}
+.hud-corner-bracket::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-bottom: 2px solid #00f0ff;
+  border-right: 2px solid #00f0ff;
+  pointer-events: none;
+}
+
+.neon-text-gradient {
+  background: linear-gradient(135deg, #00f0ff 0%, #c084fc 50%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5));
+}
+
+.neon-glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.45), inset 0 0 12px rgba(0, 240, 255, 0.18);
+}
+
+.neon-glow-pink {
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.45), inset 0 0 12px rgba(236, 72, 153, 0.18);
+}
+
+.neon-glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.45), inset 0 0 12px rgba(168, 85, 247, 0.18);
+}
+
+.neon-btn-primary {
+  background: linear-gradient(135deg, #00b4d8 0%, #7c3aed 50%, #d946ef 100%) !important;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4) !important;
+  color: #ffffff !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.neon-btn-primary:hover {
+  background: linear-gradient(135deg, #00f0ff 0%, #9333ea 50%, #ec4899 100%) !important;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.65), 0 0 15px rgba(236, 72, 153, 0.45) !important;
+  transform: translateY(-1px);
 }
 
