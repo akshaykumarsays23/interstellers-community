@@ -16,6 +16,8 @@ import {
   TravelerGamificationState,
   ArcadeGame,
   GameScoreRecord,
+  GameHistory,
+  GamePlayRecord,
   LeaderboardEntry,
   Mission,
   Achievement,
@@ -181,6 +183,7 @@ interface AppContextType {
   gamificationState: TravelerGamificationState;
   arcadeGames: ArcadeGame[];
   gameScores: GameScoreRecord[];
+  gameHistory: Record<GameId, GameHistory>;  // per-game personal history
   leaderboard: LeaderboardEntry[];
   missions: Mission[];
   achievements: Achievement[];
@@ -317,6 +320,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>(INITIAL_ARCADE_GAMES);
   const [gameScores, setGameScores] = useState<GameScoreRecord[]>([]);
+  const [gameHistory, setGameHistory] = useState<Record<GameId, GameHistory>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('interstellers_game_history');
+      if (saved) {
+        try { return JSON.parse(saved) as Record<GameId, GameHistory>; } catch (_) {}
+      }
+    }
+    return {} as Record<GameId, GameHistory>;
+  });
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(INITIAL_GLOBAL_LEADERBOARD);
   const [missions, setMissions] = useState<Mission[]>(INITIAL_MISSIONS);
   const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
@@ -324,6 +336,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stations, setStations] = useState<SpaceStation[]>(INITIAL_SPACE_STATIONS);
   const [timeCapsules, setTimeCapsules] = useState<TimeCapsule[]>([]);
   const shopItems = STAR_CREDIT_SHOP_ITEMS;
+
+  // Persist gameHistory to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('interstellers_game_history', JSON.stringify(gameHistory));
+    }
+  }, [gameHistory]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -391,6 +410,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     setGameScores((prev) => [newRecord, ...prev]);
+
+    // ---- Per-game personal history (best score + attempt log) ----
+    setGameHistory((prev) => {
+      const existing = prev[gameId] ?? { gameId, bestScore: 0, totalPlays: 0, plays: [] };
+      const attemptNumber = existing.totalPlays + 1;
+      const newBest = score > existing.bestScore;
+      const playEntry: GamePlayRecord = {
+        attempt: attemptNumber,
+        score,
+        isBest: newBest,
+        statsDetails,
+        timestamp: new Date().toISOString(),
+      };
+      // Mark previous best as no longer best if new best
+      const updatedPlays = newBest
+        ? existing.plays.map((p) => ({ ...p, isBest: false }))
+        : existing.plays;
+      return {
+        ...prev,
+        [gameId]: {
+          gameId,
+          bestScore: newBest ? score : existing.bestScore,
+          totalPlays: attemptNumber,
+          plays: [...updatedPlays, playEntry],
+        },
+      };
+    });
+    // ---------------------------------------------------------------
 
     setArcadeGames((prev) =>
       prev.map((game) => {
@@ -2385,6 +2432,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         gamificationState,
         arcadeGames,
         gameScores,
+        gameHistory,
         leaderboard,
         missions,
         achievements,

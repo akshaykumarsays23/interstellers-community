@@ -17,6 +17,8 @@ import {
   Headphones,
   Flame,
   Zap,
+  SkipBack,
+  SkipForward,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMusic } from '@/lib/MusicContext';
@@ -33,6 +35,9 @@ export const RightSidebarMusicPlayer: React.FC = () => {
     autoplayBlocked,
     userPlayCount,
     totalPlayCount,
+    currentSong,
+    currentSongIndex,
+    playlist,
     togglePlay,
     restartSong,
     seekMusic,
@@ -40,6 +45,9 @@ export const RightSidebarMusicPlayer: React.FC = () => {
     increaseVolume,
     decreaseVolume,
     toggleRepeat,
+    nextSong,
+    prevSong,
+    jumpToSong,
     formatTime,
   } = useMusic();
 
@@ -109,16 +117,19 @@ export const RightSidebarMusicPlayer: React.FC = () => {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h4 className="font-heading font-black text-sm text-white truncate drop-shadow-sm">
-              Forever Young
+            <h4 className="font-heading font-black text-sm text-white truncate drop-shadow-sm max-w-[140px]">
+              {currentSong.title}
             </h4>
-            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-200 border border-purple-400/40">
+            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-200 border border-purple-400/40 shrink-0">
               <Zap className="w-2.5 h-2.5 text-amber-300" />
-              Theme
+              Live
             </span>
           </div>
           <p className="text-[11px] text-cyan-200/90 truncate font-semibold mt-0.5">
-            Alphaville • Interstellers Anthem
+            {currentSong.artist}
+          </p>
+          <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+            Track {currentSongIndex + 1} of {playlist.length}
           </p>
         </div>
       </div>
@@ -127,8 +138,8 @@ export const RightSidebarMusicPlayer: React.FC = () => {
       <div className="grid grid-cols-2 gap-2 mb-3">
         {/* User's Personal Play Count */}
         <div
-          className="flex items-center gap-2 p-2.5 bg-gradient-to-r from-purple-900/30 to-purple-800/20 rounded-xl border border-purple-500/30 relative overflow-hidden group/user-stat transition-all hover:border-purple-400"
-          title={`You have listened to this song ${userPlayCount} times (${currentUser?.name || 'Your Account'})`}
+          className="flex items-center gap-2 p-2.5 bg-gradient-to-r from-purple-900/30 to-purple-800/20 rounded-xl border border-purple-500/30 relative overflow-hidden transition-all hover:border-purple-400"
+          title={`You have listened ${userPlayCount} times (${currentUser?.name || 'Your Account'})`}
         >
           <div className="w-8 h-8 rounded-lg bg-purple-500/25 text-purple-300 flex items-center justify-center shrink-0 shadow-inner">
             <Headphones className="w-4 h-4" />
@@ -150,7 +161,7 @@ export const RightSidebarMusicPlayer: React.FC = () => {
 
         {/* Global Galaxy Total Play Count */}
         <div
-          className="flex items-center gap-2 p-2.5 bg-gradient-to-r from-cyan-900/30 to-cyan-800/20 rounded-xl border border-cyan-500/30 relative overflow-hidden group/global-stat transition-all hover:border-cyan-400"
+          className="flex items-center gap-2 p-2.5 bg-gradient-to-r from-cyan-900/30 to-cyan-800/20 rounded-xl border border-cyan-500/30 relative overflow-hidden transition-all hover:border-cyan-400"
           title={`All galactic travelers combined have played this anthem ${totalPlayCount} times`}
         >
           <div className="w-8 h-8 rounded-lg bg-cyan-500/25 text-cyan-300 flex items-center justify-center shrink-0 shadow-inner">
@@ -172,19 +183,37 @@ export const RightSidebarMusicPlayer: React.FC = () => {
         </div>
       </div>
 
-      {/* Autoplay Status & 8-Bar Cosmic Equalizer */}
+      {/* Animated Waveform Visualizer + Status */}
       <div className="flex items-center justify-between text-[11px] mb-2 px-1">
         <div className="flex items-center gap-2">
-          {/* Cosmic Multi-Bar Equalizer */}
-          <div className="flex items-end gap-1 h-3.5">
-            <span className={cn('w-1 rounded-full bg-cyan-400 transition-all duration-300', isPlaying ? 'h-3 animate-pulse' : 'h-1')} />
-            <span className={cn('w-1 rounded-full bg-purple-400 transition-all duration-300', isPlaying ? 'h-2 animate-bounce' : 'h-1')} />
-            <span className={cn('w-1 rounded-full bg-pink-400 transition-all duration-300', isPlaying ? 'h-3.5 animate-pulse' : 'h-1')} />
-            <span className={cn('w-1 rounded-full bg-amber-400 transition-all duration-300', isPlaying ? 'h-2.5 animate-bounce' : 'h-1')} />
-            <span className={cn('w-1 rounded-full bg-emerald-400 transition-all duration-300', isPlaying ? 'h-3 animate-pulse' : 'h-1')} />
+          {/* 8-bar cosmic equalizer — only animates when playing */}
+          <div className="flex items-end gap-[2px] h-4" aria-hidden="true" aria-label={isPlaying ? 'Music playing' : 'Music paused'}>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <span
+                key={i}
+                className={cn(
+                  'w-[3px] rounded-full origin-bottom',
+                  i % 3 === 0 ? 'bg-cyan-400' : i % 3 === 1 ? 'bg-purple-400' : 'bg-pink-400',
+                  isPlaying ? 'animate-visualizer-bar' : ''
+                )}
+                style={
+                  isPlaying
+                    ? {
+                        height: '100%',
+                        animationDelay: `${i * 0.085}s`,
+                        animationDuration: `${0.45 + (i % 4) * 0.12}s`,
+                      }
+                    : { height: '2px' }
+                }
+              />
+            ))}
           </div>
           <span className="font-bold text-[10px] text-cyan-200">
-            {isPlaying ? 'Streaming Galaxy Resonance' : autoplayBlocked ? 'Tap Play or Scroll' : 'Theme Paused'}
+            {isPlaying
+              ? 'Streaming Galaxy Resonance'
+              : autoplayBlocked
+              ? 'Tap Play or Scroll'
+              : 'Theme Paused'}
           </span>
         </div>
 
@@ -211,16 +240,16 @@ export const RightSidebarMusicPlayer: React.FC = () => {
         </div>
       </div>
 
-      {/* Primary Playback Controls */}
+      {/* Primary Playback Controls — prev / play-pause / next */}
       <div className="flex items-center justify-between gap-2 mb-3">
-        {/* Restart Track */}
+        {/* Prev Track */}
         <button
           type="button"
-          onClick={restartSong}
+          onClick={prevSong}
           className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all active:scale-95 border border-white/10"
-          title="Restart from beginning"
+          title="Previous song"
         >
-          <RotateCcw className="w-4 h-4" />
+          <SkipBack className="w-4 h-4" />
         </button>
 
         {/* Big Central Play / Pause Button with Cosmic Glow */}
@@ -236,31 +265,80 @@ export const RightSidebarMusicPlayer: React.FC = () => {
         >
           {isPlaying ? (
             <>
-              <Pause className="w-4 h-4 fill-current" />
-              <span>Pause Forever Young</span>
+              <Pause className="w-4 h-4 fill-current shrink-0" />
+              <span className="truncate max-w-[90px]">{currentSong.title}</span>
             </>
           ) : (
             <>
-              <Play className="w-4 h-4 fill-current ml-0.5" />
-              <span>Play Forever Young</span>
+              <Play className="w-4 h-4 fill-current ml-0.5 shrink-0" />
+              <span className="truncate max-w-[90px]">{currentSong.title}</span>
             </>
           )}
         </button>
 
-        {/* Repeat Toggle Button */}
+        {/* Next Track */}
+        <button
+          type="button"
+          onClick={nextSong}
+          className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all active:scale-95 border border-white/10"
+          title="Next song"
+        >
+          <SkipForward className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Restart & Repeat row */}
+      <div className="flex items-center gap-2 mb-3">
+        <button
+          type="button"
+          onClick={restartSong}
+          className="flex-1 flex items-center justify-center gap-1.5 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all active:scale-95 border border-white/10 text-xs font-semibold"
+          title="Restart from beginning"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Restart</span>
+        </button>
+
         <button
           type="button"
           onClick={toggleRepeat}
           className={cn(
-            'p-2.5 rounded-xl transition-all active:scale-95 border',
+            'flex-1 flex items-center justify-center gap-1.5 p-2 rounded-xl transition-all active:scale-95 border text-xs font-semibold',
             isRepeat
               ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400/50 shadow-[0_0_10px_rgba(52,211,153,0.3)]'
               : 'bg-white/10 text-slate-300 hover:text-white border-white/10 hover:bg-white/20'
           )}
           title={isRepeat ? 'Repeat is ON (Click to turn OFF)' : 'Repeat is OFF (Click to turn ON)'}
         >
-          <Repeat className="w-4 h-4" />
+          <Repeat className="w-3.5 h-3.5" />
+          <span>{isRepeat ? 'Loop On' : 'Loop Off'}</span>
         </button>
+      </div>
+
+      {/* Playlist mini-scroll */}
+      <div className="mb-3 max-h-24 overflow-y-auto custom-scrollbar space-y-1">
+        {playlist.slice(0, 6).map((song, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => jumpToSong(idx)}
+            className={cn(
+              'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-all text-[10px]',
+              idx === currentSongIndex
+                ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/30'
+                : 'hover:bg-white/10 text-slate-400 hover:text-slate-200'
+            )}
+          >
+            <span className="shrink-0 w-4 text-right font-mono text-slate-500">{idx + 1}</span>
+            <span className="truncate flex-1 font-medium">{song.title}</span>
+            {idx === currentSongIndex && isPlaying && (
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+            )}
+          </button>
+        ))}
+        {playlist.length > 6 && (
+          <p className="text-center text-[9px] text-slate-500 py-1">+{playlist.length - 6} more tracks</p>
+        )}
       </div>
 
       {/* Volume Section */}

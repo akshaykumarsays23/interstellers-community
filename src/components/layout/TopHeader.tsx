@@ -6,9 +6,11 @@ import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
 import { INTERSTELLERS_LOGO } from '@/lib/data';
-import { Search, Bot, Moon, Sun, Sparkles, PlusCircle, Share2, ShieldCheck, UserCheck, Telescope, Package, Play, Pause, Music } from 'lucide-react';
+import { Search, Bot, Moon, Sun, Sparkles, PlusCircle, Share2, ShieldCheck, UserCheck, Telescope, Package, Play, Pause, Music, SkipBack, SkipForward } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMusic } from '@/lib/MusicContext';
+import { ActivityTicker } from '@/components/common/ActivityTicker';
+import { MusicVisualizer } from '@/components/common/MusicVisualizer';
 
 interface TopHeaderProps {
   title?: string;
@@ -40,7 +42,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     isAdmin,
     openUserProfile,
   } = useApp();
-  const { isPlaying, togglePlay, userPlayCount, totalPlayCount } = useMusic();
+  const { isPlaying, togglePlay, userPlayCount, totalPlayCount, currentSong, nextSong, prevSong } = useMusic();
 
   const toggleTheme = () => {
     const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
@@ -79,6 +81,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         )}
       </div>
+
+      {/* Center-left: Live Activity Ticker */}
+      <ActivityTicker />
 
       {/* Center: Global Search Bar */}
       <div className="flex-1 max-w-md mx-auto hidden sm:block">
@@ -126,38 +131,65 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         )}
 
         {/* Quick Theme Music Controller (Active Across All Tabs) */}
-        <button
-          onClick={togglePlay}
+        <div
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shadow-xs',
+            'flex items-center gap-0.5 rounded-full border shadow-xs transition-all',
             isPlaying
-              ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border-cyan-400/40 shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:border-cyan-300'
-              : 'bg-surface-container text-on-surface-variant border-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/40'
+              ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border-cyan-400/40 shadow-[0_0_15px_rgba(0,240,255,0.3)]'
+              : 'bg-surface-container border-cyan-500/20'
           )}
-          title={
-            isPlaying
-              ? `Pause Forever Young • You listened ${userPlayCount} ${userPlayCount === 1 ? 'time' : 'times'} (Galaxy: ${totalPlayCount} plays)`
-              : `Play Forever Young • You listened ${userPlayCount} ${userPlayCount === 1 ? 'time' : 'times'} (Galaxy: ${totalPlayCount} plays)`
-          }
         >
-          {isPlaying ? (
-            <Pause className="w-3 h-3 fill-current text-cyan-400" />
-          ) : (
-            <Play className="w-3 h-3 fill-current text-on-surface-variant ml-0.5" />
-          )}
-          <span className="hidden sm:inline font-medium text-[11px]">Forever Young</span>
-          {userPlayCount > 0 && (
-            <span
-              className="inline-flex items-center text-[10px] font-mono font-bold text-cyan-300 bg-cyan-500/20 px-1.5 py-0.5 rounded-full border border-cyan-400/30"
-              title={`You listened ${userPlayCount} times`}
-            >
-              {userPlayCount}x
+          {/* Prev */}
+          <button
+            onClick={prevSong}
+            className="p-1.5 text-on-surface-variant hover:text-cyan-300 transition-colors rounded-full"
+            title="Previous song"
+          >
+            <SkipBack className="w-3 h-3" />
+          </button>
+
+          {/* Play / Pause */}
+          <button
+            onClick={togglePlay}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold transition-all"
+            title={
+              isPlaying
+                ? `Pause • ${currentSong.title} — ${currentSong.artist}`
+                : `Play • ${currentSong.title} — ${currentSong.artist}`
+            }
+          >
+            {isPlaying ? (
+              <Pause className="w-3 h-3 fill-current text-cyan-400" />
+            ) : (
+              <Play className="w-3 h-3 fill-current text-on-surface-variant ml-0.5" />
+            )}
+            {/* Animated waveform visualizer */}
+            <MusicVisualizer isPlaying={isPlaying} barCount={4} className="text-cyan-400 hidden sm:inline-flex" />
+            <span className={cn('hidden sm:inline font-medium text-[11px] max-w-[100px] truncate', isPlaying ? 'text-cyan-300' : 'text-on-surface-variant')}>
+              {currentSong.title}
             </span>
-          )}
-          {isPlaying && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
-          )}
-        </button>
+            {userPlayCount > 0 && (
+              <span
+                className="hidden lg:inline-flex items-center text-[10px] font-mono font-bold text-cyan-300 bg-cyan-500/20 px-1.5 py-0.5 rounded-full border border-cyan-400/30"
+                title={`You listened ${userPlayCount} times`}
+              >
+                {userPlayCount}x
+              </span>
+            )}
+            {isPlaying && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
+            )}
+          </button>
+
+          {/* Next */}
+          <button
+            onClick={nextSong}
+            className="p-1.5 text-on-surface-variant hover:text-cyan-300 transition-colors rounded-full"
+            title="Next song"
+          >
+            <SkipForward className="w-3 h-3" />
+          </button>
+        </div>
 
         {/* Share Link Button */}
         <button

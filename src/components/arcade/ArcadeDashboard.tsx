@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
-import { GameId } from '@/lib/types';
+import { GameId, GameHistory } from '@/lib/types';
 import { ReactionWarpGame } from './games/ReactionWarpGame';
 import { AsteroidDodgeGame } from './games/AsteroidDodgeGame';
 import { CosmicQuizGame } from './games/CosmicQuizGame';
@@ -30,15 +30,93 @@ import {
   Play,
   Clock,
   Ghost,
+  ChevronDown,
+  ChevronUp,
+  Crown,
+  History,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// ── Ordinal helper ────────────────────────────────────────────────
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// ── Game History Panel ────────────────────────────────────────────
+const GameHistoryPanel: React.FC<{ history: GameHistory | undefined }> = ({ history }) => {
+  if (!history || history.plays.length === 0) {
+    return (
+      <p className="text-[11px] text-on-surface-variant italic text-center py-2">
+        No plays yet — be the first to set a record!
+      </p>
+    );
+  }
+
+  // Show newest plays first (up to 10)
+  const reversed = [...history.plays].reverse().slice(0, 10);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2 mb-1">
+        <Crown className="w-3.5 h-3.5 text-amber-400" />
+        <span className="text-[11px] font-black text-amber-400">
+          Best: {history.bestScore.toLocaleString()}
+        </span>
+        <span className="text-[10px] text-on-surface-variant ml-auto font-mono">
+          {history.totalPlays} {history.totalPlays === 1 ? 'play' : 'plays'}
+        </span>
+      </div>
+      <div className="flex flex-col gap-0.5 max-h-40 overflow-y-auto custom-scrollbar pr-0.5">
+        {reversed.map((play) => {
+          const date = new Date(play.timestamp);
+          const dateStr = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+          const timeStr = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+          return (
+            <div
+              key={play.attempt}
+              className={cn(
+                'flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[10px] border transition-all',
+                play.isBest
+                  ? 'bg-amber-500/10 border-amber-500/40 shadow-[0_0_8px_rgba(251,191,36,0.15)]'
+                  : 'bg-surface-container-high border-outline-variant/30'
+              )}
+            >
+              <span className="text-on-surface-variant font-medium">
+                {ordinal(play.attempt)} play
+              </span>
+              <span
+                className={cn(
+                  'font-black font-mono',
+                  play.isBest ? 'text-amber-400' : 'text-on-surface'
+                )}
+              >
+                {play.score.toLocaleString()}
+                {play.isBest && (
+                  <span className="ml-1 text-[9px] text-amber-300 font-bold">👑 BEST</span>
+                )}
+              </span>
+              <span className="text-on-surface-variant font-mono text-[9px]">
+                {dateStr} {timeStr}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ── Main Component ────────────────────────────────────────────────
 export const ArcadeDashboard: React.FC = () => {
-  const { gamificationState, arcadeGames, claimDailyChallenge, restoreGhostOrbit, useEmergencyWarpPass } = useApp();
+  const { gamificationState, arcadeGames, gameHistory, claimDailyChallenge, restoreGhostOrbit, useEmergencyWarpPass } = useApp();
 
   const [activeTab, setActiveTab] = useState<'games' | 'leaderboard' | 'missions' | 'achievements' | 'shop' | 'crews'>('games');
   const [activeGameId, setActiveGameId] = useState<GameId | null>(null);
   const [dailyChallengeMessage, setDailyChallengeMessage] = useState<string | null>(null);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<GameId | null>(null);
 
   const handleClaimChallenge = () => {
     const res = claimDailyChallenge(1500);
@@ -227,44 +305,100 @@ export const ArcadeDashboard: React.FC = () => {
       {/* Tab Content Views */}
       {activeTab === 'games' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {arcadeGames.map((game) => (
-            <div
-              key={game.id}
-              className="p-5 rounded-3xl border border-outline-variant/60 bg-surface-container hover:border-primary/50 transition-all flex flex-col justify-between gap-4 shadow-sm group"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-surface-container-high border border-white/10 flex items-center justify-center text-3xl shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                  {game.icon}
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase">
-                    {game.badge}
-                  </span>
-                  <span className="text-[10px] text-on-surface-variant mt-1 font-mono">
-                    {game.playsCount} Plays
-                  </span>
-                </div>
-              </div>
+          {arcadeGames.map((game) => {
+            const history = gameHistory[game.id];
+            const hasHistory = history && history.plays.length > 0;
+            const isExpanded = expandedHistoryId === game.id;
 
-              <div>
-                <h3 className="text-base font-bold text-on-surface">{game.name}</h3>
-                <p className="text-xs text-primary font-medium">{game.subtitle}</p>
-                <p className="text-xs text-on-surface-variant leading-relaxed mt-2">{game.description}</p>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-outline-variant/40">
-                <div className="text-xs font-bold text-amber-400 font-mono">
-                  Record: {game.highScore.toLocaleString()}
+            return (
+              <div
+                key={game.id}
+                className="p-5 rounded-3xl border border-outline-variant/60 bg-surface-container hover:border-primary/50 transition-all flex flex-col justify-between gap-4 shadow-sm group"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="w-14 h-14 rounded-2xl bg-surface-container-high border border-white/10 flex items-center justify-center text-3xl shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+                    {game.icon}
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase">
+                      {game.badge}
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant mt-1 font-mono">
+                      {game.playsCount} Plays
+                    </span>
+                  </div>
                 </div>
+
+                <div>
+                  <h3 className="text-base font-bold text-on-surface">{game.name}</h3>
+                  <p className="text-xs text-primary font-medium">{game.subtitle}</p>
+                  <p className="text-xs text-on-surface-variant leading-relaxed mt-2">{game.description}</p>
+                </div>
+
+                {/* Score row: leaderboard best + personal best */}
+                <div className="flex items-center justify-between pt-2 border-t border-outline-variant/40 gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <div className="text-[10px] text-on-surface-variant font-semibold flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3 text-cyan-400" />
+                      Galaxy Record
+                    </div>
+                    <div className="text-xs font-black text-amber-400 font-mono">
+                      {game.highScore.toLocaleString()}
+                    </div>
+                  </div>
+
+                  {hasHistory && (
+                    <div className="flex flex-col gap-0.5 items-center">
+                      <div className="text-[10px] text-on-surface-variant font-semibold flex items-center gap-1">
+                        <Crown className="w-3 h-3 text-amber-400" />
+                        Your Best
+                      </div>
+                      <div className="text-xs font-black text-emerald-400 font-mono">
+                        {history.bestScore.toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setActiveGameId(game.id)}
+                    className="px-5 py-2 rounded-2xl bg-primary text-on-primary font-bold text-xs hover:bg-primary-hover transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-on-primary" /> PLAY
+                  </button>
+                </div>
+
+                {/* History toggle button */}
                 <button
-                  onClick={() => setActiveGameId(game.id)}
-                  className="px-5 py-2 rounded-2xl bg-primary text-on-primary font-bold text-xs hover:bg-primary-hover transition-all shadow-xs flex items-center gap-1.5"
+                  onClick={() => setExpandedHistoryId(isExpanded ? null : game.id)}
+                  className={cn(
+                    'flex items-center justify-between w-full px-3 py-2 rounded-2xl text-[11px] font-bold border transition-all',
+                    isExpanded
+                      ? 'bg-surface-container-high border-outline-variant/60 text-on-surface'
+                      : 'bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-outline-variant/60'
+                  )}
                 >
-                  <Play className="w-3.5 h-3.5 fill-on-primary" /> PLAY GAME
+                  <span className="flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5" />
+                    {hasHistory
+                      ? `Play History (${history.totalPlays})`
+                      : 'No history yet'}
+                  </span>
+                  {isExpanded ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
                 </button>
+
+                {/* Expanded History Panel */}
+                {isExpanded && (
+                  <div className="p-3 rounded-2xl bg-surface-container-low border border-outline-variant/40">
+                    <GameHistoryPanel history={history} />
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

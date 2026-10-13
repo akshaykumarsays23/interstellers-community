@@ -184,6 +184,24 @@ export interface GameScoreRecord {
   timestamp: string;
 }
 
+// Per-game personal play history entry
+export interface GamePlayRecord {
+  attempt: number;       // 1st, 2nd, 3rd play etc.
+  score: number;
+  isBest: boolean;
+  statsDetails: string;
+  timestamp: string;     // ISO date string
+}
+
+// Best score + full history per game
+export interface GameHistory {
+  gameId: GameId;
+  bestScore: number;
+  totalPlays: number;
+  plays: GamePlayRecord[];  // chronological oldest → newest
+}
+
+
 export interface LeaderboardEntry {
   rank: number;
   userId: string;

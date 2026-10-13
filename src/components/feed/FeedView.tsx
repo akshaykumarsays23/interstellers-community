@@ -1,18 +1,28 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { PostComposer } from './PostComposer';
 import { SpaceTravelerBriefing } from './SpaceTravelerBriefing';
 import { PublicVideoTransmission } from './PublicVideoTransmission';
 import { PostCard } from './PostCard';
 import { TrendingPanel } from './TrendingPanel';
+import { SpaceMoments } from './SpaceMoments';
+import { OnlineTravelersWidget } from './OnlineTravelersWidget';
+import { FeedSkeleton, MomentsRowSkeleton, OnlineWidgetSkeleton } from '@/components/common/Skeletons';
 import { Compass, Sparkles, Filter, Bookmark, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const FeedView: React.FC = () => {
   const { posts, searchQuery } = useApp();
   const [activeTab, setActiveTab] = useState<'all' | 'popular' | 'saved'>('all');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Simulate brief initial load skeleton
+  useEffect(() => {
+    const t = setTimeout(() => setIsInitialLoad(false), 600);
+    return () => clearTimeout(t);
+  }, []);
 
   const filteredPosts = posts.filter((post) => {
     // Search query filter
@@ -39,6 +49,9 @@ export const FeedView: React.FC = () => {
 
           {/* Live Public Video Transmission */}
           <PublicVideoTransmission />
+
+          {/* Space Moments row */}
+          {isInitialLoad ? <MomentsRowSkeleton /> : <SpaceMoments />}
 
           {/* Post Composer */}
           <PostComposer />
@@ -92,7 +105,9 @@ export const FeedView: React.FC = () => {
           </div>
 
           {/* Posts List */}
-          {filteredPosts.length === 0 ? (
+          {isInitialLoad ? (
+            <FeedSkeleton count={2} />
+          ) : filteredPosts.length === 0 ? (
             <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 p-12 text-center shadow-card">
               <Sparkles className="w-8 h-8 text-primary mx-auto mb-3 animate-bounce" />
               <h3 className="font-heading font-semibold text-base text-on-surface mb-1">No posts found</h3>
@@ -114,6 +129,7 @@ export const FeedView: React.FC = () => {
         {/* Right Trending & Activity Column */}
         <div className="hidden lg:block w-80 xl:w-96 shrink-0">
           <div className="sticky top-24">
+            {isInitialLoad ? <OnlineWidgetSkeleton /> : <OnlineTravelersWidget />}
             <TrendingPanel />
           </div>
         </div>

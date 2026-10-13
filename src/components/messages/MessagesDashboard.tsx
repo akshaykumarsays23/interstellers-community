@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { cn, formatMessageDate, formatDate } from '@/lib/utils';
 
+import { ChatThreadSkeleton, MessageStreamSkeleton } from '@/components/common/Skeletons';
 import { NovaFellowsProtocol } from './NovaFellowsProtocol';
 
 export const MessagesDashboard: React.FC = () => {
@@ -58,6 +59,17 @@ export const MessagesDashboard: React.FC = () => {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [chatWallpaper, setChatWallpaper] = useState<string>('');
   const [isWallpaperModalOpen, setIsWallpaperModalOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [partnerTyping, setPartnerTyping] = useState(false);
+  const [isLoadingChats, setIsLoadingChats] = useState(true);
+  const typingTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const partnerTypingTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Brief skeleton show on mount
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoadingChats(false), 400);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -108,6 +120,29 @@ export const MessagesDashboard: React.FC = () => {
 
     sendMessage(activeChat.id, messageText);
     setMessageText('');
+    setIsTyping(false);
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+
+    // Simulate partner typing response (only for non-Nova chats & non-group threads)
+    if (activeChat.id !== 'chat_nova' && !activeChat.isGroup) {
+      const delay = 800 + Math.random() * 1200;
+      if (partnerTypingTimerRef.current) clearTimeout(partnerTypingTimerRef.current);
+      partnerTypingTimerRef.current = setTimeout(() => {
+        setPartnerTyping(true);
+        partnerTypingTimerRef.current = setTimeout(() => {
+          setPartnerTyping(false);
+        }, 2000 + Math.random() * 2000);
+      }, delay);
+    }
+  };
+
+  const handleMessageInput = (val: string) => {
+    setMessageText(val);
+    setIsTyping(val.trim().length > 0);
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (val.trim().length > 0) {
+      typingTimerRef.current = setTimeout(() => setIsTyping(false), 3000);
+    }
   };
 
   const handleSendImage = (imgUrl: string) => {
@@ -589,6 +624,37 @@ export const MessagesDashboard: React.FC = () => {
             })}
 
             <div ref={messagesEndRef} />
+
+            {/* Partner typing indicator — shows when the OTHER person is typing */}
+            {partnerTyping && activeChat && (
+              <div className="flex items-end gap-2 self-start animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <Avatar
+                  src={activeChat.participant.avatar}
+                  name={activeChat.participant.name}
+                  size="xs"
+                  className="mb-1 shrink-0"
+                />
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-[10px] text-on-surface-variant px-1">{activeChat.participant.name.split(' ')[0]} is typing…</span>
+                  <div className="px-4 py-3 bg-surface-bright/95 backdrop-blur-xs rounded-2xl rounded-bl-none border border-cyan-400/25 shadow-xs flex items-center gap-1 shadow-[0_0_8px_rgba(0,240,255,0.12)]">
+                    <span className="typing-dot w-1.5 h-1.5 rounded-full bg-cyan-400" style={{ animationDelay: '0ms' }} />
+                    <span className="typing-dot w-1.5 h-1.5 rounded-full bg-purple-400" style={{ animationDelay: '160ms' }} />
+                    <span className="typing-dot w-1.5 h-1.5 rounded-full bg-cyan-400" style={{ animationDelay: '320ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Self-typing indicator — shows when YOU are composing */}
+            {isTyping && !partnerTyping && (
+              <div className="flex items-end gap-2 self-end flex-row-reverse animate-in fade-in duration-150">
+                <div className="px-4 py-3 bg-primary/10 backdrop-blur-xs rounded-2xl rounded-br-none border border-primary/25 shadow-xs flex items-center gap-1">
+                  <span className="typing-dot w-1.5 h-1.5 rounded-full bg-primary" style={{ animationDelay: '0ms' }} />
+                  <span className="typing-dot w-1.5 h-1.5 rounded-full bg-primary" style={{ animationDelay: '160ms' }} />
+                  <span className="typing-dot w-1.5 h-1.5 rounded-full bg-primary" style={{ animationDelay: '320ms' }} />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Attachment Quick Menu */}
@@ -636,7 +702,7 @@ export const MessagesDashboard: React.FC = () => {
               <input
                 type="text"
                 value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
+                onChange={(e) => handleMessageInput(e.target.value)}
                 placeholder="Type a message to transmit..."
                 className="flex-1 bg-transparent border-none text-xs sm:text-sm text-on-surface placeholder:text-on-surface-variant outline-none py-1"
               />

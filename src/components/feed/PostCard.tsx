@@ -46,6 +46,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [newComment, setNewComment] = useState('');
   const [copied, setCopied] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [localReactions, setLocalReactions] = useState<Record<string, number>>({
+    '❤️': post.isLiked ? 1 : 0,
+    '🚀': 0,
+    '🔥': 0,
+    '🌌': 0,
+    '👾': 0,
+    '✨': 0,
+  });
+  const [myReaction, setMyReaction] = useState<string | null>(post.isLiked ? '❤️' : null);
 
   // Edit Post State
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -58,6 +68,29 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
     setEditMediaUrl(post.mediaUrl || '');
     setIsEditModalOpen(true);
     setIsMenuOpen(false);
+  };
+
+  const handleReact = (emoji: string) => {
+    setLocalReactions((prev) => {
+      const next = { ...prev };
+      if (myReaction === emoji) {
+        // Un-react
+        next[emoji] = Math.max(0, (next[emoji] || 0) - 1);
+        setMyReaction(null);
+        if (emoji === '❤️' && post.isLiked) toggleLikePost(post.id);
+      } else {
+        // Switch from old reaction
+        if (myReaction) {
+          next[myReaction] = Math.max(0, (next[myReaction] || 0) - 1);
+          if (myReaction === '❤️' && post.isLiked) toggleLikePost(post.id);
+        }
+        next[emoji] = (next[emoji] || 0) + 1;
+        setMyReaction(emoji);
+        if (emoji === '❤️' && !post.isLiked) toggleLikePost(post.id);
+      }
+      return next;
+    });
+    setShowReactionPicker(false);
   };
 
   const handleSavePostEdit = () => {
@@ -287,59 +320,107 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
       </div>
 
       {/* Post Actions Bar */}
-      <div className="pt-3 border-t border-outline-variant/40 flex items-center justify-between text-xs text-on-surface-variant">
-        <div className="flex items-center gap-1 sm:gap-2">
-          {/* Like */}
-          <button
-            onClick={() => toggleLikePost(post.id)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
-              post.isLiked
-                ? 'text-pink-400 bg-pink-500/20 font-bold border border-pink-500/40 shadow-[0_0_12px_rgba(244,63,94,0.35)]'
-                : 'hover:bg-pink-500/10 hover:text-pink-300'
-            )}
-          >
-            <Heart className={cn('w-4 h-4', post.isLiked && 'fill-pink-500 text-pink-400 drop-shadow-[0_0_8px_#ec4899]')} />
-            <span>{post.likes}</span>
-          </button>
+      <div className="pt-3 border-t border-outline-variant/40 space-y-2 text-xs text-on-surface-variant">
+        {/* Active reaction summary chips */}
+        {Object.entries(localReactions).some(([, v]) => v > 0) && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {Object.entries(localReactions)
+              .filter(([, count]) => count > 0)
+              .map(([emoji, count]) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleReact(emoji)}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all border',
+                    myReaction === emoji
+                      ? 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300 shadow-[0_0_8px_rgba(0,240,255,0.25)]'
+                      : 'bg-surface-container border-outline-variant/30 hover:bg-surface-container-high',
+                  )}
+                >
+                  <span>{emoji}</span>
+                  <span className="font-semibold">{count}</span>
+                </button>
+              ))}
+          </div>
+        )}
 
-          {/* Comments Toggle */}
-          <button
-            onClick={() => setShowComments(!showComments)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
-              showComments
-                ? 'text-cyan-300 bg-cyan-500/20 font-bold border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.35)]'
-                : 'hover:bg-cyan-500/10 hover:text-cyan-300'
-            )}
-          >
-            <MessageCircle className="w-4 h-4 text-cyan-400" />
-            <span>{post.commentsCount}</span>
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Emoji Reaction Picker */}
+            <div className="relative">
+              <button
+                onClick={() => setShowReactionPicker((v) => !v)}
+                onBlur={() => setTimeout(() => setShowReactionPicker(false), 150)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all select-none',
+                  myReaction
+                    ? 'text-pink-400 bg-pink-500/20 font-bold border border-pink-500/40 shadow-[0_0_12px_rgba(244,63,94,0.35)]'
+                    : 'hover:bg-pink-500/10 hover:text-pink-300',
+                )}
+                aria-label="React to post"
+              >
+                <span className="text-base leading-none">{myReaction || '❤️'}</span>
+                <span>{post.likes + Object.values(localReactions).reduce((a, b) => a + b, 0)}</span>
+              </button>
 
-          {/* Share */}
+              {showReactionPicker && (
+                <div className="absolute bottom-full left-0 mb-2 z-30 flex items-center gap-1 p-2 bg-surface-container-lowest border border-cyan-500/30 rounded-2xl shadow-xl backdrop-blur-md animate-reaction-pop">
+                  {['❤️', '🚀', '🔥', '🌌', '👾', '✨'].map((emoji) => (
+                    <button
+                      key={emoji}
+                      onMouseDown={() => handleReact(emoji)}
+                      className={cn(
+                        'w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all hover:scale-125 hover:bg-surface-container',
+                        myReaction === emoji && 'bg-cyan-500/20 ring-2 ring-cyan-400/50 scale-110',
+                      )}
+                      aria-label={'React ' + emoji}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Comments Toggle */}
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
+                showComments
+                  ? 'text-cyan-300 bg-cyan-500/20 font-bold border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.35)]'
+                  : 'hover:bg-cyan-500/10 hover:text-cyan-300'
+              )}
+            >
+              <MessageCircle className="w-4 h-4 text-cyan-400" />
+              <span>{post.commentsCount}</span>
+            </button>
+
+            {/* Share */}
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-purple-500/15 hover:text-purple-300 transition-colors"
+            >
+              <Share2 className="w-4 h-4 text-purple-400" />
+              <span>{copied ? 'Copied link!' : post.sharesCount}</span>
+            </button>
+
+          </div>
+
+          {/* Bookmark */}
           <button
-            onClick={handleShare}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-purple-500/15 hover:text-purple-300 transition-colors"
+            onClick={() => toggleBookmarkPost(post.id)}
+            className={cn(
+              'p-2 rounded-lg transition-all',
+              post.isBookmarked
+                ? 'text-amber-300 bg-amber-500/20 border border-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.35)]'
+                : 'hover:bg-amber-500/10 hover:text-amber-300'
+            )}
+            title="Save post"
           >
-            <Share2 className="w-4 h-4 text-purple-400" />
-            <span>{copied ? 'Copied link!' : post.sharesCount}</span>
+            <Bookmark className={cn('w-4 h-4', post.isBookmarked && 'fill-amber-400 text-amber-300 drop-shadow-[0_0_8px_#fbbf24]')} />
           </button>
         </div>
-
-        {/* Bookmark */}
-        <button
-          onClick={() => toggleBookmarkPost(post.id)}
-          className={cn(
-            'p-2 rounded-lg transition-all',
-            post.isBookmarked
-              ? 'text-amber-300 bg-amber-500/20 border border-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.35)]'
-              : 'hover:bg-amber-500/10 hover:text-amber-300'
-          )}
-          title="Save post"
-        >
-          <Bookmark className={cn('w-4 h-4', post.isBookmarked && 'fill-amber-400 text-amber-300 drop-shadow-[0_0_8px_#fbbf24]')} />
-        </button>
       </div>
 
       {/* Comments Drawer */}

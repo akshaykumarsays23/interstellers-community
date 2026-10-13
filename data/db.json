@@ -159,10 +159,10 @@
       "content": "🎥 **Public Video Message • Transmission Online!** 🚀\n\nWelcome to all explorers across the galaxy! Tune in to our official public video transmission directly from the bridge. Press play below to watch! ✨🌌",
       "createdAt": "2026-10-12T15:50:38.375Z",
       "timestamp": "Just now",
-      "likes": 18,
+      "likes": 17,
       "commentsCount": 2,
       "sharesCount": 6,
-      "isLiked": true,
+      "isLiked": false,
       "isBookmarked": true,
       "tags": [
         "#VideoMessage",
@@ -403,7 +403,7 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
       "deviceType": "Desktop",
       "firstSeen": 1791051620417,
-      "lastSeen": 1791818413975
+      "lastSeen": 1791908708153
     },
     {
       "id": "dev_npjnd20mutvrod5",
@@ -444,6 +444,14 @@
       "deviceType": "Desktop",
       "firstSeen": 1791741034302,
       "lastSeen": 1791741773915
+    },
+    {
+      "id": "dev_342x8qumv6vz59m",
+      "ip": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+      "deviceType": "Desktop",
+      "firstSeen": 1791908367954,
+      "lastSeen": 1791908387505
     }
   ],
   "messages": {
@@ -1067,6 +1075,50 @@
         "timestamp": "Oct 11, 2026, 06:57 PM",
         "time": "Oct 11, 2026, 06:57 PM",
         "status": "read"
+      },
+      {
+        "id": "msg_uvsoln3mv5itaev",
+        "senderId": "user_host",
+        "senderHandle": "akshay",
+        "senderName": "Akshay Kumar",
+        "text": "next one ",
+        "mediaUrl": "",
+        "timestamp": "Oct 12, 2026, 10:53 PM",
+        "time": "Oct 12, 2026, 10:53 PM",
+        "status": "sent"
+      },
+      {
+        "id": "msg_i9cl5zymv5itqm3",
+        "senderId": "ai_nova",
+        "senderHandle": "nova_ai",
+        "senderName": "Nova AI Assistant",
+        "text": "Here is your next one:\n\nI can bring back the past, make you laugh, make you cry, and make you young again. I am born in a single instant, but I can last a lifetime. \n\nWhat am I?",
+        "mediaUrl": "",
+        "timestamp": "Oct 12, 2026, 10:53 PM",
+        "time": "Oct 12, 2026, 10:53 PM",
+        "status": "read"
+      },
+      {
+        "id": "msg_mqsmo2emv5ixjd2",
+        "senderId": "user_host",
+        "senderHandle": "akshay",
+        "senderName": "Akshay Kumar",
+        "text": "idea",
+        "mediaUrl": "",
+        "timestamp": "Oct 12, 2026, 10:56 PM",
+        "time": "Oct 12, 2026, 10:56 PM",
+        "status": "sent"
+      },
+      {
+        "id": "msg_f13s871mv5ixx6s",
+        "senderId": "ai_nova",
+        "senderHandle": "nova_ai",
+        "senderName": "Nova AI Assistant",
+        "text": "Transmission received across the quantum grid! Regarding \"idea\": In our digital cosmos, knowledge spans quantum science, superhero lore, space stations, and human exploration. Let me know what specific aspect you would like to explore next!",
+        "mediaUrl": "",
+        "timestamp": "Oct 12, 2026, 10:56 PM",
+        "time": "Oct 12, 2026, 10:56 PM",
+        "status": "read"
       }
     ],
     "chat_dm_akshay_pooja_verma": [
@@ -1134,13 +1186,14 @@
     ]
   },
   "musicStats": {
-    "totalPlays": 49,
+    "totalPlays": 61,
     "userPlays": {
-      "akshaycricketer1230@gmail.com": 23,
+      "akshaycricketer1230@gmail.com": 32,
       "akshay": 1,
-      "vikram": 1
+      "vikram": 1,
+      "user_guest": 3
     },
-    "lastPlayedAt": 1791818434621
+    "lastPlayedAt": 1791908393909
   },
   "deletedPostIds": [
     "test_post_to_delete_1791723549079",
