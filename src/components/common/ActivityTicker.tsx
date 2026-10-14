@@ -103,7 +103,7 @@ export const ActivityTicker: React.FC = () => {
     const el = tickerRef.current;
     if (!el) return;
 
-    const speed = 0.6; // px per frame — slow and readable
+    const speed = 0.9; // px per frame — smoother and more readable
 
     const tick = () => {
       if (!isPaused && el) {
@@ -132,29 +132,29 @@ export const ActivityTicker: React.FC = () => {
 
   return (
     <div
-      className="hidden lg:flex flex-1 items-center overflow-hidden max-w-xs xl:max-w-sm mx-3 relative"
+      className="hidden lg:flex flex-1 items-center overflow-hidden max-w-md xl:max-w-lg 2xl:max-w-xl h-10 mx-3 relative rounded-full border border-cyan-500/20 bg-surface-container/60 backdrop-blur-sm shadow-[0_0_18px_rgba(34,211,238,0.08)]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       aria-label="Live activity ticker"
       role="marquee"
     >
       {/* Fade edges */}
-      <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[rgba(8,16,42,0.9)] to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[rgba(8,16,42,0.9)] to-transparent z-10 pointer-events-none" />
+      <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[rgba(8,16,42,0.92)] to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[rgba(8,16,42,0.92)] to-transparent z-10 pointer-events-none" />
 
       <div
         ref={tickerRef}
-        className="flex items-center gap-0 will-change-transform"
+        className="flex items-center gap-0 will-change-transform py-1"
         style={{ whiteSpace: 'nowrap' }}
       >
         {events.map((event, idx) => (
           <span
             key={`${event.id}-${idx}`}
-            className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 ${event.color}`}
+            className={`inline-flex items-center gap-2 text-[12px] sm:text-[13px] font-semibold tracking-wide px-3 ${event.color}`}
           >
-            {event.icon}
+            <span className="flex items-center justify-center">{event.icon}</span>
             <span>{event.text}</span>
-            <span className="text-cyan-500/40 mx-1 text-xs">✦</span>
+            <span className="text-cyan-500/60 mx-1 text-[11px]">✦</span>
           </span>
         ))}
       </div>

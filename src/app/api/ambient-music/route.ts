@@ -1,88 +1,72 @@
-import { NextResponse } from 'next/server';
+ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
-const AUDIO_EXTS = new Set(['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.webm', '.opus']);
+const AUDIO_EXTS = new Set([
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+  '.aac',
+  '.flac',
+  '.webm',
+  '.opus',
+]);
 
 export async function GET() {
   try {
     const publicDir = path.join(process.cwd(), 'public');
     const musicDir = path.join(publicDir, 'music');
 
-    const candidateFiles: { filePath: string; url: string; filename: string; mtime: number }[] = [];
+    const songs: {
+      url: string;
+      filename: string;
+      title: string;
+    }[] = [];
 
-    // 1. Check public/music
     if (fs.existsSync(musicDir)) {
-      try {
-        const musicFiles = fs.readdirSync(musicDir);
-        for (const file of musicFiles) {
-          const ext = path.extname(file).toLowerCase();
-          if (AUDIO_EXTS.has(ext)) {
-            const stat = fs.statSync(path.join(musicDir, file));
-            if (stat.isFile() && stat.size > 0) {
-              candidateFiles.push({
-                filePath: path.join(musicDir, file),
-                url: `/music/${encodeURIComponent(file)}`,
-                filename: file,
-                mtime: stat.mtimeMs,
-              });
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error reading public/music:', err);
+      const files = fs.readdirSync(musicDir);
+
+      for (const file of files) {
+        const filePath = path.join(musicDir, file);
+        const ext = path.extname(file).toLowerCase();
+
+        if (!AUDIO_EXTS.has(ext)) continue;
+
+        const stat = fs.statSync(filePath);
+
+        if (!stat.isFile() || stat.size === 0) continue;
+
+        songs.push({
+          url: `/music/${encodeURIComponent(file)}`,
+          filename: file,
+          title: file.replace(/\.[^/.]+$/, ''),
+        });
       }
     }
 
-    // 2. Check public root
-    if (fs.existsSync(publicDir)) {
-      try {
-        const rootFiles = fs.readdirSync(publicDir);
-        for (const file of rootFiles) {
-          const ext = path.extname(file).toLowerCase();
-          if (AUDIO_EXTS.has(ext)) {
-            const stat = fs.statSync(path.join(publicDir, file));
-            if (stat.isFile() && stat.size > 0) {
-              candidateFiles.push({
-                filePath: path.join(publicDir, file),
-                url: `/${encodeURIComponent(file)}`,
-                filename: file,
-                mtime: stat.mtimeMs,
-              });
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error reading public:', err);
-      }
-    }
-
-    // Sort by newest modified time
-    candidateFiles.sort((a, b) => b.mtime - a.mtime);
-
-    if (candidateFiles.length > 0) {
-      const topSong = candidateFiles[0];
-      return NextResponse.json({
-        available: true,
-        url: topSong.url,
-        filename: topSong.filename,
-        title: topSong.filename.replace(/\.[^/.]+$/, ''),
-        allCount: candidateFiles.length,
-      });
-    }
+    songs.sort((a, b) =>
+      a.filename.localeCompare(b.filename, undefined, {
+        sensitivity: 'base',
+      }),
+    );
 
     return NextResponse.json({
-      available: false,
-      url: null,
-      filename: null,
-      message: 'No song file found in public/ or public/music/',
+      available: songs.length > 0,
+      songs,
+      allCount: songs.length,
     });
   } catch (error) {
     return NextResponse.json(
-      { available: false, url: null, error: String(error) },
-      { status: 500 }
+      {
+        available: false,
+        songs: [],
+        allCount: 0,
+        error: String(error),
+      },
+      { status: 500 },
     );
   }
 }

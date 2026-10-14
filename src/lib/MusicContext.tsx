@@ -12,19 +12,21 @@ export interface SongInfo {
   artist: string;
 }
 
-export const PLAYLIST: SongInfo[] = [
-  { src: '/music/forever-young.mp3',                                                                                              title: 'Forever Young',                              artist: 'Alphaville' },
-  { src: '/music/Alan Walker - Faded.mp3',                                                                                        title: 'Faded',                                      artist: 'Alan Walker' },
-  { src: '/music/Caribbean Blue X Golden Brown X Love Story (slowed + reverb) music hub lyrics.mp3',                             title: 'Caribbean Blue × Golden Brown × Love Story', artist: 'Music Hub' },
-  { src: '/music/Ed Sheeran - Tenerife Sea (Live At Wembley Stadium 2015) HD.mp3',                                               title: 'Tenerife Sea (Live)',                        artist: 'Ed Sheeran' },
-  { src: '/music/Enchanted - Pride & Prejudice (2005).mp3',                                                                      title: 'Enchanted',                                  artist: 'Pride & Prejudice' },
-  { src: '/music/Sakhi Pachchadanamey song.mp3',                                                                                  title: 'Sakhi Pachchadanamey',                       artist: 'Telugu Classic' },
-  { src: '/music/The Stranglers - Golden Brown (Official Lyric Video) [ji1TIBybjp4].mp3',                                        title: 'Golden Brown',                               artist: 'The Stranglers' },
-  { src: '/music/Tumblr Girls - G-Eazy 「 𝙀𝙣𝙙𝙞𝙣𝙜 𝙡𝙤𝙤𝙥𝙚𝙙」.mp3',                                                         title: 'Tumblr Girls',                               artist: 'G-Eazy' },
-  { src: '/music/a thousand years (speed up + lyrics).mp3',                                                                      title: 'A Thousand Years (Sped Up)',                 artist: 'Christina Perri' },
-  { src: '/music/perfect (sped up).mp3',                                                                                          title: 'Perfect (Sped Up)',                           artist: 'Ed Sheeran' },
-  { src: '/music/İndila-Love Story (Türkçe çeviri).mp3',                                                                        title: 'Love Story',                                 artist: 'İndila' },
+export const FALLBACK_PLAYLIST: SongInfo[] = [
+  { src: '/music/forever-young.mp3', title: 'Forever Young', artist: 'Alphaville' },
+  { src: '/music/Alan Walker - Faded.mp3', title: 'Faded', artist: 'Alan Walker' },
+  { src: '/music/Caribbean Blue X Golden Brown X Love Story (slowed + reverb) music hub lyrics.mp3', title: 'Caribbean Blue × Golden Brown × Love Story', artist: 'Music Hub' },
+  { src: '/music/Ed Sheeran - Tenerife Sea (Live At Wembley Stadium 2015) HD.mp3', title: 'Tenerife Sea (Live)', artist: 'Ed Sheeran' },
+  { src: '/music/Enchanted - Pride & Prejudice (2005).mp3', title: 'Enchanted', artist: 'Pride & Prejudice' },
+  { src: '/music/Sakhi Pachchadanamey song.mp3', title: 'Sakhi Pachchadanamey', artist: 'Telugu Classic' },
+  { src: '/music/The Stranglers - Golden Brown (Official Lyric Video) [ji1TIBybjp4].mp3', title: 'Golden Brown', artist: 'The Stranglers' },
+  { src: '/music/Tumblr Girls - G-Eazy 「 𝙀𝙣𝙙𝙞𝙣𝙜 𝙡𝙤𝙤𝙥𝙚𝙙」.mp3', title: 'Tumblr Girls', artist: 'G-Eazy' },
+  { src: '/music/a thousand years (speed up + lyrics).mp3', title: 'A Thousand Years (Sped Up)', artist: 'Christina Perri' },
+  { src: '/music/perfect (sped up).mp3', title: 'Perfect (Sped Up)', artist: 'Ed Sheeran' },
+  { src: '/music/İndila-Love Story (Türkçe çeviri).mp3', title: 'Love Story', artist: 'İndila' },
 ];
+
+export const PLAYLIST = FALLBACK_PLAYLIST;
 
 interface MusicContextType {
   isPlaying: boolean;
@@ -60,6 +62,9 @@ const MusicContext = createContext<MusicContextType | undefined>(undefined);
 export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useApp();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playlist, setPlaylist] = useState<SongInfo[]>(FALLBACK_PLAYLIST);
+  const playlistRef = useRef<SongInfo[]>(FALLBACK_PLAYLIST);
+  playlistRef.current = playlist;
 
   // ── Use a ref for the index to avoid stale closures in audio event handlers ──
   const [currentSongIndex, setCurrentSongIndex] = useState<number>(() => {
@@ -67,7 +72,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem('interstellers_current_song_index');
       if (saved !== null) {
         const n = parseInt(saved, 10);
-        if (!isNaN(n) && n >= 0 && n < PLAYLIST.length) return n;
+        if (!isNaN(n) && n >= 0 && n < FALLBACK_PLAYLIST.length) return n;
       }
     }
     return 0;
@@ -118,29 +123,48 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   // ── Core helper: load & play a specific index ────────────────────────────────
-  const goToIndex = useCallback((index: number, play = true) => {
-    const safe = ((index % PLAYLIST.length) + PLAYLIST.length) % PLAYLIST.length;
-    setCurrentSongIndex(safe);
-    currentSongIndexRef.current = safe;
-    try { localStorage.setItem('interstellers_current_song_index', String(safe)); } catch (_) {}
+const goToIndex = useCallback((index: number, play = true) => {
+  const activePlaylist = playlistRef.current.length ? playlistRef.current : FALLBACK_PLAYLIST;
+  const safe = ((index % activePlaylist.length) + activePlaylist.length) % activePlaylist.length;
+  const song = activePlaylist[safe];
 
-    hasCountedCurrentPlayback.current = false;
-    setCurrentTime(0);
-    setDuration(0);
+  setCurrentSongIndex(safe);
+  currentSongIndexRef.current = safe;
 
-    const audio = audioRef.current;
-    if (!audio) return;
+  try {
+    localStorage.setItem(
+      'interstellers_current_song_index',
+      String(safe)
+    );
+  } catch (_) {}
 
-    audio.pause();
-    audio.src = PLAYLIST[safe].src;
-    audio.load();
+  hasCountedCurrentPlayback.current = false;
+  setCurrentTime(0);
+  setDuration(0);
+  setIsPlaying(false);
+  setAutoplayBlocked(false);
 
-    if (play) {
-      audio.play()
-        .then(() => { setIsPlaying(true); setAutoplayBlocked(false); })
-        .catch(() => { setIsPlaying(false); });
-    }
-  }, []);
+  const audio = audioRef.current;
+
+  if (!audio || !song) return;
+
+  audio.pause();
+  audio.src = song.src;
+  audio.load();
+
+  if (play) {
+    audio.play()
+      .then(() => {
+        setIsPlaying(true);
+        setAutoplayBlocked(false);
+      })
+      .catch((error: unknown) => {
+        setIsPlaying(false);
+        setAutoplayBlocked(true);
+        console.error('Interstellers music playback failed:', error);
+      });
+  }
+}, []);
 
   // ── Public controls ──────────────────────────────────────────────────────────
   const nextSong = useCallback(() => {
@@ -280,16 +304,55 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshMusicStats();
   }, [userKey, refreshMusicStats]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPlaylist = async () => {
+      try {
+        const res = await fetch('/api/ambient-music');
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const songs = Array.isArray(data?.songs)
+          ? data.songs.map((song: { url?: string; filename?: string; title?: string }) => ({
+              src: song.url || '',
+              title: song.title || song.filename?.replace(/\.[^/.]+$/, '') || 'Untitled track',
+              artist: 'Ambient Mix',
+            }))
+          : [];
+
+        if (!isMounted || songs.length === 0) return;
+
+        setPlaylist(songs);
+        const safeIndex = currentSongIndexRef.current >= songs.length ? 0 : currentSongIndexRef.current;
+        if (safeIndex !== currentSongIndexRef.current) {
+          setCurrentSongIndex(safeIndex);
+          currentSongIndexRef.current = safeIndex;
+          try { localStorage.setItem('interstellers_current_song_index', String(safeIndex)); } catch (_) {}
+        }
+      } catch (_) {
+        // Fall back to the bundled playlist if the folder is unavailable.
+      }
+    };
+
+    loadPlaylist();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // ── Wire up the audio element once on mount ──────────────────────────────────
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    const activePlaylist = playlistRef.current.length ? playlistRef.current : FALLBACK_PLAYLIST;
     audio.volume = volume;
     audio.loop = isRepeat;
 
     // Set the initial src (index persisted from localStorage)
-    audio.src = PLAYLIST[currentSongIndexRef.current].src;
+    audio.src = activePlaylist[currentSongIndexRef.current]?.src || activePlaylist[0]?.src || FALLBACK_PLAYLIST[0].src;
     audio.load();
 
     // timeupdate
@@ -309,7 +372,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // ENDED → advance to next song immediately
     const onEnded = () => {
-      const nextIndex = (currentSongIndexRef.current + 1) % PLAYLIST.length;
+      const activePlaylist = playlistRef.current.length ? playlistRef.current : FALLBACK_PLAYLIST;
+      const nextIndex = (currentSongIndexRef.current + 1) % activePlaylist.length;
       goToIndex(nextIndex, true);
     };
 
@@ -366,8 +430,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         userPlayCount,
         totalPlayCount,
         currentSongIndex,
-        currentSong: PLAYLIST[currentSongIndex],
-        playlist: PLAYLIST,
+        currentSong: (playlist.length ? playlist : FALLBACK_PLAYLIST)[currentSongIndex] || FALLBACK_PLAYLIST[0],
+        playlist: playlist.length ? playlist : FALLBACK_PLAYLIST,
         togglePlay,
         playSong,
         pauseSong,
