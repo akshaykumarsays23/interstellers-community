@@ -2,11 +2,50 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 interface HistoryMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: { 'Cache-Control': 'no-store, max-age=0, must-revalidate' },
+  });
+}
+
+function normalizeHistory(history: unknown): HistoryMessage[] {
+  if (!Array.isArray(history)) return [];
+
+  const sanitized = history
+    .slice(-12)
+    .filter(
+      (message): message is HistoryMessage =>
+        Boolean(
+          message &&
+            (message.role === 'user' || message.role === 'assistant') &&
+            typeof message.content === 'string' &&
+            message.content.trim()
+        )
+    )
+    .map((message) => ({ ...message, content: message.content.trim() }));
+
+  // The initial greeting and any unanswered user turn are not part of a completed exchange.
+  while (sanitized[0]?.role === 'assistant') sanitized.shift();
+  if (sanitized[sanitized.length - 1]?.role === 'user') sanitized.pop();
+
+  return sanitized.reduce<HistoryMessage[]>((turns, message) => {
+    const previous = turns[turns.length - 1];
+    if (previous?.role === message.role) {
+      previous.content = `${previous.content}\n${message.content}`;
+    } else {
+      turns.push(message);
+    }
+    return turns;
+  }, []);
 }
 
 // Optional real web search helper if configured
@@ -18,6 +57,7 @@ async function performWebSearchIfConfigured(query: string): Promise<{ searchSumm
     try {
       const res = await fetch('https://api.tavily.com/search', {
         method: 'POST',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ api_key: tavilyKey, query, max_results: 3 }),
       });
@@ -40,6 +80,7 @@ async function performWebSearchIfConfigured(query: string): Promise<{ searchSumm
     try {
       const res = await fetch('https://google.serper.dev/search', {
         method: 'POST',
+        cache: 'no-store',
         headers: {
           'X-API-KEY': serperKey,
           'Content-Type': 'application/json',
@@ -72,12 +113,12 @@ export async function POST(request: Request) {
 
     // 1. Validation
     if (!message || typeof message !== 'string' || !message.trim()) {
-      return NextResponse.json({ error: 'Message cannot be empty.' }, { status: 400 });
+      return jsonResponse({ error: 'Message cannot be empty.' }, 400);
     }
 
     const trimmedMessage = message.trim();
     if (trimmedMessage.length > 4000) {
-      return NextResponse.json({ error: 'Message is too long. Please keep under 4000 characters.' }, { status: 400 });
+      return jsonResponse({ error: 'Message is too long. Please keep under 4000 characters.' }, 400);
     }
 
     // 2. Resolve Verified User Profile from Server Database
@@ -149,28 +190,19 @@ AUTHENTICATED USER CONTEXT:
 - Community Platform: Interstellers (Official Vercel Network)${searchGrounding}`;
 
     // 4. Sanitize and Format Conversation History (last 12 messages maximum)
-    const validHistory: HistoryMessage[] = Array.isArray(history)
-      ? history
-          .slice(-12)
-          .filter(
-            (m): m is HistoryMessage =>
-              Boolean(m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
-          )
-      : [];
+    const validHistory = normalizeHistory(history);
 
     // 5. Connect to Real AI Model Provider
     const geminiKey = process.env.GEMINI_API_KEY?.trim();
     const openaiKey = process.env.OPENAI_API_KEY?.trim();
     const groqKey = process.env.GROQ_API_KEY?.trim();
 
-    // Priority 1: Google Gemini (gemini-flash-latest / gemini-3.8-flash / gemini-3.5-flash)
+    // Priority 1: Google Gemini
     if (geminiKey) {
       try {
         const geminiModels = [
           'gemini-flash-latest',
-          'gemini-3.8-flash',
-          'gemini-3.5-flash',
-          'gemini-2.5-pro',
+          'gemini-2.5-flash',
         ];
         let data: any = null;
         let lastErrText = '';
@@ -191,23 +223,30 @@ AUTHENTICATED USER CONTEXT:
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 12000);
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-            const response = await fetch(geminiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              signal: controller.signal,
-              body: JSON.stringify({
-                system_instruction: {
-                  parts: [{ text: systemPrompt }],
+            let response: Response;
+            try {
+              response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-goog-api-key': geminiKey,
                 },
-                contents,
-                generationConfig: {
-                  temperature: 0.7,
-                  maxOutputTokens: 1000,
-                },
-              }),
-            });
-            clearTimeout(timeoutId);
+                cache: 'no-store',
+                signal: controller.signal,
+                body: JSON.stringify({
+                  system_instruction: {
+                    parts: [{ text: systemPrompt }],
+                  },
+                  contents,
+                  generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 1000,
+                  },
+                }),
+              });
+            } finally {
+              clearTimeout(timeoutId);
+            }
 
             if (response.ok) {
               const resJson = await response.json();
@@ -227,7 +266,7 @@ AUTHENTICATED USER CONTEXT:
         const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (reply && typeof reply === 'string') {
-          return NextResponse.json({ reply: reply.trim() });
+          return jsonResponse({ reply: reply.trim() });
         }
 
         console.warn('All Gemini models attempted, falling through to secondary providers. Last error:', lastErrText);
@@ -251,6 +290,7 @@ AUTHENTICATED USER CONTEXT:
 
         const response = await fetch(openaiUrl, {
           method: 'POST',
+          cache: 'no-store',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${openaiKey}`,
@@ -266,29 +306,20 @@ AUTHENTICATED USER CONTEXT:
         if (!response.ok) {
           const errText = await response.text();
           console.error('OpenAI API returned error:', response.status, errText);
-          return NextResponse.json(
-            { error: 'Nova is temporarily unavailable. Please try again.' },
-            { status: 502 }
-          );
+          return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
         }
 
         const data = await response.json();
         const reply = data?.choices?.[0]?.message?.content;
 
         if (reply && typeof reply === 'string') {
-          return NextResponse.json({ reply: reply.trim() });
+          return jsonResponse({ reply: reply.trim() });
         }
 
-        return NextResponse.json(
-          { error: 'Nova is temporarily unavailable. Please try again.' },
-          { status: 502 }
-        );
+        return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
       } catch (err) {
         console.error('OpenAI provider error:', err);
-        return NextResponse.json(
-          { error: 'Nova is temporarily unavailable. Please try again.' },
-          { status: 502 }
-        );
+        return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
       }
     }
 
@@ -307,6 +338,7 @@ AUTHENTICATED USER CONTEXT:
 
         const response = await fetch(groqUrl, {
           method: 'POST',
+          cache: 'no-store',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${groqKey}`,
@@ -322,121 +354,36 @@ AUTHENTICATED USER CONTEXT:
         if (!response.ok) {
           const errText = await response.text();
           console.error('Groq API error:', response.status, errText);
-          return NextResponse.json(
-            { error: 'Nova is temporarily unavailable. Please try again.' },
-            { status: 502 }
-          );
+          return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
         }
 
         const data = await response.json();
         const reply = data?.choices?.[0]?.message?.content;
 
         if (reply && typeof reply === 'string') {
-          return NextResponse.json({ reply: reply.trim() });
+          return jsonResponse({ reply: reply.trim() });
         }
 
-        return NextResponse.json(
-          { error: 'Nova is temporarily unavailable. Please try again.' },
-          { status: 502 }
-        );
+        return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
       } catch (err) {
         console.error('Groq provider error:', err);
-        return NextResponse.json(
-          { error: 'Nova is temporarily unavailable. Please try again.' },
-          { status: 502 }
-        );
+        return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
       }
     }
 
-    // 6. Intelligent Omniscient Cognitive Engine (Instant fallback answering anything in the universe)
-    const fallbackReply = generateOmniscientNovaResponse(trimmedMessage, verifiedName);
-    return NextResponse.json({ reply: fallbackReply });
+    if (!geminiKey) {
+      return jsonResponse(
+        { error: 'No AI provider is configured. Set GEMINI_API_KEY in the Vercel project environment, then redeploy.' },
+        503
+      );
+    }
+
+    return jsonResponse(
+      { error: 'Gemini could not complete this request. Check the server logs and Gemini API configuration.' },
+      502
+    );
   } catch (error) {
     console.error('Unexpected error in Nova AI chat route:', error);
-    return NextResponse.json({
-      reply: "I am receiving your transmission across the quantum grid! What cosmic query or topic would you like to explore together?",
-    });
+    return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 500);
   }
-}
-
-// Built-in Omniscient Knowledge Engine
-function generateOmniscientNovaResponse(query: string, userName: string): string {
-  const q = query.toLowerCase();
-
-  // Marvel queries
-  if (q.includes('spiderman') || q.includes('spider-man') || q.includes('peter parker')) {
-    return `Spider-Man, also known as Peter Parker, is Marvel's legendary web-slinger created by Stan Lee and Steve Ditko. With great power comes great responsibility! He belongs to our Marvel House in Interstellers.`;
-  }
-  if (q.includes('iron man') || q.includes('tony stark')) {
-    return `Tony Stark, the armored Avenger and genius billionaire philanthropist! His arc reactor and bleeding-edge nano-armor represent peak Marvel innovation. Selecting him sorts you into the mighty Marvel House.`;
-  }
-  if (q.includes('marvel')) {
-    return `Marvel House in Interstellers features icons like Spider-Man, Iron Man, Thor, Captain America, and Wolverine! House members compete in cosmic mini-games to claim the #1 rank in our 30-day galactic league.`;
-  }
-
-  // DC queries
-  if (q.includes('batman') || q.includes('dark knight') || q.includes('bruce wayne')) {
-    return `The Dark Knight, Gotham's legendary vigilante and master strategist! Batman proves that sheer human determination, intellect, and discipline can stand toe-to-toe with gods. Selecting him puts you into the DC House.`;
-  }
-  if (q.includes('superman') || q.includes('clark kent')) {
-    return `Superman, Kal-El of Krypton, stands as the symbol of hope across the DC multiverse. Drawing immense power from Earth's yellow sun, he leads the DC House champions in Interstellers.`;
-  }
-  if (q.includes('dc')) {
-    return `DC House features Gotham's Dark Knight, Superman, The Flash, Wonder Woman, and The Joker. When you enter DC House, you represent unmatched tactical power and justice for your 30-day residency.`;
-  }
-
-  // Pokemon queries
-  if (q.includes('pokemon') || q.includes('pikachu') || q.includes('charizard') || q.includes('mewtwo')) {
-    return `Pokemon House represents elemental power, synergy, and evolution! Led by icons like Pikachu, Charizard, Mewtwo, Gengar, and Rayquaza, this house excels in tactical power clashes and electric energy.`;
-  }
-
-  // Power Rangers queries
-  if (q.includes('power ranger') || q.includes('megazord') || q.includes('morphin')) {
-    return `Power Rangers House harnesses the raw cosmic energy of the Morphin Grid! Champions include the Red Ranger, Green Ranger, White Ranger, Blue Ranger, and Megazord. It's Morphin Time!`;
-  }
-
-  // Houses & 1 Month Rule
-  if (q.includes('house') || q.includes('group') || q.includes('month') || q.includes('rule')) {
-    return `In Interstellers, there are 4 Space Houses: Marvel, DC, Pokemon, and Power Rangers. When you enter, you pick your favorite character from 20 legends to be sorted. By galactic law, you stay in your chosen House for exactly 1 month (30 days) and earn points through games and duels!`;
-  }
-
-  // Time & Quote queries
-  if (q.includes('time') || q.includes('quote') || q.includes('never coming back')) {
-    return `As our Founder Akshay Kumar reminds every traveler: "Time is never coming back, remember time is never..." Every moment in this galaxy is precious, so connect deeply and make your presence count!`;
-  }
-
-  // Who am I / Identity
-  if (q.includes('who are you') || q.includes('nova')) {
-    return `I am Nova, your omniscient cosmic AI companion. I have full access to universal science, pop culture, superhero lore, technology, and real-time internet data. Ask me anything—from quantum physics to character comparisons!`;
-  }
-  if (q.includes('who am i') || q.includes('my name')) {
-    return `You are ${userName}, a verified traveler in the Interstellers galaxy. You have full clearance to explore our Space Houses, Space Stations, and connect with fellow explorers.`;
-  }
-
-  // Science / Quantum & Physics queries
-  if (q.includes('quantum') || q.includes('qubit') || q.includes('superposition') || q.includes('entanglement')) {
-    return `In physics, "quantum" refers to the smallest discrete quantity of any physical property (like energy or matter). 
-
-Quantum computers leverage the counter-intuitive principles of quantum mechanics:
-1. **Superposition:** Unlike classical bits that can only be 0 or 1, quantum bits (qubits) can exist in a combination of both states simultaneously.
-2. **Entanglement:** Qubits can become interconnected such that the state of one instantaneously influences another.
-
-This allows quantum computers to process complex multi-variable calculations (like molecular simulation, cryptography, and optimization) exponentially faster than standard classical supercomputers!`;
-  }
-
-  if (q.includes('explain above') || q.includes('explain that') || q.includes('elaborate')) {
-    return `Expanding on that: Classical computers calculate by flipping binary switches (transistors) one step at a time. A quantum computer operates in a multi-dimensional state space—exploring many possible outcomes in parallel. While still in early development requiring near-absolute-zero refrigeration, they represent the next frontier of computational power!`;
-  }
-
-  if (q.includes('black hole') || q.includes('space') || q.includes('wormhole') || q.includes('universe') || q.includes('cosmos')) {
-    return `The universe spans over 93 billion light-years in the observable realm. Black holes distort spacetime where gravity prevents even light from escaping. In Interstellers, our 7 Space Stations utilize simulated wormholes to bridge distant quadrants in real time!`;
-  }
-
-  // Technology & Code
-  if (q.includes('code') || q.includes('programming') || q.includes('javascript') || q.includes('python') || q.includes('react')) {
-    return `In software engineering and digital systems, clean architecture, responsive components, and robust APIs form the backbone of modern web applications—just like the Next.js and TypeScript engine powering Interstellers! Let me know what language or concept you'd like to explore.`;
-  }
-
-  // General questions fallback with conversational brilliance
-  return `Transmission received across the quantum grid! Regarding "${query.slice(0, 100).trim()}": In our digital cosmos, knowledge spans quantum science, superhero lore, space stations, and human exploration. Let me know what specific aspect you would like to explore next!`;
 }

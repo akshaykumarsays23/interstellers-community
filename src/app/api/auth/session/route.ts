@@ -59,10 +59,14 @@ export async function GET(request: Request) {
     }
 
     // Check if user is still in approved list
-    const isApproved = Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail);
-    const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
+    const reg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
+    const isApproved =
+      reg?.status === 'approved' ||
+      ((!reg || (reg.status !== 'pending' && reg.status !== 'rejected')) &&
+        Array.isArray(db.approvedEmails) &&
+        db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail));
 
-    if (isApproved || (reg && reg.status === 'approved')) {
+    if (isApproved) {
       return NextResponse.json({
         authenticated: true,
         user: {

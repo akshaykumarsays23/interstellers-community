@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '@/lib/store';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
@@ -14,6 +14,7 @@ import {
   UserPlus,
   Sparkles,
   UserMinus,
+  RefreshCw,
 } from 'lucide-react';
 
 export const ApprovalsModal: React.FC = () => {
@@ -25,14 +26,44 @@ export const ApprovalsModal: React.FC = () => {
     rejectRegistration,
     kickOutUser,
     registerNewUser,
+    fetchAdminApprovals,
     activeDevicesCount,
     totalDevicesCount,
   } = useApp();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [manualEmail, setManualEmail] = useState('');
+  const [manualName, setManualName] = useState('');
+  const [manualApproveStatus, setManualApproveStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [manualApproveMsg, setManualApproveMsg] = useState('');
+
+  // Fetch fresh approval data whenever the modal opens.
+  // fetchAdminApprovals should be stable (useCallback) in the app store.
+  useEffect(() => {
+    if (!isApprovalsModalOpen) return;
+
+    void fetchAdminApprovals().catch((error) => {
+      console.error('Failed to load admin approvals:', error);
+    });
+  }, [isApprovalsModalOpen, fetchAdminApprovals]);
 
   if (!isApprovalsModalOpen) return null;
 
   const pendingRequests = registrationRequests.filter((r) => r.status === 'pending');
   const approvedRequests = registrationRequests.filter((r) => r.status === 'approved');
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      await fetchAdminApprovals();
+    } catch (error) {
+      console.error('Failed to refresh admin approvals:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleSimulateFriend = () => {
     const names = ['Rohan Sharma', 'Ananya Patel', 'Vikram Sethi', 'Pooja Verma'];
@@ -41,9 +72,66 @@ export const ApprovalsModal: React.FC = () => {
     registerNewUser(randomName, randomEmail);
   };
 
+  // Directly approve a user by email — creates or updates their registration entry server-side
+  const handleManualApprove = async () => {
+    const email = manualEmail.trim().toLowerCase();
+    const name = manualName.trim() || email.split('@')[0];
+    if (!email || !email.includes('@')) {
+      setManualApproveStatus('error');
+      setManualApproveMsg('Please enter a valid email address.');
+      return;
+    }
+    setManualApproveStatus('loading');
+    try {
+      // First register/upsert the user, then approve them
+      const regRes = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email }),
+      });
+      const regData = await regRes.json().catch(() => ({}));
+
+      if (!regRes.ok) {
+        setManualApproveStatus('error');
+        setManualApproveMsg(regData.error || 'Failed to register this user. Try again.');
+        return;
+      }
+
+      if (regData.status === 'approved') {
+        // Already approved
+        setManualApproveStatus('success');
+        setManualApproveMsg(`✅ ${name} (${email}) is already approved and can log in!`);
+        await fetchAdminApprovals();
+        return;
+      }
+
+      // Now approve them via the approvals API
+      const approveRes = await fetch('/api/admin/approvals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: email, action: 'approve' }),
+      });
+      const approveData = await approveRes.json().catch(() => ({}));
+
+      if (approveRes.ok && approveData.success) {
+        setManualApproveStatus('success');
+        setManualApproveMsg(`✅ ${name} (${email}) has been approved! They can now log in.`);
+        setManualEmail('');
+        setManualName('');
+        await fetchAdminApprovals();
+      } else {
+        setManualApproveStatus('error');
+        setManualApproveMsg(approveData.error || 'Failed to approve. Try again.');
+      }
+    } catch (e) {
+      setManualApproveStatus('error');
+      setManualApproveMsg('Network error. Please try again.');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5">
+      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto custom-scrollbar">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-outline-variant/40">
           <div className="flex items-center gap-3">
@@ -68,12 +156,22 @@ export const ApprovalsModal: React.FC = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setIsApprovalsModalOpen(false)}
-            className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* Manual Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+              title="Refresh approval queue from server"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
+            </button>
+            <button
+              onClick={() => setIsApprovalsModalOpen(false)}
+              className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Notice */}
@@ -85,7 +183,7 @@ export const ApprovalsModal: React.FC = () => {
         </div>
 
         {/* Pending Requests List */}
-        <div className="space-y-3 max-h-72 overflow-y-auto custom-scrollbar">
+        <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar">
           {pendingRequests.length === 0 ? (
             <div className="py-8 text-center bg-surface-container-low/50 rounded-xl border border-outline-variant/40 space-y-2">
               <UserCheck className="w-8 h-8 text-emerald-500 mx-auto" />
@@ -138,6 +236,51 @@ export const ApprovalsModal: React.FC = () => {
                 </div>
               </div>
             ))
+          )}
+        </div>
+
+        {/* ── Manual Approve by Email (bypass DB lookup issues) ── */}
+        <div className="pt-3 border-t border-outline-variant/30 space-y-2">
+          <p className="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5">
+            <UserPlus className="w-3.5 h-3.5 text-primary" />
+            Manually Approve a Friend by Email
+          </p>
+          <p className="text-[11px] text-on-surface-variant/70 leading-tight">
+            If a friend registered but doesn&apos;t appear in the queue above, enter their email here to directly grant them access.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              placeholder="Friend's name (optional)"
+              value={manualName}
+              onChange={(e) => { setManualName(e.target.value); setManualApproveStatus('idle'); }}
+              className="flex-1 px-3 py-2 text-xs rounded-xl bg-surface-container border border-outline-variant/60 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60"
+            />
+            <input
+              type="email"
+              placeholder="friend@gmail.com"
+              value={manualEmail}
+              onChange={(e) => { setManualEmail(e.target.value); setManualApproveStatus('idle'); }}
+              className="flex-1 px-3 py-2 text-xs rounded-xl bg-surface-container border border-outline-variant/60 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60"
+              onKeyDown={(e) => e.key === 'Enter' && handleManualApprove()}
+            />
+            <button
+              onClick={handleManualApprove}
+              disabled={manualApproveStatus === 'loading'}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-white text-xs font-bold transition-colors shrink-0"
+            >
+              {manualApproveStatus === 'loading' ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Check className="w-3.5 h-3.5" />
+              )}
+              <span>Approve</span>
+            </button>
+          </div>
+          {manualApproveStatus !== 'idle' && (
+            <p className={`text-xs font-medium ${manualApproveStatus === 'success' ? 'text-emerald-500' : 'text-red-400'}`}>
+              {manualApproveMsg}
+            </p>
           )}
         </div>
 

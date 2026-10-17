@@ -44,22 +44,30 @@ export async function POST(request: Request) {
       createdAt: Date.now(),
     };
 
-    saveDb(db);
-
     // Auto-create pending registration so host (Akshay) receives approval request immediately
-    const existingReg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
-    const isApproved = Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail);
-    if (!existingReg && !isApproved && !isHostAdmin) {
-      db.registrations.unshift({
-        id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
-        name: cleanName,
-        email: cleanEmail,
-        avatar: '',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'pending',
-      });
-      saveDb(db);
+    const existingReg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
+    const isApproved = Array.isArray(db.approvedEmails) &&
+      db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail) &&
+      (!existingReg || existingReg.status === 'approved');
+    if (!isApproved && !isHostAdmin) {
+      if (existingReg) {
+        if (existingReg.status !== 'approved') {
+          existingReg.name = cleanName || existingReg.name;
+          existingReg.status = 'pending';
+        }
+      } else {
+        db.registrations.unshift({
+          id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
+          name: cleanName,
+          email: cleanEmail,
+          avatar: '',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'pending',
+        });
+      }
     }
+
+    saveDb(db);
 
     // Attempt real email delivery via Nodemailer
     const emailResult = await sendLoginCodeEmail(cleanEmail, cleanName, code);

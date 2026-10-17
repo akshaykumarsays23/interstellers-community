@@ -113,9 +113,16 @@ export async function POST(request: Request) {
       return response;
     }
 
+    const existingReg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
+
     // 2. User already approved by Akshay earlier
-    if (db.approvedEmails.includes(cleanEmail)) {
-      const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
+    const isApproved =
+      existingReg?.status === 'approved' ||
+      (existingReg?.status !== 'pending' &&
+        existingReg?.status !== 'rejected' &&
+        db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail));
+    if (isApproved) {
+      const reg = existingReg;
       const verifiedName = reg ? reg.name : cleanName;
 
       const sessionToken = createSessionToken({
@@ -155,7 +162,7 @@ export async function POST(request: Request) {
     }
 
     // 3. New User Registration -> Hold in pending approval queue for Akshay
-    let reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
+    let reg = existingReg;
     if (!reg) {
       reg = {
         id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),

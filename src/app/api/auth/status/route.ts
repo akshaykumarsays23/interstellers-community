@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     // Check if host Akshay
     if (isAdminEmail(cleanEmail)) {
-      const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
+      const reg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
       return NextResponse.json({
         status: 'approved',
         role: 'admin',
@@ -31,10 +31,25 @@ export async function GET(request: Request) {
       });
     }
 
-    // Check approved list
-    const isApproved = Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail);
+    const reg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
+    if (reg?.status === 'pending' || reg?.status === 'rejected') {
+      return NextResponse.json({
+        status: reg.status,
+        role: 'guest',
+        user: {
+          name: reg.name,
+          email: reg.email,
+          avatar: reg.avatar || '',
+          isAvatarLocked: reg.isAvatarLocked || Boolean(reg.avatar),
+        },
+      });
+    }
+
+    const isApproved =
+      reg?.status === 'approved' ||
+      (Array.isArray(db.approvedEmails) &&
+        db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail));
     if (isApproved) {
-      const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
       return NextResponse.json({
         status: 'approved',
         role: 'member',
@@ -45,7 +60,6 @@ export async function GET(request: Request) {
     }
 
     // Check registrations queue
-    const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
     if (reg) {
       return NextResponse.json({
         status: reg.status,

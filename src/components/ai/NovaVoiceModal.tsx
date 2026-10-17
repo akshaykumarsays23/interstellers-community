@@ -141,27 +141,23 @@ export const NovaVoiceModal: React.FC = () => {
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userText,
           userEmail,
-          history: novaResponse
-            ? [
-                { role: 'assistant', content: novaResponse },
-                { role: 'user', content: userText },
-              ]
-            : [{ role: 'user', content: userText }],
+          history: novaResponse ? [{ role: 'assistant', content: novaResponse }] : [],
         }),
       });
 
       const data = await res.json();
-      if (data && data.reply) {
-        reply = data.reply;
-      } else {
-        reply = `I heard you loud and clear regarding "${userText}"! My cosmic sensors are fully online. Ask me about Marvel, DC, Pokemon, Power Rangers, space physics, or anything across the universe!`;
+      if (!res.ok || typeof data?.reply !== 'string' || !data.reply.trim()) {
+        throw new Error(data?.error || 'Nova is temporarily unavailable. Please try again.');
       }
-    } catch (e) {
-      reply = `I heard you loud and clear regarding "${userText}"! My cosmic sensors are fully online. Ask me about Marvel, DC, Pokemon, Power Rangers, space physics, or anything across the universe!`;
+      reply = data.reply.trim();
+    } catch (error) {
+      console.error('Nova voice request failed:', error);
+      reply = error instanceof Error ? error.message : 'Nova is temporarily unavailable. Please try again.';
     }
 
     setNovaResponse(reply);

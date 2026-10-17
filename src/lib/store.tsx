@@ -818,7 +818,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (currentUser.handle === 'akshay' ||
       currentUser.id === 'user_host' ||
       currentUser.email === 'akshaycricketer1230@gmail.com' ||
-      currentUser.email === 'akshay@interstellers.space');
+      currentUser.email === 'akshay@interstellers.space' ||
+      currentUser.role === 'Host Admin');
 
   // Load session & saved server profile on start
   // Load session, saved server profile & saved posts on start
@@ -1082,7 +1083,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data.registrations) {
-          setRegistrationRequests(data.registrations);
+          setRegistrationRequests((prev) => {
+            const newRegs: RegistrationRequest[] = data.registrations;
+            // Detect newly-arrived pending registrations and fire a notification
+            const prevPendingIds = new Set(prev.filter((r) => r.status === 'pending').map((r) => r.id));
+            const newPending = newRegs.filter((r) => r.status === 'pending' && !prevPendingIds.has(r.id));
+            if (newPending.length > 0) {
+              const names = newPending.map((r) => r.name).join(', ');
+              const notif: AppNotification = {
+                id: `notif_approval_${Date.now()}`,
+                type: 'friend_request',
+                title: `🚀 New Registration Request${newPending.length > 1 ? 's' : ''}`,
+                message: `${names} ${newPending.length > 1 ? 'are' : 'is'} waiting for your approval to join Interstellers.`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isRead: false,
+              };
+              setNotifications((prev) => [notif, ...prev]);
+            }
+            return newRegs;
+          });
         }
       }
     } catch (_) {}
@@ -1926,6 +1945,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await fetch('/api/ai/chat', {
             method: 'POST',
+            cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message: text,
@@ -2249,6 +2269,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: trimmedPrompt,

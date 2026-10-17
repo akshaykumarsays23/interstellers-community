@@ -14,8 +14,9 @@ export async function GET() {
       Object.entries(db.verificationCodes).forEach(([email, entry]) => {
         const cleanEmail = normalizeEmail(email);
         const isAdmin = isAdminEmail(cleanEmail);
-        const isApproved = Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail);
-        const existing = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
+        const isApproved = Array.isArray(db.approvedEmails) &&
+          db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail);
+        const existing = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
         if (!existing && !isApproved && !isAdmin) {
           db.registrations.unshift({
             id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
     if (!requestId || !action) {
       return NextResponse.json({ error: 'requestId and action are required' }, { status: 400 });
     }
+    if (!['approve', 'reject', 'kick'].includes(action)) {
+      return NextResponse.json({ error: 'Unsupported approval action' }, { status: 400 });
+    }
 
     const db = getDb();
     if (!Array.isArray(db.approvedEmails)) {
@@ -75,7 +79,6 @@ export async function POST(request: Request) {
         rId === strippedId ||
         rStripped === cleanReq ||
         rEmail === cleanReq ||
-        (cleanReq.includes('@') && cleanReq.includes(rEmail)) ||
         rName === cleanReq ||
         rHandle === reqHandle
       );
@@ -87,37 +90,48 @@ export async function POST(request: Request) {
 
     if (action === 'approve') {
       if (target) {
-        target.status = 'approved';
         const targetEmail = normalizeEmail(target.email);
-        if (!db.approvedEmails.includes(targetEmail)) {
+        db.registrations.forEach((registration) => {
+          if (normalizeEmail(registration.email) === targetEmail) {
+            registration.status = 'approved';
+          }
+        });
+        if (!db.approvedEmails.some((email) => normalizeEmail(email) === targetEmail)) {
           db.approvedEmails.push(targetEmail);
         }
       }
     } else if (action === 'reject') {
       if (target) {
-        target.status = 'rejected';
         const targetEmail = normalizeEmail(target.email);
+        db.registrations.forEach((registration) => {
+          if (normalizeEmail(registration.email) === targetEmail) {
+            registration.status = 'rejected';
+          }
+        });
         db.approvedEmails = db.approvedEmails.filter((e) => normalizeEmail(e) !== targetEmail);
       }
     } else if (action === 'kick') {
-      if (target) {
-        target.status = 'pending';
-        const targetEmail = normalizeEmail(target.email);
-        // Revoke all instances of this email from approved list
-        db.approvedEmails = db.approvedEmails.filter((e) => normalizeEmail(e) !== targetEmail);
-        // Also update any other registration rows with this email
-        db.registrations.forEach((r) => {
-          if (normalizeEmail(r.email) === targetEmail) {
-            r.status = 'pending';
-          }
-        });
-      } else {
-        // Fallback: If passed an email directly, remove from approved list
-        db.approvedEmails = db.approvedEmails.filter((e) => {
-          const norm = normalizeEmail(e);
-          return norm !== cleanReq && !norm.includes(cleanReq);
-        });
+      const targetEmail = normalizeEmail(target?.email || cleanReq);
+      if (!targetEmail.includes('@') || !targetEmail.includes('.')) {
+        return NextResponse.json({ error: 'A valid email is required to return this user to the queue' }, { status: 404 });
       }
+      if (!target) {
+        target = {
+          id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
+          name: targetEmail.split('@')[0],
+          email: targetEmail,
+          avatar: '',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'pending',
+        };
+        db.registrations.unshift(target);
+      }
+      db.registrations.forEach((registration) => {
+        if (normalizeEmail(registration.email) === targetEmail) {
+          registration.status = 'pending';
+        }
+      });
+      db.approvedEmails = db.approvedEmails.filter((email) => normalizeEmail(email) !== targetEmail);
     }
 
     saveDb(db);

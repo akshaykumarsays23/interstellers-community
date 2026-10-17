@@ -27,21 +27,26 @@ export async function POST(request: Request) {
       });
     }
 
-    // Check if already approved
-    if (Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail)) {
-      const existing = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
-      return NextResponse.json({
-        status: 'approved',
-        user: { name: existing?.name || cleanName, email: cleanEmail },
-      });
-    }
-
-    // Check if already in registrations queue
-    const existing = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
-    if (existing) {
+    const existing = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
+    if (existing && existing.status !== 'approved') {
+      existing.name = cleanName || existing.name;
+      if (existing.status === 'rejected') {
+        existing.status = 'pending';
+      }
+      saveDb(db);
       return NextResponse.json({
         status: existing.status,
         user: { name: existing.name, email: existing.email },
+      });
+    }
+
+    // Check if already approved
+    if (existing?.status === 'approved' ||
+        (Array.isArray(db.approvedEmails) &&
+          db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail))) {
+      return NextResponse.json({
+        status: 'approved',
+        user: { name: existing?.name || cleanName, email: cleanEmail },
       });
     }
 
