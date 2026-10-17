@@ -8,6 +8,7 @@ import { PostCard } from './PostCard';
 import { TrendingPanel } from './TrendingPanel';
 import { SpaceMoments } from './SpaceMoments';
 import { OnlineTravelersWidget } from './OnlineTravelersWidget';
+import { WelcomeImageBanner } from './WelcomeImageBanner';
 import { FeedSkeleton, MomentsRowSkeleton, OnlineWidgetSkeleton } from '@/components/common/Skeletons';
 import { Compass, Sparkles, Filter, Bookmark, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -43,6 +44,9 @@ export const FeedView: React.FC = () => {
       <div className="flex flex-col lg:flex-row gap-6 w-full items-start">
         {/* Main Posts Feed Column (expanded to fill all available width) */}
         <div className="flex-1 min-w-0">
+          {/* Welcome Image Banner */}
+          <WelcomeImageBanner />
+
           {/* Space Traveler Flight Briefing */}
           <SpaceTravelerBriefing />
 
