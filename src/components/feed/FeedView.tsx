@@ -17,6 +17,7 @@ export const FeedView: React.FC = () => {
   const { posts, searchQuery } = useApp();
   const [activeTab, setActiveTab] = useState<'all' | 'popular' | 'saved'>('all');
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isBriefingExpanded, setIsBriefingExpanded] = useState(true);
 
   // Simulate brief initial load skeleton
   useEffect(() => {
@@ -45,10 +46,13 @@ export const FeedView: React.FC = () => {
         {/* Main Posts Feed Column (expanded to fill all available width) */}
         <div className="flex-1 min-w-0">
           {/* Welcome Image Banner */}
-          <WelcomeImageBanner />
+          <WelcomeImageBanner
+            isBriefingExpanded={isBriefingExpanded}
+            onToggleBriefing={() => setIsBriefingExpanded((expanded) => !expanded)}
+          />
 
           {/* Space Traveler Flight Briefing */}
-          <SpaceTravelerBriefing />
+          <SpaceTravelerBriefing isExpanded={isBriefingExpanded} />
 
           {/* Space Moments row */}
           {isInitialLoad ? <MomentsRowSkeleton /> : <SpaceMoments />}
@@ -137,4 +141,3 @@ export const FeedView: React.FC = () => {
     </div>
   );
 };
-

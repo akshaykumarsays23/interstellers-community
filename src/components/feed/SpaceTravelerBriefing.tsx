@@ -10,8 +10,6 @@ import {
   Shield,
   Radio,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
   Star,
   Mic,
   Globe,
@@ -36,7 +34,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export const SpaceTravelerBriefing: React.FC = () => {
+interface SpaceTravelerBriefingProps {
+  isExpanded: boolean;
+}
+
+export const SpaceTravelerBriefing: React.FC<SpaceTravelerBriefingProps> = ({ isExpanded }) => {
   const {
     currentUser,
     isAdmin,
@@ -47,7 +49,6 @@ export const SpaceTravelerBriefing: React.FC = () => {
     missions,
     userHouse,
   } = useApp();
-  const [isExpanded, setIsExpanded] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState<'briefing' | 'intro' | 'rules' | 'reputation' | 'mysteries'>('briefing');
   const [ruleMode, setRuleMode] = useState<'core7' | 'classified20'>('core7');
   const [protocolFilter, setProtocolFilter] = useState<'all' | 'orbit' | 'community' | 'guardian' | 'badges'>('all');
@@ -124,29 +125,7 @@ export const SpaceTravelerBriefing: React.FC = () => {
   };
 
   return (
-    <div className="mb-6 rounded-3xl border-2 border-cyan-400/40 bg-surface-container-lowest overflow-hidden shadow-[0_0_30px_rgba(0,240,255,0.22)] transition-all duration-300">
-        {/* Uncropped Banner Image Header */}
-        <div className="relative w-full bg-slate-950 overflow-hidden border-b-2 border-cyan-400/40">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/neon_interstellar_welcome_crew.png"
-            alt="Welcome to Interstellers"
-            className="w-full h-auto block object-contain"
-          />
-
-          {/* Header Controls Overlay */}
-          <div className="absolute top-3 right-3 z-10">
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950/90 backdrop-blur-md border border-cyan-400/50 text-xs font-bold text-cyan-300 hover:border-cyan-300 hover:shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all shadow-md"
-            >
-              <Rocket className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{isExpanded ? 'Hide Briefing' : 'Show Briefing'}</span>
-              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-cyan-300" /> : <ChevronDown className="w-3.5 h-3.5 text-cyan-300" />}
-            </button>
-          </div>
-        </div>
-
+    <div id="galaxy-briefing" className={`mb-6 rounded-3xl border-2 border-cyan-400/40 bg-surface-container-lowest overflow-hidden shadow-[0_0_30px_rgba(0,240,255,0.22)] transition-all duration-300 ${isExpanded ? '' : 'hidden'}`}>
         {/* Main Content Area */}
         {isExpanded && (
           <div className="p-5 sm:p-7 space-y-6 bg-surface-container-lowest">
