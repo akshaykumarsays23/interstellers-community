@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/store';
 import { INTERSTELLERS_LOGO } from '@/lib/data';
+import { WELCOME_PAGE_IMAGES } from '@/lib/welcomeImages';
 import {
   UserPlus,
   Info,
@@ -38,6 +39,27 @@ export const AuthLandingView: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [otpToken, setOtpToken] = useState<string | null>(null);
+
+  // Random welcome image — picked once on mount, client-side only (no SSR/hydration mismatch)
+  const [welcomeImage, setWelcomeImage] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    if (WELCOME_PAGE_IMAGES.length === 0) return;
+
+    const STORAGE_KEY = 'interstellers_last_welcome_img';
+    const last = sessionStorage.getItem(STORAGE_KEY) ?? '';
+
+    // Build candidate list excluding the last shown image (if more than one available)
+    const candidates =
+      WELCOME_PAGE_IMAGES.length > 1
+        ? WELCOME_PAGE_IMAGES.filter((img) => img !== last)
+        : WELCOME_PAGE_IMAGES;
+
+    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    sessionStorage.setItem(STORAGE_KEY, chosen);
+    setWelcomeImage(chosen);
+  }, []);
 
   const handleOpenAuth = (type: 'signin' | 'register') => {
     setModalType(type);
@@ -133,38 +155,69 @@ export const AuthLandingView: React.FC = () => {
   return (
     <div className="bg-background text-on-surface font-sans h-screen w-screen overflow-hidden flex selection:bg-primary-container selection:text-on-primary-container">
       <main className="w-full h-full flex flex-col md:flex-row">
-        {/* Left Pane: Cosmic Space Branding & Quote */}
-        <section className="hidden md:flex md:w-[50%] lg:w-[48%] bg-[#080918] text-white flex-col justify-between p-8 lg:p-14 border-r border-purple-900/30 relative overflow-hidden shrink-0">
-          {/* Ambient Cosmic Lights */}
-          <div className="absolute top-[-20%] left-[-20%] w-[90%] h-[90%] rounded-full bg-purple-600/20 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-indigo-600/20 blur-3xl pointer-events-none" />
+        {/* Left Pane: Cosmic Space Branding & Random Welcome Image */}
+        <section className="hidden md:flex md:w-[50%] lg:w-[48%] bg-[#080918] text-white flex-col justify-between border-r border-purple-900/30 relative overflow-hidden shrink-0">
+          {/* ── Random Welcome Image (full-pane background) ── */}
+          {welcomeImage ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                key={welcomeImage}
+                src={welcomeImage}
+                alt="Interstellers Welcome"
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageLoaded(true)}
+                className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+              {/* Dark gradient overlay so text stays readable */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#080918]/90 via-[#080918]/40 to-[#080918]/20 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#080918]/30 to-transparent pointer-events-none" />
+            </>
+          ) : (
+            /* Fallback: ambient cosmic lights while image loads or if list is empty */
+            <>
+              <div className="absolute top-[-20%] left-[-20%] w-[90%] h-[90%] rounded-full bg-purple-600/20 blur-3xl pointer-events-none" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-indigo-600/20 blur-3xl pointer-events-none" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={INTERSTELLERS_LOGO}
+                alt="Interstellers Logo"
+                className="absolute inset-0 m-auto w-[70%] max-w-[380px] h-auto object-contain opacity-30"
+              />
+            </>
+          )}
 
-          {/* GIGANTIC INTERSTELLERS LOGO */}
-          <div className="z-10 relative mb-6">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={INTERSTELLERS_LOGO}
-              alt="Interstellers Logo"
-              className="w-full max-w-[420px] lg:max-w-[480px] h-auto object-contain rounded-2xl drop-shadow-[0_0_50px_rgba(168,85,247,0.45)] hover:scale-[1.02] transition-transform duration-300"
-            />
-          </div>
+          {/* ── Content overlay ── */}
+          <div className="relative z-10 flex flex-col justify-between h-full p-8 lg:p-14">
+            {/* Logo badge at top */}
+            <div className="mb-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={INTERSTELLERS_LOGO}
+                alt="Interstellers Logo"
+                className="w-full max-w-[260px] lg:max-w-[320px] h-auto object-contain rounded-2xl drop-shadow-[0_0_50px_rgba(168,85,247,0.45)] hover:scale-[1.02] transition-transform duration-300"
+              />
+            </div>
 
-          {/* Core Quote */}
-          <div className="z-10 relative my-auto">
-            <blockquote className="font-heading font-bold text-2xl lg:text-3xl text-purple-300 mb-5 max-w-md leading-snug">
-              &ldquo;Time is never coming back, remember time is never...&rdquo;
-            </blockquote>
-            <div className="w-20 h-1.5 bg-purple-500 rounded-full mb-4 shadow-[0_0_12px_rgba(168,85,247,0.8)]" />
-            <p className="text-xs sm:text-sm text-slate-300 max-w-sm leading-relaxed">
-              Connect with friends, collaborate across galactic spaces, and experience real-time community communication.
-            </p>
-          </div>
+            {/* Core Quote */}
+            <div className="my-auto">
+              <blockquote className="font-heading font-bold text-2xl lg:text-3xl text-purple-300 mb-5 max-w-md leading-snug drop-shadow-lg">
+                &ldquo;Time is never coming back, remember time is never...&rdquo;
+              </blockquote>
+              <div className="w-20 h-1.5 bg-purple-500 rounded-full mb-4 shadow-[0_0_12px_rgba(168,85,247,0.8)]" />
+              <p className="text-xs sm:text-sm text-slate-300 max-w-sm leading-relaxed drop-shadow">
+                Connect with friends, collaborate across galactic spaces, and experience real-time community communication.
+              </p>
+            </div>
 
-          {/* Footer without "Reimagined" */}
-          <div className="z-10 relative mt-auto">
-            <p className="text-xs text-slate-400 font-medium">
-              &copy; 2026 Interstellers. Professional Networking.
-            </p>
+            {/* Footer */}
+            <div className="mt-auto">
+              <p className="text-xs text-slate-400 font-medium">
+                &copy; 2026 Interstellers. Professional Networking.
+              </p>
+            </div>
           </div>
         </section>
 
