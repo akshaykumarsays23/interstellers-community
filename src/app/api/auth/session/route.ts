@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, saveDb } from '@/lib/db';
 import { verifySessionToken, isAdminEmail, normalizeEmail } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -51,55 +51,52 @@ export async function GET(request: Request) {
           email: cleanEmail,
           handle: 'akshay',
           role: 'Host Admin',
+          profileRole: reg?.role || 'Community Host & Admin',
           avatar: reg?.avatar || '/avatar.png',
+          bio: reg?.bio ?? "Founder & Community Host at Interstellers. 'Time is never coming back, remember time is never...'",
+          house: reg?.house,
+          houseAssignedAt: reg?.houseAssignedAt,
           status: 'online',
           isVerified: true,
         },
       });
     }
 
-    // Check if user is still in approved list
-    const reg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
-    const isApproved =
-      reg?.status === 'approved' ||
-      ((!reg || (reg.status !== 'pending' && reg.status !== 'rejected')) &&
-        Array.isArray(db.approvedEmails) &&
-        db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail));
-
-    if (isApproved) {
-      return NextResponse.json({
-        authenticated: true,
-        user: {
-          id: reg?.id || 'user_' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_'),
-          name: reg?.name || verification.user.name,
-          email: cleanEmail,
-          handle: (reg?.name || verification.user.name).toLowerCase().replace(/\s+/g, '_'),
-          role: reg?.status === 'approved' ? 'Community Member' : 'Guest',
-          avatar: reg?.avatar || '',
-          status: 'online',
-          isVerified: true,
-        },
-      });
+    let reg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
+    if (!reg) {
+      reg = {
+        id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
+        name: verification.user.name,
+        email: cleanEmail,
+        avatar: '',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'approved',
+      };
+      db.registrations.unshift(reg);
     }
+    reg.status = 'approved';
+    if (!db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail)) {
+      db.approvedEmails.push(cleanEmail);
+    }
+    saveDb(db);
 
-    // If revoked, kicked, or still pending
-    const response = NextResponse.json({
-      authenticated: false,
-      status: reg?.status || 'pending',
-      requiresApproval: true,
+    return NextResponse.json({
+      authenticated: true,
+      user: {
+        id: reg.id,
+        name: reg.name || verification.user.name,
+        email: cleanEmail,
+        handle: (reg.name || verification.user.name).toLowerCase().replace(/\s+/g, '_'),
+        role: 'Community Member',
+        profileRole: reg.role || 'Community Member',
+        avatar: reg.avatar || '',
+        bio: reg.bio || '',
+        house: reg.house,
+        houseAssignedAt: reg.houseAssignedAt,
+        status: 'online',
+        isVerified: true,
+      },
     });
-
-    response.cookies.set({
-      name: 'interstellers_session',
-      value: '',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 0,
-    });
-
-    return response;
   } catch (error) {
     console.error('Session check error:', error);
     return NextResponse.json({ authenticated: false, error: 'Internal server error' }, { status: 500 });

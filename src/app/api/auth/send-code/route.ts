@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb, saveDb } from '@/lib/db';
 import { sendLoginCodeEmail } from '@/lib/email';
-import { normalizeEmail, isAdminEmail, createOtpToken } from '@/lib/auth';
+import { normalizeEmail, createOtpToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,6 @@ export async function POST(request: Request) {
     const cleanName = ((name as string) || cleanEmail.split('@')[0]).trim();
 
     // Generate secure 6-digit numeric OTP code
-    const isHostAdmin = isAdminEmail(cleanEmail);
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresInMinutes = 10;
     const expiresInSeconds = expiresInMinutes * 60;
@@ -43,29 +42,6 @@ export async function POST(request: Request) {
       name: cleanName,
       createdAt: Date.now(),
     };
-
-    // Auto-create pending registration so host (Akshay) receives approval request immediately
-    const existingReg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
-    const isApproved = Array.isArray(db.approvedEmails) &&
-      db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail) &&
-      (!existingReg || existingReg.status === 'approved');
-    if (!isApproved && !isHostAdmin) {
-      if (existingReg) {
-        if (existingReg.status !== 'approved') {
-          existingReg.name = cleanName || existingReg.name;
-          existingReg.status = 'pending';
-        }
-      } else {
-        db.registrations.unshift({
-          id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
-          name: cleanName,
-          email: cleanEmail,
-          avatar: '',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'pending',
-        });
-      }
-    }
 
     saveDb(db);
 

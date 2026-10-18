@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb, saveDb, DbRegistration } from '@/lib/db';
+import { getDb, saveDb } from '@/lib/db';
 import { normalizeEmail, isAdminEmail } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -17,56 +17,52 @@ export async function POST(request: Request) {
 
     // Check if host Akshay
     if (isAdminEmail(cleanEmail)) {
+      const existing = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
       if (Array.isArray(db.approvedEmails) && !db.approvedEmails.includes(cleanEmail)) {
         db.approvedEmails.push(cleanEmail);
         saveDb(db);
       }
       return NextResponse.json({
         status: 'approved',
-        user: { name: 'Akshay Kumar', email: cleanEmail, role: 'Host Admin' },
+        user: {
+          name: 'Akshay Kumar',
+          email: cleanEmail,
+          role: 'Host Admin',
+          profileRole: existing?.role || 'Community Host & Admin',
+          avatar: existing?.avatar || '/avatar.png',
+          bio: existing?.bio ?? "Founder & Community Host at Interstellers. 'Time is never coming back, remember time is never...'",
+          house: existing?.house,
+          houseAssignedAt: existing?.houseAssignedAt,
+        },
       });
     }
 
-    const existing = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
-    if (existing && existing.status !== 'approved') {
-      existing.name = cleanName || existing.name;
-      if (existing.status === 'rejected') {
-        existing.status = 'pending';
-      }
-      saveDb(db);
-      return NextResponse.json({
-        status: existing.status,
-        user: { name: existing.name, email: existing.email },
-      });
+    const registration = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
+    const isAlreadyRegistered =
+      registration?.status === 'approved' ||
+      (!registration &&
+        Array.isArray(db.approvedEmails) &&
+        db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail));
+    if (!isAlreadyRegistered) {
+      return NextResponse.json(
+        { error: 'Verify your Gmail code to complete registration.' },
+        { status: 403 }
+      );
     }
-
-    // Check if already approved
-    if (existing?.status === 'approved' ||
-        (Array.isArray(db.approvedEmails) &&
-          db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail))) {
-      return NextResponse.json({
-        status: 'approved',
-        user: { name: existing?.name || cleanName, email: cleanEmail },
-      });
-    }
-
-    // Create new pending registration
-    const newReg: DbRegistration = {
-      id: 'reg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
-      name: cleanName,
-      email: cleanEmail,
-      avatar: '',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'pending',
-    };
-
-    db.registrations.unshift(newReg);
-    saveDb(db);
 
     return NextResponse.json({
-      status: 'pending',
-      user: { name: newReg.name, email: newReg.email },
-      message: 'Registration held. Awaiting approval from Akshay.',
+      status: 'approved',
+      user: {
+        id: registration?.id,
+        name: registration?.name || cleanName,
+        email: cleanEmail,
+        avatar: registration?.avatar || '',
+        bio: registration?.bio || '',
+        role: 'Community Member',
+        profileRole: registration?.role || 'Community Member',
+        house: registration?.house,
+        houseAssignedAt: registration?.houseAssignedAt,
+      },
     });
   } catch (error) {
     console.error('Registration API error:', error);

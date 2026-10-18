@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   Phone,
   Video,
-  UserMinus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,8 +25,6 @@ export const FriendsDirectory: React.FC = () => {
   const {
     connections,
     currentUser,
-    isAdmin,
-    kickOutUser,
     friendRequests,
     acceptFriendRequest,
     declineFriendRequest,
@@ -280,16 +277,6 @@ export const FriendsDirectory: React.FC = () => {
                             <Video className="w-3.5 h-3.5" />
                           </button>
 
-                          {isAdmin && (
-                            <button
-                              onClick={() => kickOutUser(user.email || user.id || user.handle)}
-                              className="px-2.5 py-1.5 rounded-xl bg-error/15 hover:bg-error text-error hover:text-on-error font-semibold text-xs transition-all flex items-center gap-1 border border-error/30 shadow-xs"
-                              title={`Kick out ${user.name} and send back to Host Approvals queue`}
-                            >
-                              <UserMinus className="w-3.5 h-3.5" />
-                              <span>Kick Out</span>
-                            </button>
-                          )}
                         </>
                       )}
 

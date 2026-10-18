@@ -8,7 +8,6 @@ import { MobileNav } from './MobileNav';
 import { AIAssistantPanel } from '@/components/ai/AIAssistantPanel';
 import { CallModal } from '@/components/common/CallModal';
 import { ShareModal } from '@/components/common/ShareModal';
-import { ApprovalsModal } from '@/components/common/ApprovalsModal';
 import { AuthLandingView } from '@/components/auth/AuthLandingView';
 import { NovaVoiceModal } from '@/components/ai/NovaVoiceModal';
 import { GalaxyTelescopeModal } from '@/components/common/GalaxyTelescopeModal';
@@ -78,9 +77,6 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* Share / Invite Friends Modal */}
       <ShareModal />
-
-      {/* Member Approvals Queue Modal (for Akshay) */}
-      <ApprovalsModal />
 
       {/* Galaxy Telescope Scanner Modal */}
       <GalaxyTelescopeModal isOpen={isTelescopeOpen} onClose={() => setIsTelescopeOpen(false)} />

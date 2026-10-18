@@ -5,6 +5,7 @@ export interface User {
   avatar: string;
   bio: string;
   role: string;
+  profileRole?: string;
   company?: string;
   mutualFriends?: number;
   status: 'online' | 'offline' | 'away' | 'busy';
@@ -12,16 +13,8 @@ export interface User {
   email?: string;
   isVerified?: boolean;
   isAvatarLocked?: boolean;
-}
-
-export interface RegistrationRequest {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  isAvatarLocked?: boolean;
-  timestamp: string;
-  status: 'pending' | 'approved' | 'rejected';
+  house?: 'marvel' | 'dc' | 'pokemon' | 'power_rangers';
+  houseAssignedAt?: number;
 }
 
 export interface Post {
@@ -315,4 +308,3 @@ export interface TravelerGamificationState {
   };
   moderationState: 'NORMAL' | 'WARNING' | 'COMM_BLACKOUT' | 'SHADOW_ORBIT' | 'BLACK_HOLE' | 'AIRLOCK';
 }
-

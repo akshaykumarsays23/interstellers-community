@@ -12,7 +12,6 @@ import {
   UserSettings,
   Message,
   Comment,
-  RegistrationRequest,
   TravelerGamificationState,
   ArcadeGame,
   GameScoreRecord,
@@ -41,6 +40,9 @@ import {
   INITIAL_AI_MESSAGES,
   DEFAULT_SETTINGS
 } from './data';
+
+const isHouseId = (value: unknown): value is NonNullable<User['house']> =>
+  value === 'marvel' || value === 'dc' || value === 'pokemon' || value === 'power_rangers';
 
 import {
   INITIAL_ARCADE_GAMES,
@@ -74,31 +76,16 @@ interface CallState {
 }
 
 interface AppContextType {
-  // Auth & Approval State
+  // Auth State
   isAuthenticated: boolean;
   isAdmin: boolean;
-  pendingApprovalUser: { name: string; email: string } | null;
-  setPendingApprovalUser: (val: { name: string; email: string } | null) => void;
   sendVerificationCode: (email: string, name?: string, type?: 'register' | 'signin') => Promise<{ success: boolean; code?: string; otpToken?: string; message?: string; error?: string }>;
-  verifyLoginCode: (email: string, code: string, name?: string, otpToken?: string) => Promise<{ success: boolean; status?: 'approved' | 'pending'; message?: string; error?: string }>;
-  login: (email?: string, name?: string) => Promise<{ success: boolean; requiresApproval?: boolean }>;
-  registerNewUser: (name: string, email: string) => Promise<void>;
+  verifyLoginCode: (email: string, code: string, name?: string, otpToken?: string) => Promise<{ success: boolean; status?: 'approved'; message?: string; error?: string }>;
   logout: () => void;
-  checkMyApprovalStatus: () => Promise<boolean>;
 
   // Device & Visitor Analytics
   activeDevicesCount: number;
   totalDevicesCount: number;
-
-  // Registration Approval Queue (for Akshay)
-  registrationRequests: RegistrationRequest[];
-  approveRegistration: (requestId: string) => Promise<void>;
-  rejectRegistration: (requestId: string) => Promise<void>;
-  kickOutUser: (requestId: string) => Promise<void>;
-  pendingRegistrationsCount: number;
-  isApprovalsModalOpen: boolean;
-  setIsApprovalsModalOpen: (open: boolean) => void;
-  fetchAdminApprovals: () => Promise<void>;
 
   // User & Settings
   currentUser: User;
@@ -229,10 +216,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [pendingApprovalUser, setPendingApprovalUser] = useState<{ name: string; email: string } | null>(null);
   
-  // Registration requests from backend
-  const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([]);
-  const [isApprovalsModalOpen, setIsApprovalsModalOpen] = useState<boolean>(false);
-
   // Visitor & Active Device Tracking
   const [activeDevicesCount, setActiveDevicesCount] = useState<number>(1);
   const [totalDevicesCount, setTotalDevicesCount] = useState<number>(1);
@@ -770,6 +753,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     return null;
   });
+
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser.email) return;
+    setUserHouse(currentUser.house ?? null);
+    setUserHouseAssignedAt(currentUser.houseAssignedAt ?? null);
+  }, [isAuthenticated, currentUser.email, currentUser.house, currentUser.houseAssignedAt]);
+
   const [houseScores, setHouseScores] = useState<{ marvel: number; dc: number; pokemon: number; power_rangers: number }>({
     marvel: 14250,
     dc: 13980,
@@ -786,6 +776,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('interstellers_user_house', house);
       localStorage.setItem('interstellers_house_char', character);
       localStorage.setItem('interstellers_house_assigned_at', now.toString());
+    }
+    const userEmail = currentUser.email || settings.email;
+    if (userEmail) {
+      fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          name: currentUser.name,
+          bio: currentUser.bio,
+          role: currentUser.role,
+          avatar: currentUser.avatar,
+          house,
+          houseAssignedAt: now,
+        }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Profile update failed with status ${response.status}`);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to save house residency:', error);
+        });
     }
     setHouseScores((prev) => ({ ...prev, [house]: prev[house] + 100 }));
   };
@@ -818,8 +832,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (currentUser.handle === 'akshay' ||
       currentUser.id === 'user_host' ||
       currentUser.email === 'akshaycricketer1230@gmail.com' ||
-      currentUser.email === 'akshay@interstellers.space' ||
-      currentUser.role === 'Host Admin');
+      currentUser.email === 'akshay@interstellers.space');
 
   // Load session & saved server profile on start
   // Load session, saved server profile & saved posts on start
@@ -922,13 +935,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               name: sessionData.user.name,
               handle: sessionData.user.handle || sessionData.user.name.toLowerCase().replace(/\s+/g, '_'),
               avatar: sessionData.user.avatar || '',
-              bio: sessionData.user.role === 'Host Admin' ? HOST_USER.bio : 'Verified Member at Interstellers.',
+              bio: sessionData.user.bio ?? (sessionData.user.role === 'Host Admin' ? HOST_USER.bio : ''),
               role: sessionData.user.role || 'Community Member',
+              profileRole: sessionData.user.profileRole || sessionData.user.role || 'Community Member',
               email: sessionData.user.email,
               status: 'online',
               isVerified: true,
+              house: sessionData.user.house,
+              houseAssignedAt: sessionData.user.houseAssignedAt,
             };
             setCurrentUser(serverUser);
+            const validHouses = ['marvel', 'dc', 'pokemon', 'power_rangers'];
+            if (serverUser.house && validHouses.includes(serverUser.house)) {
+              setUserHouse(serverUser.house);
+              setUserHouseAssignedAt(serverUser.houseAssignedAt ?? null);
+            } else {
+              setUserHouse(null);
+              setUserHouseAssignedAt(null);
+            }
             setSettings((prev) => ({
               ...prev,
               displayName: serverUser.name,
@@ -969,11 +993,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                             name: pendingObj.name,
                             handle: pendingObj.name.toLowerCase().replace(/\s+/g, '_'),
                             avatar: data.user?.avatar || '',
-                            bio: 'Verified Member at Interstellers.',
-                            role: 'Community Member',
+                            bio: data.user?.bio || '',
+                            role: data.user?.role || 'Community Member',
+                            profileRole: data.user?.profileRole || data.user?.role || 'Community Member',
                             email: pendingObj.email,
                             status: 'online',
                             isVerified: true,
+                            house: data.user?.house,
+                            houseAssignedAt: data.user?.houseAssignedAt,
                           };
                       setCurrentUser(approvedUser);
                       setIsAuthenticated(true);
@@ -1076,47 +1103,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated]);
 
-  // Fetch admin approvals from backend
-  const fetchAdminApprovals = async () => {
-    try {
-      const res = await fetch('/api/admin/approvals');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.registrations) {
-          setRegistrationRequests((prev) => {
-            const newRegs: RegistrationRequest[] = data.registrations;
-            // Detect newly-arrived pending registrations and fire a notification
-            const prevPendingIds = new Set(prev.filter((r) => r.status === 'pending').map((r) => r.id));
-            const newPending = newRegs.filter((r) => r.status === 'pending' && !prevPendingIds.has(r.id));
-            if (newPending.length > 0) {
-              const names = newPending.map((r) => r.name).join(', ');
-              const notif: AppNotification = {
-                id: `notif_approval_${Date.now()}`,
-                type: 'friend_request',
-                title: `🚀 New Registration Request${newPending.length > 1 ? 's' : ''}`,
-                message: `${names} ${newPending.length > 1 ? 'are' : 'is'} waiting for your approval to join Interstellers.`,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isRead: false,
-              };
-              setNotifications((prev) => [notif, ...prev]);
-            }
-            return newRegs;
-          });
-        }
-      }
-    } catch (_) {}
-  };
-
-  // Poll for admin approvals if Akshay is logged in
-  useEffect(() => {
-    if (isAuthenticated && isAdmin) {
-      fetchAdminApprovals();
-      const interval = setInterval(fetchAdminApprovals, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated, isAdmin]);
-
-  // Auto-poll approval status if user is currently held in pending approval lobby
+  // Resolve pending account data saved by older app versions.
   useEffect(() => {
     if (pendingApprovalUser && !isAuthenticated) {
       const checkStatus = async () => {
@@ -1130,11 +1117,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 id: 'user_' + generateId(),
                 name: pendingApprovalUser.name,
                 handle: pendingApprovalUser.name.toLowerCase().replace(/\s+/g, '_'),
-                avatar: '',
-                bio: 'Verified Member at Interstellers.',
-                role: 'Community Member',
+                avatar: data.user?.avatar || '',
+                bio: data.user?.bio || '',
+                role: data.user?.role || 'Community Member',
+                profileRole: data.user?.profileRole || data.user?.role || 'Community Member',
+                email: pendingApprovalUser.email,
                 status: 'online',
                 isVerified: true,
+                house: data.user?.house,
+                houseAssignedAt: data.user?.houseAssignedAt,
               };
               setCurrentUser(approvedUser);
               setSettings({
@@ -1156,31 +1147,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return () => clearInterval(interval);
     }
   }, [pendingApprovalUser, isAuthenticated]);
-
-  // Active session watcher: if Akshay kicks out a user, immediately redirect them to Pending Approval Lobby
-  useEffect(() => {
-    const userEmail = settings.email || currentUser.email;
-    if (isAuthenticated && !isAdmin && userEmail) {
-      const checkEviction = async () => {
-        try {
-          const res = await fetch(`/api/auth/status?email=${encodeURIComponent(userEmail)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status !== 'approved') {
-              fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-              const pending = { name: currentUser.name || settings.displayName || 'Explorer', email: userEmail };
-              setPendingApprovalUser(pending);
-              setIsAuthenticated(false);
-              localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
-              localStorage.removeItem('interstellers_current_user');
-            }
-          }
-        } catch (_) {}
-      };
-      const interval = setInterval(checkEviction, 2500);
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated, isAdmin, settings.email, currentUser.email, currentUser.name, settings.displayName]);
 
   // Call timer
   useEffect(() => {
@@ -1242,17 +1208,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (data.status === 'approved') {
         const isHostEmail = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
         const userToSet: User = isHostEmail
-          ? HOST_USER
+          ? { ...HOST_USER, ...data.user }
           : {
               id: data.user?.id || 'user_' + generateId(),
               name: data.user?.name || cleanName,
               handle: (data.user?.name || cleanName).toLowerCase().replace(/\s+/g, '_'),
               avatar: data.user?.avatar || '',
-              bio: 'Verified Member at Interstellers.',
-              role: 'Community Member',
+              bio: data.user?.bio || '',
+              role: data.user?.role || 'Community Member',
+              profileRole: data.user?.profileRole || data.user?.role || 'Community Member',
               email: cleanEmail,
               status: 'online',
               isVerified: true,
+              house: data.user?.house,
+              houseAssignedAt: data.user?.houseAssignedAt,
             };
 
         setCurrentUser(userToSet);
@@ -1271,277 +1240,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         return { success: true, status: 'approved' as const, message: data.message };
       } else {
-        // New user registration -> Held in pending approval lobby for Akshay
-        const pending = { name: cleanName, email: cleanEmail };
-        setPendingApprovalUser(pending);
-        setIsAuthenticated(false);
-        setCurrentUser(GUEST_USER);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
-          localStorage.removeItem('interstellers_current_user');
-        }
-        return { success: true, status: 'pending' as const, message: data.message };
+        return { success: false, error: data.error || 'Account access is unavailable.' };
       }
     } catch (err: any) {
       return { success: false, error: String(err?.message || 'Verification error') };
-    }
-  };
-
-  // Register New User (Calls server backend)
-  const registerNewUser = async (name: string, email: string) => {
-    const cleanEmail = email.toLowerCase().trim();
-    const cleanName = name.trim() || 'New Explorer';
-
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: cleanName, email: cleanEmail }),
-      });
-      const data = await res.json();
-
-      if (data.status === 'approved') {
-        const isHostEmail = cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space';
-        const userToSet: User = isHostEmail
-          ? HOST_USER
-          : {
-              id: 'user_' + generateId(),
-              name: data.user?.name || cleanName,
-              handle: (data.user?.name || cleanName).toLowerCase().replace(/\s+/g, '_'),
-              avatar: data.user?.avatar || '',
-              bio: 'Verified Member at Interstellers.',
-              role: 'Community Member',
-              email: cleanEmail,
-              status: 'online',
-              isVerified: true,
-            };
-
-        setCurrentUser(userToSet);
-        setSettings({
-          ...DEFAULT_SETTINGS,
-          displayName: userToSet.name,
-          handle: userToSet.handle,
-          email: cleanEmail,
-          avatar: userToSet.avatar,
-        });
-        setIsAuthenticated(true);
-        setPendingApprovalUser(null);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('interstellers_current_user', JSON.stringify(userToSet));
-          localStorage.removeItem('interstellers_pending_user');
-        }
-      } else {
-        const pending = { name: cleanName, email: cleanEmail };
-        setPendingApprovalUser(pending);
-        setIsAuthenticated(false);
-        setCurrentUser(GUEST_USER);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
-          localStorage.removeItem('interstellers_current_user');
-        }
-      }
-    } catch (e) {
-      console.error(e);
-      const pending = { name: cleanName, email: cleanEmail };
-      setPendingApprovalUser(pending);
-      setIsAuthenticated(false);
-      setCurrentUser(GUEST_USER);
-    }
-  };
-
-  // Sign In Flow
-  const login = async (email?: string, name?: string) => {
-    const cleanEmail = (email || '').toLowerCase().trim();
-
-    if (cleanEmail === 'akshaycricketer1230@gmail.com' || cleanEmail === 'akshay@interstellers.space') {
-      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('interstellers_current_user') : null;
-      const hostAvatarKey = `interstellers_saved_avatar_akshaycricketer1230@gmail.com`;
-      const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem(hostAvatarKey) || localStorage.getItem('interstellers_saved_avatar') : null;
-      let hostUserToSet = { ...HOST_USER };
-      if (savedUser) {
-        try {
-          const parsed = JSON.parse(savedUser);
-          hostUserToSet = { ...hostUserToSet, ...parsed };
-        } catch (_) {}
-      }
-      if (savedAvatar) {
-        hostUserToSet.avatar = savedAvatar;
-      }
-      setCurrentUser(hostUserToSet);
-      setSettings((prev) => ({
-        ...prev,
-        displayName: hostUserToSet.name,
-        bio: hostUserToSet.bio,
-        role: hostUserToSet.role,
-        avatar: hostUserToSet.avatar,
-      }));
-      setIsAuthenticated(true);
-      setPendingApprovalUser(null);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('interstellers_current_user', JSON.stringify(hostUserToSet));
-        localStorage.removeItem('interstellers_pending_user');
-      }
-      return { success: true };
-    }
-
-    try {
-      const res = await fetch(`/api/auth/status?email=${encodeURIComponent(cleanEmail)}`);
-      const data = await res.json();
-
-      if (data.status === 'approved') {
-        const approvedUser: User = {
-          id: 'user_' + generateId(),
-          name: data.user?.name || name || cleanEmail.split('@')[0],
-          handle: (data.user?.name || name || cleanEmail.split('@')[0]).toLowerCase().replace(/\s+/g, '_'),
-          avatar: data.user?.avatar || '',
-          bio: 'Verified Member at Interstellers.',
-          role: 'Community Member',
-          status: 'online',
-          isVerified: true,
-        };
-        setCurrentUser(approvedUser);
-        setSettings({
-          ...DEFAULT_SETTINGS,
-          displayName: approvedUser.name,
-          handle: approvedUser.handle,
-          email: cleanEmail,
-        });
-        setIsAuthenticated(true);
-        setPendingApprovalUser(null);
-        localStorage.setItem('interstellers_current_user', JSON.stringify(approvedUser));
-        localStorage.removeItem('interstellers_pending_user');
-        return { success: true };
-      } else {
-        const pending = { name: name || cleanEmail.split('@')[0], email: cleanEmail };
-        setPendingApprovalUser(pending);
-        setIsAuthenticated(false);
-        localStorage.setItem('interstellers_pending_user', JSON.stringify(pending));
-        return { success: false, requiresApproval: true };
-      }
-    } catch (e) {
-      return { success: false, requiresApproval: true };
-    }
-  };
-
-  // Manual status check by user
-  const checkMyApprovalStatus = async (): Promise<boolean> => {
-    if (!pendingApprovalUser) return false;
-    try {
-      const res = await fetch(`/api/auth/status?email=${encodeURIComponent(pendingApprovalUser.email)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status === 'approved') {
-          const approvedUser: User = {
-            id: 'user_' + generateId(),
-            name: pendingApprovalUser.name,
-            handle: pendingApprovalUser.name.toLowerCase().replace(/\s+/g, '_'),
-            avatar: data.user?.avatar || '',
-            bio: 'Verified Member at Interstellers.',
-            role: 'Community Member',
-            status: 'online',
-            isVerified: true,
-          };
-          setCurrentUser(approvedUser);
-          setIsAuthenticated(true);
-          setPendingApprovalUser(null);
-          localStorage.removeItem('interstellers_pending_user');
-          localStorage.setItem('interstellers_current_user', JSON.stringify(approvedUser));
-          return true;
-        }
-      }
-    } catch (_) {}
-    return false;
-  };
-
-  // Akshay Approves a Registration Request on Server Backend
-  const approveRegistration = async (requestId: string) => {
-    try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, action: 'approve' }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.registrations) {
-          setRegistrationRequests(data.registrations);
-        }
-        if (data.updatedUser) {
-          const newUser: User = {
-            id: 'user_' + data.updatedUser.id,
-            name: data.updatedUser.name,
-            handle: data.updatedUser.name.toLowerCase().replace(/\s+/g, '_'),
-            avatar: data.updatedUser.avatar || '',
-            bio: 'Verified Member at Interstellers.',
-            role: 'Community Member',
-            status: 'online',
-            isVerified: true,
-            mutualFriends: 1,
-          };
-          setConnections((prev) => {
-            if (prev.find((u) => u.handle === newUser.handle)) return prev;
-            return [newUser, ...prev];
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Approve error:', e);
-    }
-  };
-
-  // Akshay Rejects a Registration Request
-  const rejectRegistration = async (requestId: string) => {
-    try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, action: 'reject' }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.registrations) {
-          setRegistrationRequests(data.registrations);
-        }
-      }
-    } catch (e) {
-      console.error('Reject error:', e);
-    }
-  };
-
-  // Akshay Kicks Out a Member (Revokes approval back to pending approval lobby)
-  const kickOutUser = async (targetIdentifier: string) => {
-    try {
-      const res = await fetch('/api/admin/approvals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: targetIdentifier, action: 'kick' }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.registrations) {
-          setRegistrationRequests(data.registrations);
-        }
-        const cleanTarget = targetIdentifier.toLowerCase().replace(/^user_/, '');
-        setConnections((prev) =>
-          prev.filter((u) => {
-            const uId = (u.id || '').toLowerCase().replace(/^user_/, '');
-            const uEmail = (u.email || '').toLowerCase();
-            const uHandle = (u.handle || '').toLowerCase();
-            const uName = (u.name || '').toLowerCase();
-            return (
-              uId !== cleanTarget &&
-              uEmail !== cleanTarget &&
-              uHandle !== cleanTarget &&
-              uName !== cleanTarget &&
-              !cleanTarget.includes(uId)
-            );
-          })
-        );
-        await fetchRegisteredUsers();
-        await fetchAdminApprovals();
-      }
-    } catch (e) {
-      console.error('Kick out error:', e);
     }
   };
 
@@ -1593,7 +1295,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...currentUser,
       name,
       bio,
-      role,
+      profileRole: role,
       avatar: newAvatar,
       isAvatarLocked: false,
     };
@@ -1648,8 +1350,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             avatar: newAvatar,
             isAvatarLocked: false,
           }),
-        }).catch(() => {});
-      } catch (_) {}
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`Profile update failed with status ${response.status}`);
+            }
+          })
+          .catch((error) => {
+            console.error('Failed to save profile:', error);
+          });
+      } catch (error) {
+        console.error('Failed to submit profile update:', error);
+      }
     }
 
     // Helper to lock and persist posts to localStorage and server DB
@@ -2366,31 +2078,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const activeChat = chats.find((c) => c.id === activeChatId) || chats[0];
   const activeGroup = groups.find((g) => g.id === activeGroupId) || groups[0];
   const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
-  const pendingRegistrationsCount = registrationRequests.filter((r) => r.status === 'pending').length;
 
   return (
     <AppContext.Provider
       value={{
         isAuthenticated,
         isAdmin,
-        pendingApprovalUser,
-        setPendingApprovalUser,
         sendVerificationCode,
         verifyLoginCode,
-        login,
-        registerNewUser,
         logout,
-        checkMyApprovalStatus,
         activeDevicesCount,
         totalDevicesCount,
-        registrationRequests,
-        approveRegistration,
-        rejectRegistration,
-        kickOutUser,
-        pendingRegistrationsCount,
-        isApprovalsModalOpen,
-        setIsApprovalsModalOpen,
-        fetchAdminApprovals,
         currentUser,
         settings,
         updateSettings,

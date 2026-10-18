@@ -66,7 +66,7 @@ export async function sendLoginCodeEmail(toEmail: string, name: string, code: st
           <div class="notice">
             <ul>
               <li>• This verification code expires in <strong>10 minutes</strong>.</li>
-              <li>• After entering this code on the website, your registration will be placed in the host approval queue for <span class="highlight">Akshay</span> before you can access the platform.</li>
+              <li>• After entering this code on the website, you can access the platform immediately.</li>
             </ul>
           </div>
 
@@ -79,7 +79,7 @@ export async function sendLoginCodeEmail(toEmail: string, name: string, code: st
       </html>
     `;
 
-    const plainTextMessage = `Welcome to Interstellers!\n\n"Time is never coming back, remember time is never..."\n\nHello ${cleanName},\n\nUse the 6-digit verification code below to complete your registration:\n\n====================\n    ${code}\n====================\n\n• This verification code expires in 10 minutes.\n• After entering this code on the website, your registration will be placed in the host approval queue for Akshay before you can access the platform.\n\n— Interstellers Cosmic Network\n© 2026 Interstellers. Professional Networking.\nFrom: Akshay Kumar <${gmailUser}>`;
+    const plainTextMessage = `Welcome to Interstellers!\n\n"Time is never coming back, remember time is never..."\n\nHello ${cleanName},\n\nUse the 6-digit verification code below to complete your registration:\n\n====================\n    ${code}\n====================\n\n• This verification code expires in 10 minutes.\n• After entering this code on the website, you can access the platform immediately.\n\n— Interstellers Cosmic Network\n© 2026 Interstellers. Professional Networking.\nFrom: Akshay Kumar <${gmailUser}>`;
 
     const info = await transporter.sendMail({
       from: `"Interstellers Community" <${gmailUser}>`,

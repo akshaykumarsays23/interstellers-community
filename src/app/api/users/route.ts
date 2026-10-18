@@ -7,6 +7,11 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const db = getDb();
+    const onlineSince = Date.now() - 5 * 60 * 1000;
+    const isUserOnline = (userId: string) =>
+      db.visitorSessions?.some(
+        (session) => session.userId === userId && session.lastSeen >= onlineSince
+      ) || false;
     
     // Always include Host Akshay Kumar
     const hostUser: User = {
@@ -15,9 +20,10 @@ export async function GET() {
       handle: 'akshay',
       avatar: '/avatar.png',
       bio: "Founder & Community Host at Interstellers. 'Time is never coming back, remember time is never...'",
-      role: 'Community Host & Admin',
+      role: 'Host Admin',
+      profileRole: 'Community Host & Admin',
       company: 'Interstellers',
-      status: 'online',
+      status: isUserOnline('user_host') ? 'online' : 'offline',
       customStatus: 'Building Interstellers 🚀',
       isVerified: true,
       mutualFriends: 5,
@@ -30,6 +36,12 @@ export async function GET() {
     if (hostReg && hostReg.avatar) {
       hostUser.avatar = hostReg.avatar;
     }
+    if (hostReg) {
+      hostUser.bio = hostReg.bio ?? hostUser.bio;
+      hostUser.profileRole = hostReg.role ?? hostUser.profileRole;
+      hostUser.house = hostReg.house;
+      hostUser.houseAssignedAt = hostReg.houseAssignedAt;
+    }
 
     const approvedList: User[] = [hostUser];
     const seenEmails = new Set(['akshaycricketer1230@gmail.com', 'akshay@interstellers.space']);
@@ -39,24 +51,24 @@ export async function GET() {
       const cleanEmail = reg.email.toLowerCase().trim();
       if (seenEmails.has(cleanEmail)) return;
 
-      // Require user to be approved AND in approvedEmails list (kicked users are excluded)
-      if (reg.status === 'approved' && Array.isArray(db.approvedEmails) && db.approvedEmails.includes(cleanEmail)) {
-        seenEmails.add(cleanEmail);
-        const handle = reg.name.toLowerCase().replace(/\s+/g, '_');
-        approvedList.push({
-          id: reg.id,
-          name: reg.name,
-          email: reg.email,
-          handle,
-          avatar: reg.avatar || '',
-          bio: 'Verified Member at Interstellers.',
-          role: 'Community Member',
-          company: 'Interstellers Galaxy',
-          status: 'online',
-          isVerified: true,
-          mutualFriends: 1,
-        });
-      }
+      seenEmails.add(cleanEmail);
+      const handle = reg.name.toLowerCase().replace(/\s+/g, '_');
+      approvedList.push({
+        id: reg.id,
+        name: reg.name,
+        email: reg.email,
+        handle,
+        avatar: reg.avatar || '',
+        bio: reg.bio || '',
+        role: 'Community Member',
+        profileRole: reg.role || 'Community Member',
+        company: 'Interstellers Galaxy',
+        status: isUserOnline(reg.id) ? 'online' : 'offline',
+        isVerified: true,
+        mutualFriends: 1,
+        house: reg.house,
+        houseAssignedAt: reg.houseAssignedAt,
+      });
     });
 
     return NextResponse.json({ users: approvedList });

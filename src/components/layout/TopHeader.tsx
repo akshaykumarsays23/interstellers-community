@@ -6,7 +6,7 @@ import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
 import { INTERSTELLERS_LOGO } from '@/lib/data';
-import { Bot, Moon, Sun, Sparkles, PlusCircle, Share2, ShieldCheck, UserCheck, Telescope, Package, Play, Pause, Music, SkipBack, SkipForward } from 'lucide-react';
+import { Bot, Moon, Sun, Sparkles, PlusCircle, Share2, Telescope, Package, Play, Pause, Music, SkipBack, SkipForward } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMusic } from '@/lib/MusicContext';
 import { MusicVisualizer } from '@/components/common/MusicVisualizer';
@@ -33,10 +33,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     isAIPanelOpen,
     setIsAIPanelOpen,
     setIsShareModalOpen,
-    setIsApprovalsModalOpen,
-    pendingRegistrationsCount,
-    activeDevicesCount,
-    isAdmin,
     openUserProfile,
   } = useApp();
   const { isPlaying, togglePlay, userPlayCount, totalPlayCount, currentSong, nextSong, prevSong } = useMusic();
@@ -81,27 +77,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
       {/* Right: Quick Action Controls */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Host Approvals & Live Devices Trigger (for Akshay) */}
-        {isAdmin && (
-          <button
-            onClick={() => setIsApprovalsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-semibold transition-all relative shadow-[0_0_12px_rgba(251,191,36,0.25)]"
-            title="Member Access Approvals & Connected Devices"
-          >
-            <UserCheck className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Approvals</span>
-            <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{activeDevicesCount} Online</span>
-            </span>
-            {pendingRegistrationsCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center animate-pulse">
-                {pendingRegistrationsCount}
-              </span>
-            )}
-          </button>
-        )}
-
         {/* Quick Theme Music Controller (Active Across All Tabs) */}
         <div
           className={cn(

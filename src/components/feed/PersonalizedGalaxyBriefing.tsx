@@ -16,7 +16,6 @@ import {
   X,
   Flame,
   Trophy,
-  ShieldCheck,
   Layers,
   Radio,
   Compass,
@@ -35,7 +34,7 @@ import { Avatar } from '@/components/common/Avatar';
 
 interface DiscoveryCard {
   id: string;
-  category: 'comms' | 'social' | 'arcade' | 'house' | 'admin' | 'mission' | 'ai';
+  category: 'comms' | 'social' | 'arcade' | 'house' | 'mission' | 'ai';
   title: string;
   description: string;
   badge?: string;
@@ -62,10 +61,7 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
     stations,
     userHouse,
     fellowsAnswers,
-    pendingRegistrationsCount,
-    setIsApprovalsModalOpen,
     setIsAIPanelOpen,
-    fetchAdminApprovals,
   } = useApp();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -124,9 +120,6 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
     if (pendingRequestsCount > 0) {
       alerts.push(`${pendingRequestsCount} fellow docking request${pendingRequestsCount > 1 ? 's' : ''}`);
     }
-    if (isAdmin && pendingRegistrationsCount > 0) {
-      alerts.push(`${pendingRegistrationsCount} member approval${pendingRegistrationsCount > 1 ? 's' : ''}`);
-    }
     if (!gamificationState.hasClaimedDailyChallenge) {
       alerts.push('Daily bounty unclaimed');
     }
@@ -135,7 +128,7 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
       return alerts.join(' • ');
     }
     return 'All comms clear • Flight systems nominal';
-  }, [unreadMessagesCount, pendingRequestsCount, isAdmin, pendingRegistrationsCount, gamificationState.hasClaimedDailyChallenge]);
+  }, [unreadMessagesCount, pendingRequestsCount, gamificationState.hasClaimedDailyChallenge]);
 
   // Briefing refresh handler with async simulation and error handling
   const handleRefreshBriefing = useCallback(async () => {
@@ -146,9 +139,6 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
     try {
       // Re-sync endpoints if possible
       const promises: Promise<any>[] = [];
-      if (isAdmin && fetchAdminApprovals) {
-        promises.push(fetchAdminApprovals());
-      }
       promises.push(fetch('/api/posts').catch(() => null));
       promises.push(fetch('/api/users').catch(() => null));
 
@@ -168,7 +158,7 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [isAdmin, fetchAdminApprovals]);
+  }, []);
 
   // Dismiss / Reset cards
   const handleDismissCard = useCallback((cardId: string) => {
@@ -247,23 +237,6 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
         actionLabel: 'Review Requests',
         onAction: () => router.push('/friends'),
         canDismiss: true,
-      });
-    }
-
-    // 3. Admin Approvals Queue (Akshay only)
-    if (isAdmin && pendingRegistrationsCount > 0) {
-      cards.push({
-        id: 'card_admin_approvals',
-        category: 'admin',
-        title: `Security Airlock Approvals (${pendingRegistrationsCount})`,
-        description: `${pendingRegistrationsCount} newly arrived explorer${pendingRegistrationsCount > 1 ? 's are' : ' is'} waiting in the security airlock for your clearance.`,
-        badge: 'Admin Task 🛡️',
-        badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-        icon: <ShieldCheck className="w-5 h-5 text-amber-300 animate-pulse" />,
-        iconBg: 'bg-amber-500/20 border-amber-400/40',
-        actionLabel: 'Open Approvals',
-        onAction: () => setIsApprovalsModalOpen(true),
-        canDismiss: false,
       });
     }
 
@@ -373,15 +346,12 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
   }, [
     unreadMessagesCount,
     pendingRequestsCount,
-    isAdmin,
-    pendingRegistrationsCount,
     gamificationState.hasClaimedDailyChallenge,
     userGameScoresCount,
     userHouse,
     fellowsAnswers,
     activeStationWormhole,
     router,
-    setIsApprovalsModalOpen,
     setIsAIPanelOpen,
   ]);
 

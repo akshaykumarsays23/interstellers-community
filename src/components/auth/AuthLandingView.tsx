@@ -5,27 +5,18 @@ import { useApp } from '@/lib/store';
 import { INTERSTELLERS_LOGO } from '@/lib/data';
 import {
   UserPlus,
-  Info,
   Check,
   Sparkles,
   ArrowRight,
-  Clock,
-  RefreshCw,
-  ShieldCheck,
   Mail,
   KeyRound,
-  CheckCircle2,
   ArrowLeft,
 } from 'lucide-react';
 
 export const AuthLandingView: React.FC = () => {
   const {
-    login,
     sendVerificationCode,
     verifyLoginCode,
-    pendingApprovalUser,
-    setPendingApprovalUser,
-    checkMyApprovalStatus,
   } = useApp();
 
   const [nameInput, setNameInput] = useState('');
@@ -122,14 +113,6 @@ export const AuthLandingView: React.FC = () => {
     setShowModal(true);
   };
 
-  // Check if pending user was approved by Akshay
-  const handleCheckStatus = async () => {
-    if (!pendingApprovalUser) return;
-    setIsLoading(true);
-    await checkMyApprovalStatus();
-    setIsLoading(false);
-  };
-
   return (
     <div className="bg-background text-on-surface font-sans h-screen w-screen overflow-hidden flex selection:bg-primary-container selection:text-on-primary-container">
       <main className="w-full h-full flex flex-col md:flex-row">
@@ -169,7 +152,7 @@ export const AuthLandingView: React.FC = () => {
           </div>
         </section>
 
-        {/* Right Pane: Authentication or Pending Holding Screen */}
+        {/* Right Pane: Authentication */}
         <section className="w-full md:w-[50%] lg:w-[52%] bg-surface-container-lowest h-full flex items-center justify-center p-6 sm:p-10 relative overflow-y-auto custom-scrollbar">
           {/* Mobile Logo */}
           <div className="absolute top-4 left-4 md:hidden bg-[#080918] p-1 rounded-xl border border-purple-500/30 shadow-md">
@@ -181,61 +164,7 @@ export const AuthLandingView: React.FC = () => {
             />
           </div>
 
-          {/* PENDING APPROVAL HOLDING LOBBY */}
-          {pendingApprovalUser ? (
-            <div className="w-full max-w-md flex flex-col gap-6 z-10 my-auto py-10 animate-in fade-in zoom-in-95 duration-200">
-              <div className="bg-surface-container-lowest rounded-2xl border border-primary/30 shadow-floating p-6 sm:p-8 flex flex-col gap-5 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-primary via-amber-400 to-primary" />
-
-                <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center mx-auto ring-8 ring-amber-50 dark:ring-amber-900/20">
-                  <Clock className="w-8 h-8 animate-spin [animation-duration:8s]" />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-semibold border border-emerald-500/20 mx-auto">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Gmail Code Verified</span>
-                  </div>
-                  <h2 className="font-heading font-bold text-xl text-on-surface">
-                    Awaiting Host Approval
-                  </h2>
-                  <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
-                    Hello <strong className="text-on-surface">{pendingApprovalUser.name}</strong> ({pendingApprovalUser.email}), your verified registration has been placed in the queue.
-                  </p>
-                </div>
-
-                <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/40 space-y-2 text-left text-xs">
-                  <div className="flex items-center gap-2 text-primary font-semibold">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Host Verification in Progress</span>
-                  </div>
-                  <p className="text-on-surface-variant leading-relaxed">
-                    Account activation requires approval from <strong className="text-on-surface">Akshay</strong> before you can access the platform. Please wait while Akshay reviews your access request.
-                  </p>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <button
-                    onClick={handleCheckStatus}
-                    disabled={isLoading}
-                    className="w-full py-3 px-4 bg-primary hover:bg-primary-hover text-on-primary font-semibold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                  >
-                    <RefreshCw className={isLoading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
-                    <span>{isLoading ? 'Checking Approval...' : 'Check Approval Status'}</span>
-                  </button>
-
-                  <button
-                    onClick={() => setPendingApprovalUser(null)}
-                    className="w-full py-2.5 px-4 text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors"
-                  >
-                    Return to Sign In
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* STANDARD AUTH CARD */
-            <div className="w-full max-w-md flex flex-col gap-6 z-10 my-auto py-10">
+          <div className="w-full max-w-md flex flex-col gap-6 z-10 my-auto py-10">
               <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 shadow-floating p-6 sm:p-8 flex flex-col gap-6">
                 {/* Header with Centered Brand Logo */}
                 <div className="text-center space-y-2 flex flex-col items-center">
@@ -313,17 +242,9 @@ export const AuthLandingView: React.FC = () => {
                     <span>Register with Gmail</span>
                   </button>
 
-                  {/* Host Approval Banner */}
-                  <div className="flex items-start gap-2 bg-surface-container p-3 rounded-lg border border-outline-variant/40 text-on-surface-variant text-xs">
-                    <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    <p className="leading-tight">
-                      Account activation requires approval from <strong className="text-on-surface">Akshay</strong> before you can access the platform.
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
-          )}
         </section>
       </main>
 
@@ -465,13 +386,6 @@ export const AuthLandingView: React.FC = () => {
                 {authError && (
                   <p className="text-xs text-error font-medium">{authError}</p>
                 )}
-
-                <div className="p-2.5 bg-surface-container rounded-xl text-[11px] text-on-surface-variant flex items-start gap-2">
-                  <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                  <span>
-                    After verification, new registrations will be submitted for Akshay&apos;s host approval.
-                  </span>
-                </div>
 
                 <div className="flex items-center justify-between pt-1">
                   <button

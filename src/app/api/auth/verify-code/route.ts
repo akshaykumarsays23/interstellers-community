@@ -83,7 +83,17 @@ export async function POST(request: Request) {
 
       const response = NextResponse.json({
         status: 'approved',
-        user: { name: 'Akshay Kumar', email: cleanEmail, role: 'Host Admin' },
+        user: {
+          name: 'Akshay Kumar',
+          email: cleanEmail,
+          role: 'Host Admin',
+          profileRole:
+            db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail)?.role ||
+            'Community Host & Admin',
+          avatar: db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail)?.avatar || '/avatar.png',
+          bio: db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail)?.bio ??
+            "Founder & Community Host at Interstellers. 'Time is never coming back, remember time is never...'",
+        },
         sessionToken,
         message: 'Welcome back Host Admin Akshay!',
       });
@@ -115,53 +125,6 @@ export async function POST(request: Request) {
 
     const existingReg = db.registrations.find((r) => normalizeEmail(r.email) === cleanEmail);
 
-    // 2. User already approved by Akshay earlier
-    const isApproved =
-      existingReg?.status === 'approved' ||
-      (existingReg?.status !== 'pending' &&
-        existingReg?.status !== 'rejected' &&
-        db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail));
-    if (isApproved) {
-      const reg = existingReg;
-      const verifiedName = reg ? reg.name : cleanName;
-
-      const sessionToken = createSessionToken({
-        email: cleanEmail,
-        name: verifiedName,
-        role: 'Community Member',
-      });
-
-      const response = NextResponse.json({
-        status: 'approved',
-        user: { name: verifiedName, email: cleanEmail },
-        sessionToken,
-        message: 'Code verified. Welcome to Interstellers!',
-      });
-
-      response.cookies.set({
-        name: 'interstellers_session',
-        value: sessionToken,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 7 * 24 * 3600,
-      });
-
-      response.cookies.set({
-        name: 'interstellers_otp_token',
-        value: '',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 0,
-      });
-
-      return response;
-    }
-
-    // 3. New User Registration -> Hold in pending approval queue for Akshay
     let reg = existingReg;
     if (!reg) {
       reg = {
@@ -170,31 +133,51 @@ export async function POST(request: Request) {
         email: cleanEmail,
         avatar: '',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'pending',
+        status: 'approved',
       };
       db.registrations.unshift(reg);
-    } else if (reg.status === 'rejected') {
-      // Re-apply sets back to pending for review
-      reg.status = 'pending';
+    } else {
+      reg.status = 'approved';
+      reg.name = reg.name || cleanName;
     }
 
+    if (!db.approvedEmails.some((approvedEmail) => normalizeEmail(approvedEmail) === cleanEmail)) {
+      db.approvedEmails.push(cleanEmail);
+    }
     saveDb(db);
 
-    const response = NextResponse.json({
-      status: 'pending',
-      user: { name: reg.name, email: reg.email },
-      message: 'Code verified successfully! Your account is now waiting for Akshay to approve access.',
+    const verifiedName = reg.name || cleanName;
+    const sessionToken = createSessionToken({
+      email: cleanEmail,
+      name: verifiedName,
+      role: 'Community Member',
     });
 
-    // Ensure unapproved users have NO active session cookie
+    const response = NextResponse.json({
+      status: 'approved',
+      user: {
+        id: reg.id,
+        name: verifiedName,
+        email: cleanEmail,
+        avatar: reg.avatar || '',
+        bio: reg.bio || '',
+        role: 'Community Member',
+        profileRole: reg.role || 'Community Member',
+        house: reg.house,
+        houseAssignedAt: reg.houseAssignedAt,
+      },
+      sessionToken,
+      message: 'Code verified. Welcome to Interstellers!',
+    });
+
     response.cookies.set({
       name: 'interstellers_session',
-      value: '',
+      value: sessionToken,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 0,
+      maxAge: 7 * 24 * 3600,
     });
 
     response.cookies.set({
