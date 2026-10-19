@@ -18,6 +18,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
   const [showMediaInput, setShowMediaInput] = useState(false);
   const [selectedTag, setSelectedTag] = useState('#CommunityUpdate');
   const [isPosting, setIsPosting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,19 +98,20 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
     setMediaType('image');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim()) return;
+    if (!content.trim() || isPosting) return;
 
     setIsPosting(true);
-    setTimeout(() => {
+    setSubmitError(null);
+    try {
       const isVideo =
         mediaType === 'video' ||
         /\.(mp4|webm|ogg|mov)($|\?)/i.test(mediaUrl) ||
         mediaUrl.includes('Video%20Project%201.mp4') ||
         mediaUrl.includes('Video Project 1.mp4');
 
-      createPost(
+      await createPost(
         content,
         mediaUrl || undefined,
         mediaUrl ? (isVideo ? 'video' : 'image') : undefined,
@@ -119,9 +121,12 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
       setMediaUrl('');
       setMediaType('image');
       setShowMediaInput(false);
-      setIsPosting(false);
       onSuccess?.();
-    }, 400);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Post could not be saved.');
+    } finally {
+      setIsPosting(false);
+    }
   };
 
   return (
@@ -139,6 +144,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
         <Avatar src={currentUser.avatar} name={currentUser.name} status="online" showStatus size="md" />
 
         <div className="flex-1 min-w-0">
+          {submitError && (
+            <p role="alert" className="mb-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+              {submitError}
+            </p>
+          )}
           <textarea
             id="post-composer-textarea"
             value={content}
@@ -368,5 +378,4 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
     </div>
   );
 };
-
 

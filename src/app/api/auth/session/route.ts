@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb, saveDb } from '@/lib/db';
 import { verifySessionToken, isAdminEmail, normalizeEmail } from '@/lib/auth';
+import { ensureCommunitySchema, ensureHouseAssignment, getCommunitySql } from '@/lib/community';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,18 @@ export async function GET(request: Request) {
 
     if (isHost) {
       const reg = db.registrations.find((r) => r.email.toLowerCase() === cleanEmail);
+      const sql = getCommunitySql();
+      await ensureCommunitySchema(sql);
+      const house = await ensureHouseAssignment(sql, {
+        id: 'user_host',
+        name: 'Akshay Kumar',
+        email: cleanEmail,
+        avatar: reg?.avatar || '/avatar.png',
+        role: 'Host Admin',
+        handle: 'akshay',
+        house: reg?.house,
+        houseAssignedAt: reg?.houseAssignedAt,
+      });
       return NextResponse.json({
         authenticated: true,
         user: {
@@ -54,8 +67,9 @@ export async function GET(request: Request) {
           profileRole: reg?.role || 'Community Host & Admin',
           avatar: reg?.avatar || '/avatar.png',
           bio: reg?.bio ?? "Founder & Community Host at Interstellers. 'Time is never coming back, remember time is never...'",
-          house: reg?.house,
-          houseAssignedAt: reg?.houseAssignedAt,
+          house: house.house,
+          houseCharacter: house.character,
+          houseAssignedAt: house.houseAssignedAt,
           status: 'online',
           isVerified: true,
         },
@@ -79,6 +93,18 @@ export async function GET(request: Request) {
       db.approvedEmails.push(cleanEmail);
     }
     saveDb(db);
+    const sql = getCommunitySql();
+    await ensureCommunitySchema(sql);
+    const house = await ensureHouseAssignment(sql, {
+      id: reg.id,
+      name: reg.name || verification.user.name,
+      email: cleanEmail,
+      avatar: reg.avatar || '',
+      role: 'Community Member',
+      handle: (reg.name || verification.user.name).toLowerCase().replace(/\s+/g, '_'),
+      house: reg.house,
+      houseAssignedAt: reg.houseAssignedAt,
+    });
 
     return NextResponse.json({
       authenticated: true,
@@ -91,8 +117,9 @@ export async function GET(request: Request) {
         profileRole: reg.role || 'Community Member',
         avatar: reg.avatar || '',
         bio: reg.bio || '',
-        house: reg.house,
-        houseAssignedAt: reg.houseAssignedAt,
+        house: house.house,
+        houseCharacter: house.character,
+        houseAssignedAt: house.houseAssignedAt,
         status: 'online',
         isVerified: true,
       },

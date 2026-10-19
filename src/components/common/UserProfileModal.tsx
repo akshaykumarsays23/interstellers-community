@@ -15,12 +15,10 @@ import {
   ZoomOut,
   RotateCcw,
   Maximize2,
-  Calendar,
-  Award,
-  Zap,
-  Star,
+  Rocket,
+  House,
+  Orbit,
   Users,
-  Compass,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,62 +28,124 @@ export const UserProfileModal: React.FC = () => {
     selectedProfileUser,
     closeUserProfile,
     currentUser,
+    connections,
     startCall,
     startChatWithUser,
     userHouse,
+    userHouseAssignedAt,
   } = useApp();
 
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
+  const [failedZoomImageSrc, setFailedZoomImageSrc] = useState<string | null>(null);
 
   if (!selectedProfileUser) return null;
 
-  const isMe = selectedProfileUser.id === currentUser.id || selectedProfileUser.handle === currentUser.handle;
+  const profileUser =
+    selectedProfileUser.id === currentUser.id || selectedProfileUser.handle === currentUser.handle
+      ? currentUser
+      : connections.find(
+          (user) =>
+            user.id === selectedProfileUser.id ||
+            user.handle.toLowerCase() === selectedProfileUser.handle.toLowerCase()
+        ) || selectedProfileUser;
+  const isMe = profileUser.id === currentUser.id || profileUser.handle === currentUser.handle;
+
+  const openPhotoZoom = () => {
+    setZoomScale(1);
+    setFailedZoomImageSrc(null);
+    setIsZoomOpen(true);
+  };
 
   const handleStartChat = () => {
-    startChatWithUser(selectedProfileUser);
+    startChatWithUser(profileUser);
     closeUserProfile();
     router.push('/messages');
   };
 
   const handleStartAudioCall = () => {
     closeUserProfile();
-    startCall('audio', selectedProfileUser);
+    startCall('audio', profileUser);
   };
 
   const handleStartVideoCall = () => {
     closeUserProfile();
-    startCall('video', selectedProfileUser);
+    startCall('video', profileUser);
   };
 
   // Determine user's house
-  const houseBadge = isMe && userHouse ? userHouse : 'marvel';
   const houseConfig: Record<string, { name: string; color: string; badge: string }> = {
-    marvel: { name: 'Marvel House', color: 'bg-red-500/20 text-red-400 border-red-500/40', badge: 'Avengers Core 🛡️' },
-    dc: { name: 'DC House', color: 'bg-blue-500/20 text-cyan-300 border-blue-500/40', badge: 'Gotham Citadel 🦇' },
-    pokemon: { name: 'Pokemon House', color: 'bg-amber-500/20 text-amber-300 border-amber-500/40', badge: 'Electric League ⚡' },
-    power_rangers: { name: 'Power Rangers House', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', badge: 'Morphin Grid 🦖' },
+    marvel: { name: 'Marvel House', color: 'profile-house-label--marvel', badge: 'Avengers Core' },
+    dc: { name: 'DC House', color: 'profile-house-label--dc', badge: 'Gotham Citadel' },
+    pokemon: { name: 'Pokemon House', color: 'profile-house-label--pokemon', badge: 'Electric League' },
+    power_rangers: { name: 'Power Rangers House', color: 'profile-house-label--power-rangers', badge: 'Morphin Grid' },
   };
-  const activeHouse = houseConfig[houseBadge] || houseConfig.marvel;
+  const selectedHouse = isMe ? userHouse : profileUser.house || null;
+  const activeHouse = selectedHouse ? houseConfig[selectedHouse] : null;
+  const residencyAssignedAt = isMe ? userHouseAssignedAt : profileUser.houseAssignedAt ?? null;
+  const residencyDaysRemaining =
+    activeHouse && residencyAssignedAt !== null && Number.isFinite(residencyAssignedAt)
+      ? Math.max(
+          0,
+          Math.ceil(
+            (residencyAssignedAt + 30 * 24 * 60 * 60 * 1000 - Date.now()) /
+              (24 * 60 * 60 * 1000)
+          )
+        )
+      : null;
+  const residencyLabel =
+    residencyDaysRemaining === null
+      ? 'No Active Cycle'
+      : residencyDaysRemaining > 0
+        ? `${residencyDaysRemaining} Days Left`
+        : 'Cycle Complete';
+  const houseLabel = activeHouse
+    ? `${activeHouse.name} • ${activeHouse.badge}`
+    : 'House Not Assigned';
+  const houseValue = activeHouse?.name.replace(' House', '') || 'Not Assigned';
+  const statusColor = {
+    online: 'profile-status-dot--online',
+    offline: 'profile-status-dot--offline',
+    away: 'profile-status-dot--away',
+    busy: 'profile-status-dot--busy',
+  }[profileUser.status];
+  const profileInitials = profileUser.name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
 
   return (
     <>
       {/* Main Profile Card Modal */}
-      <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-        <div className="bg-gradient-to-b from-surface-container-low via-surface-container to-surface-container-lowest border border-outline-variant/60 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200">
+      <div className="profile-cosmic-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-5 animate-in fade-in duration-200">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-modal-name"
+          className="profile-cosmic-panel relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[600px] flex-col overflow-hidden rounded-[22px] animate-in zoom-in-95 duration-200 sm:max-h-[calc(100dvh-2.5rem)]"
+        >
           
           {/* Header Banner */}
-          <div className="h-28 bg-gradient-to-r from-purple-900/60 via-indigo-900/60 to-cyan-900/60 relative overflow-hidden p-4 flex justify-between items-start">
-            <div className="absolute -top-10 -left-10 w-36 h-36 bg-purple-500/30 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-10 -right-10 w-36 h-36 bg-cyan-500/30 rounded-full blur-2xl pointer-events-none" />
+          <div className="profile-cosmic-header relative flex min-h-[174px] shrink-0 items-start justify-between gap-3 overflow-hidden p-4 sm:min-h-[184px] sm:px-6 sm:py-4">
+            <div className="profile-nebula profile-nebula--violet pointer-events-none absolute -left-10 top-5 h-36 w-44 rounded-full" />
+            <div className="profile-nebula profile-nebula--cyan pointer-events-none absolute -bottom-14 right-1/4 h-36 w-48 rounded-full" />
+            <div className="profile-planet pointer-events-none absolute" />
 
-            <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-sm backdrop-blur-md', activeHouse.color)}>
-              {activeHouse.name} • {activeHouse.badge}
+            <span className={cn('profile-house-label relative z-10 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md sm:text-[11px]', activeHouse?.color)}>
+              <Rocket className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{houseLabel}</span>
             </span>
 
             <button
-              onClick={closeUserProfile}
-              className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all shadow-md"
+              type="button"
+              onClick={() => {
+                setIsZoomOpen(false);
+                closeUserProfile();
+              }}
+              aria-label="Close profile"
+              className="profile-close-control relative z-10 shrink-0 rounded-full p-1.5 text-white transition-all"
               title="Close Profile"
             >
               <X className="w-4 h-4" />
@@ -93,21 +153,27 @@ export const UserProfileModal: React.FC = () => {
           </div>
 
           {/* Avatar & Core Profile Info */}
-          <div className="px-6 pb-6 pt-0 relative">
+          <div className="profile-cosmic-content relative overflow-y-auto px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
             {/* Avatar with Zoom Overlay Button */}
-            <div className="relative -mt-14 mb-3 inline-block group">
+            <div className="profile-avatar-orbit group relative -mt-[62px] mb-2 inline-flex sm:-mt-[68px]">
               <div
-                onClick={() => {
-                  setZoomScale(1);
-                  setIsZoomOpen(true);
+                role="button"
+                tabIndex={0}
+                aria-label={`Zoom ${profileUser.name}'s profile photo`}
+                onClick={openPhotoZoom}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openPhotoZoom();
+                  }
                 }}
-                className="cursor-zoom-in relative rounded-full overflow-hidden ring-4 ring-primary/40 shadow-xl transition-transform hover:scale-105"
+                className="profile-avatar-frame relative cursor-zoom-in overflow-hidden rounded-full transition-transform hover:scale-[1.04]"
                 title="Click to Zoom Profile Picture"
               >
                 <Avatar
-                  src={selectedProfileUser.avatar}
-                  name={selectedProfileUser.name}
-                  status={selectedProfileUser.status}
+                  src={profileUser.avatar}
+                  name={profileUser.name}
+                  status={profileUser.status}
                   showStatus
                   size="2xl"
                 />
@@ -121,11 +187,8 @@ export const UserProfileModal: React.FC = () => {
               {/* Quick Zoom Trigger Pill */}
               <button
                 type="button"
-                onClick={() => {
-                  setZoomScale(1);
-                  setIsZoomOpen(true);
-                }}
-                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-primary text-on-primary hover:bg-primary-hover shadow-md text-xs transition-transform active:scale-95"
+                onClick={openPhotoZoom}
+                className="profile-avatar-zoom absolute bottom-0 right-0 rounded-full p-1.5 text-xs transition-transform active:scale-95"
                 title="Enlarge and Zoom Avatar"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
@@ -133,94 +196,114 @@ export const UserProfileModal: React.FC = () => {
             </div>
 
             {/* Name, Handle, Badges */}
-            <div className="space-y-1 mb-4">
+            <div className="mb-4 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-heading font-black text-xl text-on-surface">
-                  {selectedProfileUser.name}
+                <h3 id="profile-modal-name" className="profile-cosmic-name font-heading text-xl font-black text-white sm:text-2xl">
+                  {profileUser.name}
                 </h3>
-                {selectedProfileUser.isVerified && (
+                {profileUser.isVerified && (
                   <ShieldCheck className="w-5 h-5 text-social-blue fill-social-blue/20" />
                 )}
                 {isMe && (
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                  <span className="profile-your-account rounded-full border px-2 py-0.5 text-[10px] font-extrabold">
                     Your Profile
                   </span>
                 )}
               </div>
 
-              <p className="text-xs text-on-surface-variant font-medium flex items-center gap-2">
-                <span>@{selectedProfileUser.handle}</span>
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-300 sm:text-sm">
+                <span>@{profileUser.handle}</span>
                 <span>•</span>
-                <span className="text-primary font-semibold">{selectedProfileUser.role || 'Galactic Explorer'}</span>
+                <span className="inline-flex items-center gap-1.5 font-semibold text-cyan-200">
+                  <Users className="h-3.5 w-3.5" />
+                  {profileUser.profileRole || profileUser.role || 'Community Member'}
+                </span>
               </p>
             </div>
 
             {/* Bio */}
-            {selectedProfileUser.bio ? (
-              <div className="p-3.5 rounded-2xl bg-surface-container-high/60 border border-outline-variant/40 mb-4 text-xs text-on-surface leading-relaxed">
-                <p className="italic text-on-surface font-medium">&ldquo;{selectedProfileUser.bio}&rdquo;</p>
+            {profileUser.bio ? (
+              <div className="profile-quote mb-4 flex items-start gap-2.5 rounded-2xl p-3.5 text-xs leading-relaxed sm:text-sm">
+                <Rocket className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <p className="font-medium italic text-slate-100">&ldquo;{profileUser.bio}&rdquo;</p>
               </div>
             ) : (
-              <div className="p-3 rounded-2xl bg-surface-container-high/40 border border-outline-variant/30 mb-4 text-xs text-on-surface-variant italic">
-                &ldquo;Time is never coming back, remember time is never... Exploring the galactic frontier.&rdquo;
+              <div className="profile-quote mb-4 flex items-start gap-2.5 rounded-2xl p-3 text-xs italic leading-relaxed sm:text-sm">
+                <Rocket className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <p className="text-slate-300">No bio added yet.</p>
               </div>
             )}
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-2 mb-5">
-              <div className="p-2.5 rounded-xl bg-surface-container border border-outline-variant/30 text-center">
-                <p className="text-[10px] text-on-surface-variant font-medium uppercase">House</p>
-                <p className="text-xs font-black text-primary truncate mt-0.5">{activeHouse.name.replace(' House', '')}</p>
+            <div className="mb-4 grid grid-cols-3 gap-2 sm:mb-5 sm:gap-3">
+              <div className="profile-cosmic-card profile-cosmic-card--house rounded-2xl p-2.5 sm:p-3.5">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-300 sm:text-[11px]">
+                  <House className="h-3.5 w-3.5 text-fuchsia-300" />
+                  House
+                </div>
+                <p className="mt-1 truncate text-xs font-black text-fuchsia-200 sm:text-sm">{houseValue}</p>
               </div>
-              <div className="p-2.5 rounded-xl bg-surface-container border border-outline-variant/30 text-center">
-                <p className="text-[10px] text-on-surface-variant font-medium uppercase">Residency</p>
-                <p className="text-xs font-black text-emerald-400 mt-0.5">30-Day Cycle</p>
+              <div className="profile-cosmic-card profile-cosmic-card--residency rounded-2xl p-2.5 sm:p-3.5">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-300 sm:text-[11px]">
+                  <Orbit className="h-3.5 w-3.5 text-cyan-300" />
+                  Residency
+                </div>
+                <p className="mt-1 truncate text-xs font-black text-cyan-200 sm:text-sm">{residencyLabel}</p>
               </div>
-              <div className="p-2.5 rounded-xl bg-surface-container border border-outline-variant/30 text-center">
-                <p className="text-[10px] text-on-surface-variant font-medium uppercase">Status</p>
-                <p className="text-xs font-black text-cyan-400 mt-0.5 capitalize">{selectedProfileUser.status}</p>
+              <div className="profile-cosmic-card profile-cosmic-card--status rounded-2xl p-2.5 sm:p-3.5">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-300 sm:text-[11px]">
+                  Status
+                </div>
+                <p className="mt-1 flex items-center justify-center gap-1.5 truncate text-xs font-black capitalize text-slate-100 sm:text-sm">
+                  <span className={cn('profile-status-dot', statusColor)} />
+                  {profileUser.status}
+                </p>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="space-y-2">
               <button
+                type="button"
                 onClick={() => {
                   setZoomScale(1);
                   setIsZoomOpen(true);
                 }}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-outline-variant/40"
+                className="profile-cosmic-button flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold transition-all"
               >
-                <ZoomIn className="w-3.5 h-3.5 text-primary" />
+                <ZoomIn className="h-3.5 w-3.5 text-cyan-200" />
                 <span>Zoom Photo</span>
               </button>
 
               {!isMe && (
-                <>
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2">
                   <button
+                    type="button"
                     onClick={handleStartChat}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                    className="profile-secondary-action flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>Fellow Chat</span>
                   </button>
 
                   <button
+                    type="button"
                     onClick={handleStartAudioCall}
-                    className="p-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface hover:text-primary transition-all border border-outline-variant/40"
-                    title={`Audio call ${selectedProfileUser.name}`}
+                    className="profile-secondary-action flex min-h-10 min-w-10 items-center justify-center rounded-xl px-3 py-2 text-slate-100 transition-all"
+                    title={`Audio call ${profileUser.name}`}
                   >
                     <Phone className="w-4 h-4" />
                   </button>
 
                   <button
+                    type="button"
                     onClick={handleStartVideoCall}
-                    className="p-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface hover:text-primary transition-all border border-outline-variant/40"
-                    title={`Video call ${selectedProfileUser.name}`}
+                    className="profile-secondary-action flex min-h-10 min-w-10 items-center justify-center rounded-xl px-3 py-2 text-slate-100 transition-all"
+                    title={`Video call ${profileUser.name}`}
                   >
                     <Video className="w-4 h-4" />
                   </button>
-                </>
+                </div>
               )}
             </div>
 
@@ -241,7 +324,7 @@ export const UserProfileModal: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-cyan-300" />
-              <span className="text-xs font-black truncate">{selectedProfileUser.name}&apos;s Profile Picture</span>
+              <span className="text-xs font-black truncate">{profileUser.name}&apos;s Profile Picture</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-cyan-300">
                 {Math.round(zoomScale * 100)}%
               </span>
@@ -293,14 +376,21 @@ export const UserProfileModal: React.FC = () => {
           >
             <div
               style={{ transform: `scale(${zoomScale})`, transition: 'transform 0.2s ease-out' }}
-              className="relative max-w-sm sm:max-w-md w-72 h-72 sm:w-96 sm:h-96 rounded-3xl overflow-hidden ring-4 ring-cyan-400/50 shadow-[0_0_50px_rgba(6,182,212,0.5)] bg-slate-900"
+              className="relative aspect-square w-[min(78vw,24rem)] overflow-hidden rounded-3xl ring-4 ring-cyan-400/50 shadow-[0_0_50px_rgba(6,182,212,0.5)] bg-slate-900"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={selectedProfileUser.avatar || '/avatar.png'}
-                alt={selectedProfileUser.name}
-                className="w-full h-full object-cover select-none"
-              />
+              {profileUser.avatar && failedZoomImageSrc !== profileUser.avatar ? (
+                <img
+                  src={profileUser.avatar}
+                  alt={profileUser.name}
+                  onError={() => setFailedZoomImageSrc(profileUser.avatar)}
+                  className="h-full w-full select-none object-contain"
+                />
+              ) : (
+                <div className="profile-zoom-initials flex h-full w-full items-center justify-center text-6xl font-bold text-cyan-100">
+                  {profileInitials}
+                </div>
+              )}
             </div>
           </div>
 

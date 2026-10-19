@@ -11,7 +11,6 @@ import {
   AIMessage,
   UserSettings,
   Message,
-  Comment,
   TravelerGamificationState,
   ArcadeGame,
   GameScoreRecord,
@@ -32,7 +31,6 @@ import {
   HOST_USER,
   GUEST_USER,
   INITIAL_USERS,
-  INITIAL_POSTS,
   INITIAL_CHATS,
   INITIAL_GROUPS,
   INITIAL_FRIEND_REQUESTS,
@@ -99,13 +97,14 @@ interface AppContextType {
 
   // Posts Feed Controls
   posts: Post[];
-  createPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video', tags?: string[]) => void;
-  updatePost: (postId: string, newContent?: string, newMediaUrl?: string) => void;
-  toggleLikePost: (postId: string) => void;
+  postsLoadError: string | null;
+  createPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video', tags?: string[]) => Promise<void>;
+  updatePost: (postId: string, newContent?: string, newMediaUrl?: string | null) => Promise<void>;
+  toggleLikePost: (postId: string) => Promise<void>;
   toggleBookmarkPost: (postId: string) => void;
-  addCommentToPost: (postId: string, content: string) => void;
-  voteInPoll: (postId: string, optionId: string) => void;
-  deletePost: (postId: string) => void;
+  addCommentToPost: (postId: string, content: string) => Promise<void>;
+  voteInPoll: (postId: string, optionId: string) => Promise<void>;
+  deletePost: (postId: string) => Promise<void>;
 
   // Direct Messaging
   chats: ChatThread[];
@@ -200,8 +199,13 @@ interface AppContextType {
   userHouseCharacter: string | null;
   userHouseAssignedAt: number | null;
   houseScores: { marvel: number; dc: number; pokemon: number; power_rangers: number };
-  assignUserHouse: (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', character: string) => void;
-  addHousePoints: (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', points: number) => void;
+  houseMemberCounts: { marvel: number; dc: number; pokemon: number; power_rangers: number } | null;
+  houseDataLoaded: boolean;
+  assignUserHouse: (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', character: string) => Promise<{ success: boolean; error?: string }>;
+  addHousePoints: (
+    activity: 'reactor_tap' | 'trivia_answer' | 'arena_duel',
+    details: { activityId?: string; questionIndex?: number; answerIndex?: number }
+  ) => Promise<{ awarded: boolean; points: number; roll?: number; correct?: boolean; error?: string }>;
 
   // 15-Question Fellows Compatibility Protocol
   fellowsAnswers: Record<string, string> | null;
@@ -253,7 +257,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoadError, setPostsLoadError] = useState<string | null>(null);
   const [chats, setChats] = useState<ChatThread[]>(INITIAL_CHATS);
   const [serverMessages, setServerMessages] = useState<Record<string, Message[]>>({});
   const [activeChatId, setActiveChatId] = useState<string>("chat_nova");
@@ -760,52 +765,117 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUserHouseAssignedAt(currentUser.houseAssignedAt ?? null);
   }, [isAuthenticated, currentUser.email, currentUser.house, currentUser.houseAssignedAt]);
 
-  const [houseScores, setHouseScores] = useState<{ marvel: number; dc: number; pokemon: number; power_rangers: number }>({
-    marvel: 14250,
-    dc: 13980,
-    pokemon: 15420,
-    power_rangers: 12890,
-  });
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const controller = new AbortController();
+    const loadHouseData = async () => {
+      try {
+        const response = await fetch('/api/houses', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'House data is unavailable.');
+        setHouseScores(data.scores);
+        setHouseMemberCounts(data.memberCounts);
+        setHouseDataLoaded(true);
+        setUserHouse(data.assignment.house);
+        setUserHouseCharacter(data.assignment.character);
+        setUserHouseAssignedAt(data.assignment.houseAssignedAt);
+        setCurrentUser((previous) => ({
+          ...previous,
+          house: data.assignment.house ?? undefined,
+          houseAssignedAt: data.assignment.houseAssignedAt ?? undefined,
+        }));
+      } catch (error) {
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Failed to load persistent House data:', error);
+        }
+      }
+    };
+    void loadHouseData();
+    const timer = setInterval(() => void loadHouseData(), 15_000);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [isAuthenticated, currentUser.email]);
 
-  const assignUserHouse = (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', character: string) => {
-    const now = Date.now();
-    setUserHouse(house);
-    setUserHouseCharacter(character);
-    setUserHouseAssignedAt(now);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('interstellers_user_house', house);
-      localStorage.setItem('interstellers_house_char', character);
-      localStorage.setItem('interstellers_house_assigned_at', now.toString());
-    }
-    const userEmail = currentUser.email || settings.email;
-    if (userEmail) {
-      fetch('/api/profile', {
+  const [houseScores, setHouseScores] = useState<{ marvel: number; dc: number; pokemon: number; power_rangers: number }>({
+    marvel: 0,
+    dc: 0,
+    pokemon: 0,
+    power_rangers: 0,
+  });
+  const [houseMemberCounts, setHouseMemberCounts] = useState<{
+    marvel: number;
+    dc: number;
+    pokemon: number;
+    power_rangers: number;
+  } | null>(null);
+  const [houseDataLoaded, setHouseDataLoaded] = useState(false);
+
+  const assignUserHouse = async (
+    house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers',
+    character: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
-          name: currentUser.name,
-          bio: currentUser.bio,
-          role: currentUser.role,
-          avatar: currentUser.avatar,
-          house,
-          houseAssignedAt: now,
-        }),
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`Profile update failed with status ${response.status}`);
+        body: JSON.stringify({ house, character }),
+      });
+      const data = await response.json();
+      if (!response.ok) return { success: false, error: data.error || 'House selection failed.' };
+
+      setUserHouse(data.house);
+      setUserHouseCharacter(data.character);
+      setUserHouseAssignedAt(data.houseAssignedAt);
+      setCurrentUser((previous) => ({
+        ...previous,
+        house: data.house,
+        houseAssignedAt: data.houseAssignedAt,
+      }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('interstellers_user_house', data.house);
+        localStorage.setItem('interstellers_house_char', data.character);
+        localStorage.setItem('interstellers_house_assigned_at', String(data.houseAssignedAt));
+      }
+      fetch('/api/houses', { cache: 'no-store' })
+        .then((response) => response.json())
+        .then((houseData) => {
+          if (houseData.scores) setHouseScores(houseData.scores);
+          if (houseData.memberCounts) {
+            setHouseMemberCounts(houseData.memberCounts);
+            setHouseDataLoaded(true);
           }
         })
-        .catch((error) => {
-          console.error('Failed to save house residency:', error);
-        });
+        .catch((error) => console.error('Failed to refresh House leaderboard:', error));
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to save House residency:', error);
+      return { success: false, error: 'House selection could not be saved. Please try again.' };
     }
-    setHouseScores((prev) => ({ ...prev, [house]: prev[house] + 100 }));
   };
 
-  const addHousePoints = (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', points: number) => {
-    setHouseScores((prev) => ({ ...prev, [house]: prev[house] + points }));
+  const addHousePoints = async (
+    activity: 'reactor_tap' | 'trivia_answer' | 'arena_duel',
+    details: { activityId?: string; questionIndex?: number; answerIndex?: number }
+  ): Promise<{ awarded: boolean; points: number; roll?: number; correct?: boolean; error?: string }> => {
+    try {
+      const response = await fetch('/api/houses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activity, ...details }),
+      });
+      const data = await response.json();
+      if (!response.ok) return { awarded: false, points: 0, error: data.error || 'House points could not be saved.' };
+      if (data.scores) setHouseScores(data.scores);
+      return data;
+    } catch (error) {
+      console.error('Failed to save House points:', error);
+      return { awarded: false, points: 0, error: 'House points could not be saved. Please try again.' };
+    }
   };
 
   // 15-Question Fellows Compatibility Protocol
@@ -834,8 +904,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       currentUser.email === 'akshaycricketer1230@gmail.com' ||
       currentUser.email === 'akshay@interstellers.space');
 
-  // Load session & saved server profile on start
-  // Load session, saved server profile & saved posts on start
+  // Load session and saved server profile on start
   useEffect(() => {
     try {
       // 0. Sync saved theme from localStorage on start (defaults to vivid cosmic dark)
@@ -853,77 +922,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setSettings((prev) => ({ ...prev, theme: 'dark' }));
         }
       }
-
-      // 1. Load posts from localStorage and API server
-      const localSavedPosts = localStorage.getItem('interstellers_saved_posts');
-      const localDeletedRaw = localStorage.getItem('interstellers_deleted_post_ids');
-      const localDeletedSet = new Set<string>();
-      if (localDeletedRaw) {
-        try {
-          const parsed = JSON.parse(localDeletedRaw);
-          if (Array.isArray(parsed)) parsed.forEach((id: string) => localDeletedSet.add(id));
-        } catch (_) {}
-      }
-
-      let initialPostList: Post[] = INITIAL_POSTS;
-      if (localSavedPosts) {
-        try {
-          const parsed = JSON.parse(localSavedPosts);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            initialPostList = parsed.filter((p: Post) => p && !localDeletedSet.has(p.id));
-          }
-        } catch (_) {}
-      }
-
-      fetch('/api/posts')
-        .then((r) => r.json())
-        .then((data) => {
-          const allDeleted = new Set<string>();
-          localDeletedSet.forEach((id) => allDeleted.add(id));
-          if (data && Array.isArray(data.deletedPostIds)) {
-            data.deletedPostIds.forEach((id: string) => allDeleted.add(id));
-          }
-          // Sync merged deleted set to localStorage
-          try {
-            localStorage.setItem('interstellers_deleted_post_ids', JSON.stringify(Array.from(allDeleted)));
-          } catch (_) {}
-
-          const combinedMap = new Map<string, Post>();
-          if (data.posts && Array.isArray(data.posts)) {
-            data.posts.forEach((p: Post) => {
-              if (p && p.id && !allDeleted.has(p.id)) {
-                combinedMap.set(p.id, p);
-              }
-            });
-          }
-
-          initialPostList.forEach((p: Post) => {
-            if (p && p.id && !allDeleted.has(p.id) && !combinedMap.has(p.id)) {
-              combinedMap.set(p.id, p);
-            }
-          });
-
-          // Only seed INITIAL_POSTS if no posts exist at all and they were not deleted
-          if (combinedMap.size === 0) {
-            INITIAL_POSTS.forEach((p: Post) => {
-              if (p && p.id && !allDeleted.has(p.id)) {
-                combinedMap.set(p.id, p);
-              }
-            });
-          }
-
-          const mergedList = Array.from(combinedMap.values());
-          setPosts(mergedList);
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('interstellers_saved_posts', JSON.stringify(mergedList));
-            } catch (_) {}
-          }
-        })
-        .catch(() => {
-          const filtered = initialPostList.filter((p: Post) => p && !localDeletedSet.has(p.id));
-          setPosts(filtered);
-        });
 
       // Verify active server session first
       fetch('/api/auth/session')
@@ -1081,6 +1079,80 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
     } catch (_) {}
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser.id) return;
+    const controller = new AbortController();
+    const loadPosts = async () => {
+      try {
+        const bookmarkKey = `interstellers_bookmarked_posts_${currentUser.id}`;
+        let bookmarkedIds: string[] = [];
+        try {
+          const savedBookmarks = localStorage.getItem(bookmarkKey);
+          const parsedBookmarks = savedBookmarks ? JSON.parse(savedBookmarks) : [];
+          if (Array.isArray(parsedBookmarks)) bookmarkedIds = parsedBookmarks.filter((id) => typeof id === 'string');
+        } catch (error) {
+          console.warn('Ignoring invalid saved-post bookmarks:', error);
+        }
+        const savedPostsRaw = localStorage.getItem('interstellers_saved_posts');
+        const deletedRaw = localStorage.getItem('interstellers_deleted_post_ids');
+        let legacyPosts: Post[] = [];
+        let deletedIds: string[] = [];
+        try {
+          const parsedLegacy = savedPostsRaw ? JSON.parse(savedPostsRaw) : [];
+          if (Array.isArray(parsedLegacy)) legacyPosts = parsedLegacy;
+        } catch (error) {
+          console.warn('Ignoring invalid local legacy posts:', error);
+        }
+        try {
+          const parsedDeleted = deletedRaw ? JSON.parse(deletedRaw) : [];
+          if (Array.isArray(parsedDeleted)) deletedIds = parsedDeleted.filter((id) => typeof id === 'string');
+        } catch (error) {
+          console.warn('Ignoring invalid local deleted-post IDs:', error);
+        }
+        if (legacyPosts.length > 0) {
+            const migration = await fetch('/api/posts', {
+              method: 'POST',
+              signal: controller.signal,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'migrate_legacy',
+                posts: legacyPosts.filter((post: Post) => !deletedIds.includes(post.id)),
+              }),
+            });
+            if (!migration.ok) {
+              const result = await migration.json();
+              throw new Error(result.error || 'Legacy posts could not be migrated.');
+            }
+        }
+
+        const response = await fetch('/api/posts', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Posts could not be loaded.');
+        const allDeleted = new Set<string>([...deletedIds, ...(data.deletedPostIds || [])]);
+        try {
+          localStorage.setItem('interstellers_deleted_post_ids', JSON.stringify(Array.from(allDeleted)));
+        } catch (error) {
+          console.warn('Could not cache deleted post IDs locally:', error);
+        }
+        setPosts(
+          (data.posts as Post[])
+            .filter((post) => post && post.id && !allDeleted.has(post.id))
+            .map((post) => ({ ...post, isBookmarked: bookmarkedIds.includes(post.id) }))
+        );
+        setPostsLoadError(null);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        console.error('Failed to load persisted posts:', error);
+        setPostsLoadError(error instanceof Error ? error.message : 'Posts could not be loaded.');
+      }
+    };
+    loadPosts();
+    return () => controller.abort();
+  }, [isAuthenticated, currentUser.id]);
 
   // Fetch all registered users from backend for Friends & Directory
   const fetchRegisteredUsers = async () => {
@@ -1364,233 +1436,115 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Helper to lock and persist posts to localStorage and server DB
-    const persistPosts = (updater: (prev: Post[]) => Post[]) => {
-      setPosts((prev) => {
-        const nextPosts = updater(prev);
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem('interstellers_saved_posts', JSON.stringify(nextPosts));
-          } catch (e) {
-            console.warn('localStorage quota limit for posts:', e);
-          }
-        }
-        try {
-          fetch('/api/posts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ posts: nextPosts }),
-          }).catch(() => {});
-        } catch (_) {}
-        return nextPosts;
-      });
-    };
-
-    // Update posts authored by current user so new avatar appears everywhere
-    persistPosts((prevPosts) =>
-      prevPosts.map((p) =>
-        p.author.id === currentUser.id || p.author.handle === currentUser.handle || p.author.name === currentUser.name
-          ? { ...p, author: { ...p.author, avatar: newAvatar } }
-          : p
+    setPosts((previous) =>
+      previous.map((post) =>
+        post.author.id === currentUser.id
+          ? { ...post, author: { ...post.author, name, avatar: newAvatar } }
+          : post
       )
     );
   };
 
-  // Posts Feed methods
-  const createPost = (
+  // Post mutations are committed remotely before the shared feed is updated.
+  const requestPostAction = async (body: Record<string, unknown>) => {
+    const response = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Post operation failed.');
+    return data;
+  };
+
+  const createPost = async (
     content: string,
     mediaUrl?: string,
     mediaType?: 'image' | 'video',
     tags?: string[]
   ) => {
-    const newPost: Post = {
-      id: `post_${generateId()}`,
-      author: currentUser,
-      content,
-      createdAt: new Date().toISOString(),
-      timestamp: formatTime(),
-      likes: 0,
-      commentsCount: 0,
-      sharesCount: 0,
-      isLiked: false,
-      isBookmarked: false,
-      mediaUrl,
-      mediaType,
-      tags: tags && tags.length > 0 ? tags : ["#Interstellers"],
-      comments: [],
-    };
-
-    // Lock and persist post
-    setPosts((prev) => {
-      const nextPosts = [newPost, ...prev];
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('interstellers_saved_posts', JSON.stringify(nextPosts));
-        } catch (e) {
-          console.warn('localStorage quota limit for posts:', e);
-        }
-      }
-      try {
-        fetch('/api/posts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ post: newPost }),
-        }).catch(() => {});
-      } catch (_) {}
-      return nextPosts;
-    });
-
-    const newNotif: AppNotification = {
-      id: `notif_${generateId()}`,
-      type: 'system',
-      title: 'Post Published & Locked',
-      message: 'Your update has been broadcasted and locked in the galactic feed.',
-      timestamp: 'Just now',
-      isRead: false,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-  };
-
-  const persistPostsState = (nextPosts: Post[]) => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('interstellers_saved_posts', JSON.stringify(nextPosts));
-      } catch (e) {
-        console.warn('localStorage quota limit for posts:', e);
-      }
-    }
     try {
-      fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ posts: nextPosts }),
-      }).catch(() => {});
-    } catch (_) {}
+      const data = await requestPostAction({
+        action: 'create',
+        content,
+        mediaUrl,
+        mediaType,
+        tags: tags && tags.length > 0 ? tags : ['#Interstellers'],
+      });
+      setPosts((previous) => [data.post as Post, ...previous]);
+      setPostsLoadError(null);
+      setNotifications((previous) => [{
+        id: `notif_${generateId()}`,
+        type: 'system',
+        title: 'Post Published & Locked',
+        message: 'Your update has been broadcasted and locked in the galactic feed.',
+        timestamp: 'Just now',
+        isRead: false,
+      }, ...previous]);
+    } catch (error) {
+      setPostsLoadError(error instanceof Error ? error.message : 'Post could not be saved.');
+      throw error;
+    }
   };
 
-  const updatePost = (
-    postId: string,
-    newContent?: string,
-    newMediaUrl?: string
-  ) => {
-    setPosts((prev) => {
-      const next = prev.map((post) => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            content: newContent !== undefined ? newContent : post.content,
-            mediaUrl: newMediaUrl !== undefined ? newMediaUrl : post.mediaUrl,
-          };
-        }
-        return post;
-      });
-      persistPostsState(next);
-      return next;
+  const updatePost = async (postId: string, newContent?: string, newMediaUrl?: string | null) => {
+    const data = await requestPostAction({
+      action: 'update',
+      postId,
+      content: newContent ?? posts.find((post) => post.id === postId)?.content,
+      ...(newMediaUrl !== undefined ? { mediaUrl: newMediaUrl } : {}),
     });
+    setPosts((previous) => previous.map((post) =>
+      post.id === postId ? { ...post, ...(data.post as Post), isBookmarked: post.isBookmarked } : post
+    ));
   };
 
-  const toggleLikePost = (postId: string) => {
-    setPosts((prev) => {
-      const next = prev.map((post) => {
-        if (post.id === postId) {
-          const isLiked = !post.isLiked;
-          return {
-            ...post,
-            isLiked,
-            likes: isLiked ? post.likes + 1 : Math.max(0, post.likes - 1),
-          };
-        }
-        return post;
-      });
-      persistPostsState(next);
-      return next;
-    });
+  const toggleLikePost = async (postId: string) => {
+    const data = await requestPostAction({ action: 'like', postId });
+    setPosts((previous) => previous.map((post) =>
+      post.id === postId ? { ...post, ...(data.post as Post), isBookmarked: post.isBookmarked } : post
+    ));
   };
 
   const toggleBookmarkPost = (postId: string) => {
-    setPosts((prev) => {
-      const next = prev.map((post) =>
-        post.id === postId ? { ...post, isBookmarked: !post.isBookmarked } : post
+    setPosts((previous) => {
+      const bookmarked = new Set(previous.filter((post) => post.isBookmarked).map((post) => post.id));
+      if (bookmarked.has(postId)) bookmarked.delete(postId);
+      else bookmarked.add(postId);
+      localStorage.setItem(
+        `interstellers_bookmarked_posts_${currentUser.id}`,
+        JSON.stringify(Array.from(bookmarked))
       );
-      persistPostsState(next);
-      return next;
+      return previous.map((post) =>
+        post.id === postId ? { ...post, isBookmarked: bookmarked.has(postId) } : post
+      );
     });
   };
 
-  const addCommentToPost = (postId: string, content: string) => {
-    const newComment: Comment = {
-      id: `comm_${generateId()}`,
-      author: currentUser,
-      content,
-      timestamp: formatTime(),
-      likes: 0,
-    };
-    setPosts((prev) => {
-      const next = prev.map((post) => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            commentsCount: post.commentsCount + 1,
-            comments: [...(post.comments || []), newComment],
-          };
-        }
-        return post;
-      });
-      persistPostsState(next);
-      return next;
-    });
+  const addCommentToPost = async (postId: string, content: string) => {
+    const data = await requestPostAction({ action: 'comment', postId, content });
+    setPosts((previous) => previous.map((post) =>
+      post.id === postId ? { ...post, ...(data.post as Post), isBookmarked: post.isBookmarked } : post
+    ));
   };
 
-  const voteInPoll = (postId: string, optionId: string) => {
-    setPosts((prev) => {
-      const next = prev.map((post) => {
-        if (post.id === postId && post.poll && !post.poll.userVotedOptionId) {
-          const updatedOptions = post.poll.options.map((opt) =>
-            opt.id === optionId ? { ...opt, votes: opt.votes + 1 } : opt
-          );
-          return {
-            ...post,
-            poll: {
-              ...post.poll,
-              options: updatedOptions,
-              totalVotes: post.poll.totalVotes + 1,
-              userVotedOptionId: optionId,
-            },
-          };
-        }
-        return post;
-      });
-      persistPostsState(next);
-      return next;
-    });
+  const voteInPoll = async (postId: string, optionId: string) => {
+    const data = await requestPostAction({ action: 'poll', postId, optionId });
+    setPosts((previous) => previous.map((post) =>
+      post.id === postId ? { ...(data.post as Post), isBookmarked: post.isBookmarked } : post
+    ));
   };
 
-  const deletePost = (postId: string) => {
-    // 1. Permanently record postId into tombstone list in localStorage
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = localStorage.getItem('interstellers_deleted_post_ids');
-        const list: string[] = raw ? JSON.parse(raw) : [];
-        if (!list.includes(postId)) {
-          list.push(postId);
-          localStorage.setItem('interstellers_deleted_post_ids', JSON.stringify(list));
-        }
-      } catch (_) {}
+  const deletePost = async (postId: string) => {
+    const response = await fetch(`/api/posts?id=${encodeURIComponent(postId)}`, { method: 'DELETE' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Post could not be deleted.');
+    setPosts((previous) => previous.filter((post) => post.id !== postId));
+    const raw = localStorage.getItem('interstellers_deleted_post_ids');
+    const deletedIds: string[] = raw ? JSON.parse(raw) : [];
+    if (!deletedIds.includes(postId)) {
+      localStorage.setItem('interstellers_deleted_post_ids', JSON.stringify([...deletedIds, postId]));
     }
-
-    // 2. Remove from active state & local storage
-    setPosts((prev) => {
-      const next = prev.filter((p) => p.id !== postId);
-      persistPostsState(next);
-      return next;
-    });
-
-    // 3. Permanently remove from server database
-    try {
-      fetch(`/api/posts?id=${encodeURIComponent(postId)}`, {
-        method: 'DELETE',
-      }).catch(() => {});
-    } catch (_) {}
   };
 
   // Direct Messaging methods
@@ -2096,6 +2050,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isShareModalOpen,
         setIsShareModalOpen,
         posts,
+        postsLoadError,
         createPost,
         updatePost,
         toggleLikePost,
@@ -2181,6 +2136,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         userHouseCharacter,
         userHouseAssignedAt,
         houseScores,
+        houseMemberCounts,
+        houseDataLoaded,
         assignUserHouse,
         addHousePoints,
 

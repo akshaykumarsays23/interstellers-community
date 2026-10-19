@@ -1,6 +1,14 @@
 {
   "registrations": [
     {
+      "id": "reg_1wt7hunmve40l26",
+      "name": "Vikram Sethi",
+      "email": "vikramsethi31@gmail.com",
+      "avatar": "",
+      "timestamp": "11:08 pm",
+      "status": "rejected"
+    },
+    {
       "id": "reg_peksuj1mutvu4cm",
       "name": "Vikram Sethi",
       "email": "vikramsethi91@gmail.com",
@@ -401,7 +409,8 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
       "deviceType": "Desktop",
       "firstSeen": 1791051620417,
-      "lastSeen": 1792256263218
+      "lastSeen": 1792391067151,
+      "userId": "user_host"
     },
     {
       "id": "dev_npjnd20mutvrod5",
@@ -481,7 +490,7 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.142.0 Chrome/150.0.7871.250 Electron/43.7.7 Safari/537.36",
       "deviceType": "Desktop",
       "firstSeen": 1791984970279,
-      "lastSeen": 1792255810127
+      "lastSeen": 1792390930366
     },
     {
       "id": "dev_501xlf8mv85qatk",
@@ -530,6 +539,23 @@
       "deviceType": "Desktop",
       "firstSeen": 1792255954186,
       "lastSeen": 1792255984104
+    },
+    {
+      "id": "dev_0ytih68mvdwlw0n",
+      "ip": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.142.0 Chrome/150.0.7871.250 Electron/43.7.7 Safari/537.36",
+      "deviceType": "Desktop",
+      "firstSeen": 1792332692845,
+      "lastSeen": 1792332839156
+    },
+    {
+      "id": "dev_nuf4jpemvev5re8",
+      "userId": "user_host",
+      "ip": "::ffff:127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.142.0 Chrome/150.0.7871.250 Electron/43.7.7 Safari/537.36",
+      "deviceType": "Desktop",
+      "firstSeen": 1792390725947,
+      "lastSeen": 1792390805884
     }
   ],
   "messages": {
@@ -1308,18 +1334,19 @@
     ]
   },
   "musicStats": {
-    "totalPlays": 121,
+    "totalPlays": 137,
     "userPlays": {
       "akshaycricketer1230@gmail.com": 32,
       "akshay": 1,
       "vikram": 1,
-      "user_guest": 24
+      "user_guest": 25
     },
-    "lastPlayedAt": 1792224634980
+    "lastPlayedAt": 1792345147518
   },
   "deletedPostIds": [
     "test_post_to_delete_1791723549079",
     "post_telugu_vibe",
-    "post_video_message_1"
+    "post_video_message_1",
+    "post_neon_test_8ee7912bce7549b2bbc7719f6bd71ddd"
   ]
 }

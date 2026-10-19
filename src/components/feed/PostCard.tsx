@@ -45,6 +45,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [copied, setCopied] = useState(false);
+  const [postActionError, setPostActionError] = useState<string | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [localReactions, setLocalReactions] = useState<Record<string, number>>({
@@ -62,6 +63,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [editMediaUrl, setEditMediaUrl] = useState(post.mediaUrl || '');
+  const isPostOwner = post.author.id === currentUser.id;
 
   const handleOpenEditModal = () => {
     setEditContent(post.content);
@@ -77,25 +79,36 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         // Un-react
         next[emoji] = Math.max(0, (next[emoji] || 0) - 1);
         setMyReaction(null);
-        if (emoji === '❤️' && post.isLiked) toggleLikePost(post.id);
+        if (emoji === '❤️' && post.isLiked) {
+          toggleLikePost(post.id).catch((error) => setPostActionError(error.message));
+        }
       } else {
         // Switch from old reaction
         if (myReaction) {
           next[myReaction] = Math.max(0, (next[myReaction] || 0) - 1);
-          if (myReaction === '❤️' && post.isLiked) toggleLikePost(post.id);
+          if (myReaction === '❤️' && post.isLiked) {
+            toggleLikePost(post.id).catch((error) => setPostActionError(error.message));
+          }
         }
         next[emoji] = (next[emoji] || 0) + 1;
         setMyReaction(emoji);
-        if (emoji === '❤️' && !post.isLiked) toggleLikePost(post.id);
+        if (emoji === '❤️' && !post.isLiked) {
+          toggleLikePost(post.id).catch((error) => setPostActionError(error.message));
+        }
       }
       return next;
     });
     setShowReactionPicker(false);
   };
 
-  const handleSavePostEdit = () => {
-    updatePost(post.id, editContent, editMediaUrl || undefined);
-    setIsEditModalOpen(false);
+  const handleSavePostEdit = async () => {
+    try {
+      await updatePost(post.id, editContent, editMediaUrl || null);
+      setPostActionError(null);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      setPostActionError(error instanceof Error ? error.message : 'Post could not be updated.');
+    }
   };
 
   const handleShare = () => {
@@ -103,11 +116,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
+  const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-    addCommentToPost(post.id, newComment);
-    setNewComment('');
+    try {
+      await addCommentToPost(post.id, newComment);
+      setNewComment('');
+      setPostActionError(null);
+    } catch (error) {
+      setPostActionError(error instanceof Error ? error.message : 'Comment could not be saved.');
+    }
   };
 
   return (
@@ -151,7 +169,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             </Badge>
           )}
 
-          <div className="relative">
+          {isPostOwner && <div className="relative">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors"
@@ -173,7 +191,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 <button
                   onClick={() => {
                     setIsMenuOpen(false);
-                    deletePost(post.id);
+                    deletePost(post.id).catch((error) => setPostActionError(error.message));
                   }}
                   className="w-full text-left px-3 py-2 text-xs font-medium text-error hover:bg-error/10 rounded-lg flex items-center gap-2 transition-colors"
                 >
@@ -182,9 +200,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 </button>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </div>
+
+      {postActionError && (
+        <p role="alert" className="mb-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+          {postActionError}
+        </p>
+      )}
 
       {/* Post Body Content */}
       <div className="text-sm sm:text-base text-on-surface leading-relaxed space-y-3 mb-4">
@@ -285,7 +309,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 return (
                   <button
                     key={option.id}
-                    onClick={() => voteInPoll(post.id, option.id)}
+                    onClick={() => voteInPoll(post.id, option.id).catch((error) => setPostActionError(error.message))}
                     className={cn(
                       'relative w-full p-2.5 rounded-lg border text-left text-xs transition-all overflow-hidden flex items-center justify-between',
                       isSelected

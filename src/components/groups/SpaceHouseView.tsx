@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
 import {
@@ -24,7 +24,10 @@ import {
   Radio,
   ChevronRight,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, generateId } from '@/lib/utils';
+import { PostComposer } from '@/components/feed/PostComposer';
+import { PostCard } from '@/components/feed/PostCard';
+import type { Post } from '@/lib/types';
 
 export type HouseId = 'marvel' | 'dc' | 'pokemon' | 'power_rangers';
 
@@ -238,89 +241,166 @@ const HOUSE_METADATA: Record<
     accent: string;
     icon: string;
     description: string;
+    image: string;
+    overlay: string;
+    borderColor: string;
+    glow: string;
   }
 > = {
   marvel: {
     name: 'Marvel House',
     tagline: 'Earth\'s Mightiest Heroes & Multiverse Legends',
-    color: 'from-rose-950/80 via-red-900/50 to-amber-950/60',
-    border: 'border-rose-500/40',
-    accent: 'text-rose-400',
+    color: 'from-red-950/90 via-black/60 to-rose-950/80',
+    border: 'border-red-500/50',
+    accent: 'text-rose-300',
     icon: '🛡️',
     description: 'Champions of courage, ingenuity, and cosmic justice led by Spider-Man and Iron Man.',
+    image: '/images/houses/marvel.jpg/wp6907831.jpg',
+    overlay: 'linear-gradient(90deg, rgba(15, 3, 8, .94) 0%, rgba(15, 3, 8, .78) 48%, rgba(15, 3, 8, .24) 100%), linear-gradient(0deg, rgba(15, 3, 8, .72), transparent 72%)',
+    borderColor: 'rgba(244, 63, 94, .58)',
+    glow: 'rgba(220, 38, 38, .2)',
   },
   dc: {
     name: 'DC House',
     tagline: 'Gotham Darkness & The Multiverse Trinity',
-    color: 'from-blue-950/80 via-indigo-950/60 to-slate-950/80',
-    border: 'border-blue-500/40',
-    accent: 'text-cyan-300',
+    color: 'from-blue-950/90 via-slate-950/70 to-black/90',
+    border: 'border-blue-400/50',
+    accent: 'text-sky-300',
     icon: '🦇',
     description: 'Masters of detective intellect, speed, and divine power led by The Dark Knight and Superman.',
+    image: '/images/houses/dc.jpg/dc-characters-comic-book-art-hu5av4aymzllapk9.jpg',
+    overlay: 'linear-gradient(90deg, rgba(3, 10, 27, .95) 0%, rgba(4, 12, 31, .78) 48%, rgba(4, 12, 31, .25) 100%), linear-gradient(0deg, rgba(2, 6, 17, .75), transparent 72%)',
+    borderColor: 'rgba(96, 165, 250, .55)',
+    glow: 'rgba(37, 99, 235, .2)',
   },
   pokemon: {
-    name: 'Pokemon House',
+    name: 'Pokémon House',
     tagline: 'Elemental Power & Legendary Evolution',
-    color: 'from-amber-950/80 via-emerald-950/50 to-yellow-950/60',
-    border: 'border-amber-500/40',
-    accent: 'text-amber-300',
+    color: 'from-violet-950/90 via-blue-950/65 to-indigo-950/80',
+    border: 'border-violet-400/50',
+    accent: 'text-yellow-300',
     icon: '⚡',
     description: 'Elemental synergy, legendary trainers, and thunderous power led by Pikachu and Charizard.',
+    image: '/images/houses/pokemon.jpg/9eiygxrAJz4VZIVGdz4WfNXaj9xwLOBzAOgPzZfqmdgVUppYfJufbmGgqTjsv-d_sAwBpdCAUB3fR7vH_nxZON7jAorCKQ7dBMjl87ZcxSqW3DTbFbVyhGqHxS0XBpPfJx-D5CwzyuIiiX05iPGw4RKvOMw_c2ieQnDwjZ4bICDku-0X_75aNfWOKwTaMBM1.jpg',
+    overlay: 'linear-gradient(90deg, rgba(18, 8, 38, .94) 0%, rgba(12, 14, 43, .72) 48%, rgba(12, 14, 43, .2) 100%), linear-gradient(0deg, rgba(14, 8, 35, .7), transparent 72%)',
+    borderColor: 'rgba(167, 139, 250, .56)',
+    glow: 'rgba(124, 58, 237, .2)',
   },
   power_rangers: {
     name: 'Power Rangers House',
     tagline: 'Morphin Grid Synergy & Megazord Might',
-    color: 'from-red-950/80 via-cyan-950/50 to-emerald-950/60',
-    border: 'border-cyan-500/40',
-    accent: 'text-emerald-300',
+    color: 'from-purple-950/90 via-black/65 to-indigo-950/80',
+    border: 'border-purple-400/50',
+    accent: 'text-fuchsia-300',
     icon: '🦖',
     description: 'Courage, unity, and giant Zord combat harnessing the infinite Morphin Grid.',
+    image: '/images/houses/power-rangers.jpg/VM42ijEJlFlZeB3_3p9fgxvi4kJZA8L5p7MP9HSb27fbu6ccNPqQxXzbbAGYor5ljb6OgMaQhVba8QHPs-AZmnHoM4KPPwCi2iY-biHnkhsjA6O_OplfCQ2I6-LKPaYLe2gfJoKRm_JY6pvwIsRnmsTzMWKXzX6I5nLrYvbxnBvWnGQWeonCTAjOWjuxRtDf.jpg',
+    overlay: 'radial-gradient(circle at 82% 22%, rgba(239, 68, 68, .2), transparent 28%), radial-gradient(circle at 78% 82%, rgba(34, 211, 238, .2), transparent 32%), linear-gradient(90deg, rgba(10, 5, 24, .95) 0%, rgba(13, 7, 28, .76) 48%, rgba(13, 7, 28, .24) 100%), linear-gradient(0deg, rgba(7, 4, 18, .75), transparent 72%)',
+    borderColor: 'rgba(192, 132, 252, .6)',
+    glow: 'rgba(168, 85, 247, .22)',
   },
+};
+
+interface HouseStatCardProps {
+  house: HouseId;
+  score: number | null;
+  memberCount: number | null;
+  rank: number | null;
+  isCurrent?: boolean;
+  onExplore?: () => void;
+}
+
+const HouseStatCard: React.FC<HouseStatCardProps> = ({
+  house,
+  score,
+  memberCount,
+  rank,
+  isCurrent = false,
+  onExplore,
+}) => {
+  const meta = HOUSE_METADATA[house];
+
+  return (
+    <article
+      className={cn(
+        'group relative isolate min-h-56 overflow-hidden rounded-2xl border p-4 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl',
+        isCurrent && 'ring-2 ring-offset-2 ring-offset-slate-950'
+      )}
+      style={{
+        borderColor: meta.borderColor,
+        boxShadow: `0 12px 34px ${meta.glow}`,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 transition-transform duration-500 group-hover:scale-105"
+        style={{
+          backgroundImage: `${meta.overlay}, url("${meta.image}")`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      <div className="flex h-full min-h-48 flex-col justify-between gap-4">
+        <div>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <span className="text-2xl" aria-hidden="true">{meta.icon}</span>
+            <span
+              className="rounded-full border bg-black/45 px-2.5 py-1 text-[10px] font-black tracking-wide text-white backdrop-blur-sm"
+              style={{ borderColor: meta.borderColor }}
+            >
+              {rank === null ? 'Rank loading' : `#${rank} Rank`}
+            </span>
+          </div>
+          <h3 className="font-heading text-lg font-black text-white">{meta.name}</h3>
+          <p className="mt-1 text-xs font-semibold text-white/85">{meta.tagline}</p>
+          <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-slate-100/85">{meta.description}</p>
+          {isCurrent && (
+            <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-300">
+              <CheckCircle2 className="h-3 w-3" /> Your Active House
+            </span>
+          )}
+        </div>
+
+        <div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-white/15 bg-black/45 px-3 py-2 backdrop-blur-sm">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-white/65">House points</p>
+              <p className="mt-0.5 font-mono text-sm font-black text-white tabular-nums">
+                {score === null ? 'Loading' : score.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/15 bg-black/45 px-3 py-2 backdrop-blur-sm">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-white/65">Members</p>
+              <p className="mt-0.5 font-mono text-sm font-black text-white tabular-nums">
+                {memberCount === null ? 'Loading' : memberCount.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          {onExplore && (
+            <button
+              type="button"
+              onClick={onExplore}
+              className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border bg-black/55 px-3 py-2 text-xs font-extrabold text-white transition-colors hover:bg-black/75"
+              style={{ borderColor: meta.borderColor }}
+            >
+              View champions <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </article>
+  );
 };
 
 interface HouseChatMessage {
   id: string;
+  senderId: string;
   senderName: string;
   senderAvatar: string;
   house: HouseId;
   text: string;
   timestamp: string;
 }
-
-const INITIAL_HOUSE_CHATS: HouseChatMessage[] = [
-  {
-    id: 'hc_1',
-    senderName: 'Akshay Kumar',
-    senderAvatar: '/avatar.png',
-    house: 'marvel',
-    text: 'Welcome all Houses! "Time is never coming back, remember time is never..." Compete hard this month!',
-    timestamp: '10:14 AM',
-  },
-  {
-    id: 'hc_2',
-    senderName: 'Bruce_Knight',
-    senderAvatar: '/avatar.png',
-    house: 'dc',
-    text: 'DC House has already generated +250 reactor points today. Gotham leads the galaxy!',
-    timestamp: '10:22 AM',
-  },
-  {
-    id: 'hc_3',
-    senderName: 'Ash_Ketchum',
-    senderAvatar: '/avatar.png',
-    house: 'pokemon',
-    text: 'Pikachu just hit 100,000 volts on the power reactor! Pokemon House is taking the trophy.',
-    timestamp: '10:35 AM',
-  },
-  {
-    id: 'hc_4',
-    senderName: 'Tommy_Oliver',
-    senderAvatar: '/avatar.png',
-    house: 'power_rangers',
-    text: 'Dragonzord is locked into the colosseum. Power Rangers assemble for the clash!',
-    timestamp: '10:48 AM',
-  },
-];
 
 export const SpaceHouseView: React.FC = () => {
   const {
@@ -329,15 +409,27 @@ export const SpaceHouseView: React.FC = () => {
     userHouseCharacter,
     userHouseAssignedAt,
     houseScores,
+    houseMemberCounts,
+    houseDataLoaded,
     assignUserHouse,
     addHousePoints,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'hub' | 'games' | 'chat'>('hub');
+  const [activeTab, setActiveTab] = useState<'hub' | 'games' | 'chat' | 'posts'>('hub');
   const [selectedCharacterFilter, setSelectedCharacterFilter] = useState<'all' | HouseId>('all');
-  const [chatMessages, setChatMessages] = useState<HouseChatMessage[]>(INITIAL_HOUSE_CHATS);
+  const [chatMessages, setChatMessages] = useState<HouseChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [chatChannel, setChatChannel] = useState<'house_hq' | 'global_colosseum'>('house_hq');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatSending, setChatSending] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [assignmentPending, setAssignmentPending] = useState(false);
+  const [isChangingHouse, setIsChangingHouse] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const [activityError, setActivityError] = useState<string | null>(null);
+  const [housePosts, setHousePosts] = useState<Post[]>([]);
+  const [housePostsLoading, setHousePostsLoading] = useState(false);
+  const [housePostsError, setHousePostsError] = useState<string | null>(null);
 
   // Mini-Games states
   const [reactorPower, setReactorPower] = useState(0);
@@ -346,16 +438,30 @@ export const SpaceHouseView: React.FC = () => {
   const [triviaFinished, setTriviaFinished] = useState(false);
   const [arenaResult, setArenaResult] = useState<string | null>(null);
 
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Time remaining calculation (30 days from assignment)
   const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-  const assignedTimestamp = userHouseAssignedAt || Date.now();
-  const timeRemainingMs = Math.max(0, assignedTimestamp + THIRTY_DAYS_MS - Date.now());
+  const assignedTimestamp = userHouseAssignedAt || now;
+  const timeRemainingMs = Math.max(0, assignedTimestamp + THIRTY_DAYS_MS - now);
   const daysLeft = Math.floor(timeRemainingMs / (24 * 60 * 60 * 1000));
   const hoursLeft = Math.floor((timeRemainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
 
   // Sorting Ceremony selection handler
-  const handleSelectCharacter = (char: Character) => {
-    assignUserHouse(char.house, char.name);
+  const handleSelectCharacter = async (char: Character) => {
+    if (assignmentPending) return;
+    setAssignmentPending(true);
+    setAssignmentError(null);
+    const result = await assignUserHouse(char.house, char.name);
+    setAssignmentPending(false);
+    if (!result.success) {
+      setAssignmentError(result.error || 'House selection could not be saved.');
+      return;
+    }
+    setIsChangingHouse(false);
 
     // Speak Nova's announcement aloud
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -370,10 +476,15 @@ export const SpaceHouseView: React.FC = () => {
   };
 
   // Reactor Core Tap Game
-  const handleTapReactor = () => {
+  const handleTapReactor = async () => {
     if (!userHouse) return;
-    setReactorPower((prev) => prev + 1);
-    addHousePoints(userHouse, 5);
+    setActivityError(null);
+    const result = await addHousePoints('reactor_tap', { activityId: generateId() });
+    if (result.error) {
+      setActivityError(result.error);
+      return;
+    }
+    if (result.awarded) setReactorPower((prev) => prev + 1);
   };
 
   // Trivia Questions
@@ -410,12 +521,18 @@ export const SpaceHouseView: React.FC = () => {
     },
   ];
 
-  const handleAnswerTrivia = (chosenIdx: number) => {
-    const isCorrect = chosenIdx === triviaQuestions[triviaStep].ans;
-    if (isCorrect && userHouse) {
-      setTriviaScore((prev) => prev + 1);
-      addHousePoints(userHouse, 25);
+  const handleAnswerTrivia = async (chosenIdx: number) => {
+    if (!userHouse) return;
+    setActivityError(null);
+    const result = await addHousePoints('trivia_answer', {
+      questionIndex: triviaStep,
+      answerIndex: chosenIdx,
+    });
+    if (result.error) {
+      setActivityError(result.error);
+      return;
     }
+    if (result.correct) setTriviaScore((prev) => prev + 1);
 
     if (triviaStep + 1 < triviaQuestions.length) {
       setTriviaStep((prev) => prev + 1);
@@ -424,43 +541,114 @@ export const SpaceHouseView: React.FC = () => {
     }
   };
 
-  const handleArenaDuel = () => {
+  const handleArenaDuel = async () => {
     if (!userHouse) return;
-    const roll = Math.floor(Math.random() * 100) + 1;
-    if (roll > 40) {
-      addHousePoints(userHouse, 50);
-      setArenaResult(`Victory! Your champion rolled ${roll} Power Units. +50 Points awarded to ${HOUSE_METADATA[userHouse].name}! 🏆`);
+    setActivityError(null);
+    const result = await addHousePoints('arena_duel', {});
+    if (result.error) {
+      setActivityError(result.error);
+      return;
+    }
+    if (result.points === 50) {
+      setArenaResult(`Victory! Your champion rolled ${result.roll} Power Units. +50 Points awarded to ${HOUSE_METADATA[userHouse].name}! 🏆`);
+    } else if (result.points === 10) {
+      setArenaResult(`Close battle! Rolled ${result.roll} Power Units. +10 Points tactical experience earned. ⚔️`);
     } else {
-      addHousePoints(userHouse, 10);
-      setArenaResult(`Close battle! Rolled ${roll} Power Units. +10 Points tactical experience earned. ⚔️`);
+      setArenaResult('Your House has already earned arena points today. Try again tomorrow.');
     }
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMessage.trim() || !userHouse) return;
-
-    const newMsg: HouseChatMessage = {
-      id: `hc_${Date.now()}`,
-      senderName: currentUser.name,
-      senderAvatar: currentUser.avatar,
-      house: userHouse,
-      text: inputMessage.trim(),
-      timestamp: 'Just now',
+  useEffect(() => {
+    if (activeTab !== 'chat' || !userHouse) return;
+    const controller = new AbortController();
+    const loadMessages = async () => {
+      try {
+        const response = await fetch('/api/houses/chat', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'House chat could not be loaded.');
+        setChatMessages(data.messages);
+        setChatError(null);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        setChatError(error instanceof Error ? error.message : 'House chat could not be loaded.');
+      } finally {
+        setChatLoading(false);
+      }
     };
+    setChatLoading(true);
+    void loadMessages();
+    const timer = setInterval(loadMessages, 5000);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [activeTab, userHouse]);
 
-    setChatMessages((prev) => [...prev, newMsg]);
-    setInputMessage('');
-    addHousePoints(userHouse, 2);
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMessage.trim() || !userHouse || chatSending) return;
+    setChatSending(true);
+    setChatError(null);
+    try {
+      const response = await fetch('/api/houses/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: `hc_${generateId()}`, text: inputMessage }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Message could not be sent.');
+      setChatMessages((previous) =>
+        previous.some((message) => message.id === data.message.id)
+          ? previous
+          : [...previous, data.message]
+      );
+      setInputMessage('');
+    } catch (error) {
+      setChatError(error instanceof Error ? error.message : 'Message could not be sent.');
+    } finally {
+      setChatSending(false);
+    }
   };
+
+  const loadHousePosts = useCallback(async () => {
+    if (!userHouse) return;
+    try {
+      const response = await fetch(`/api/posts?house=${encodeURIComponent(userHouse)}`, {
+        cache: 'no-store',
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'House posts could not be loaded.');
+      setHousePosts(data.posts);
+      setHousePostsError(null);
+    } catch (error) {
+      setHousePostsError(error instanceof Error ? error.message : 'House posts could not be loaded.');
+    } finally {
+      setHousePostsLoading(false);
+    }
+  }, [userHouse]);
+
+  useEffect(() => {
+    if (activeTab !== 'posts' || !userHouse) return;
+    setHousePostsLoading(true);
+    void loadHousePosts();
+    const timer = setInterval(() => void loadHousePosts(), 10_000);
+    return () => clearInterval(timer);
+  }, [activeTab, userHouse, loadHousePosts]);
 
   // Sort Leaderboard
   const sortedHouses = (['pokemon', 'marvel', 'dc', 'power_rangers'] as HouseId[]).sort(
     (a, b) => houseScores[b] - houseScores[a]
   );
+  const rankForHouse = (house: HouseId) =>
+    houseDataLoaded
+      ? 1 + Object.values(houseScores).filter((score) => score > houseScores[house]).length
+      : null;
 
   // If user is not sorted yet, show Nova Sorting Ceremony
-  if (!userHouse) {
+  if (!userHouse || isChangingHouse) {
     const filteredChars =
       selectedCharacterFilter === 'all'
         ? CHARACTERS_20
@@ -468,6 +656,11 @@ export const SpaceHouseView: React.FC = () => {
 
     return (
       <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-in fade-in duration-300">
+        {assignmentError && (
+          <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            {assignmentError}
+          </p>
+        )}
         {/* Nova Sorting Ceremony Header */}
         <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-purple-950/80 via-slate-900 to-cyan-950/80 border border-cyan-500/40 shadow-2xl overflow-hidden">
           <div className="absolute -top-16 -left-16 w-48 h-48 bg-purple-500/30 rounded-full blur-3xl pointer-events-none" />
@@ -510,6 +703,28 @@ export const SpaceHouseView: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <section aria-label="Explore the Houses" className="space-y-3">
+          <div>
+            <h2 className="font-heading text-lg font-black text-white">Explore the Four Houses</h2>
+            <p className="mt-1 text-xs text-slate-300">Compare the live league standings, then choose a champion.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {(['marvel', 'dc', 'pokemon', 'power_rangers'] as HouseId[]).map((house) => (
+              <HouseStatCard
+                key={house}
+                house={house}
+                score={houseDataLoaded ? houseScores[house] : null}
+                memberCount={houseDataLoaded ? houseMemberCounts?.[house] ?? null : null}
+                rank={rankForHouse(house)}
+                onExplore={() => {
+                  setSelectedCharacterFilter(house);
+                  document.getElementById('house-champions')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+            ))}
+          </div>
+        </section>
 
         {/* House Filter Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
@@ -555,7 +770,7 @@ export const SpaceHouseView: React.FC = () => {
                 : 'bg-surface-container text-amber-400 hover:bg-amber-950/30'
             )}
           >
-            <span>⚡ Pokemon House (5)</span>
+            <span>⚡ Pokémon House (5)</span>
           </button>
           <button
             onClick={() => setSelectedCharacterFilter('power_rangers')}
@@ -571,7 +786,7 @@ export const SpaceHouseView: React.FC = () => {
         </div>
 
         {/* 20 Character Selection Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div id="house-champions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {filteredChars.map((char) => {
             const hMeta = HOUSE_METADATA[char.house];
             return (
@@ -606,10 +821,11 @@ export const SpaceHouseView: React.FC = () => {
 
                 <button
                   onClick={() => handleSelectCharacter(char)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-xs font-black transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 group-hover:shadow-primary/30"
+                  disabled={assignmentPending}
+                  className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-xs font-black transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 group-hover:shadow-primary/30 disabled:opacity-50 disabled:cursor-wait"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Choose As My Champion</span>
+                  <span>{assignmentPending ? 'Saving House...' : 'Choose As My Champion'}</span>
                 </button>
               </div>
             );
@@ -623,10 +839,22 @@ export const SpaceHouseView: React.FC = () => {
   const myHouseMeta = HOUSE_METADATA[userHouse];
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 animate-in fade-in duration-300">
+    <div
+      className="mx-auto max-w-7xl space-y-6 p-4 animate-in fade-in duration-300 sm:p-6 lg:p-8"
+      style={{ backgroundImage: `radial-gradient(ellipse at top right, ${myHouseMeta.glow} 0%, transparent 42%)` }}
+    >
       
       {/* House Headquarters Banner */}
-      <div className={cn('relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br border shadow-2xl overflow-hidden text-white', myHouseMeta.color, myHouseMeta.border)}>
+      <div
+        className={cn('relative min-h-60 overflow-hidden rounded-3xl border p-6 text-white shadow-2xl sm:p-8', myHouseMeta.color, myHouseMeta.border)}
+        style={{
+          backgroundImage: `${myHouseMeta.overlay}, url("${myHouseMeta.image}")`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          borderColor: myHouseMeta.borderColor,
+          boxShadow: `0 18px 48px ${myHouseMeta.glow}`,
+        }}
+      >
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
@@ -645,6 +873,18 @@ export const SpaceHouseView: React.FC = () => {
             <p className="text-xs sm:text-sm text-slate-200 font-medium">
               Champion: <strong className="text-amber-300">{userHouseCharacter}</strong> • {myHouseMeta.tagline}
             </p>
+            {timeRemainingMs === 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAssignmentError(null);
+                  setIsChangingHouse(true);
+                }}
+                className="mt-2 px-3 py-2 rounded-lg bg-cyan-400/15 border border-cyan-300/40 text-cyan-200 text-xs font-bold hover:bg-cyan-400/25"
+              >
+                Choose a New House
+              </button>
+            )}
           </div>
 
           {/* 30-Day Residency Countdown Timer */}
@@ -683,46 +923,17 @@ export const SpaceHouseView: React.FC = () => {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {sortedHouses.map((hId, index) => {
-            const meta = HOUSE_METADATA[hId];
-            const score = houseScores[hId];
-            const isMyHouse = hId === userHouse;
-
-            return (
-              <div
-                key={hId}
-                className={cn(
-                  'p-4 rounded-xl border transition-all flex flex-col justify-between',
-                  isMyHouse
-                    ? 'bg-primary/10 border-primary ring-2 ring-primary/30 shadow-md'
-                    : 'bg-surface-container border-outline-variant/40'
-                )}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xl">{meta.icon}</span>
-                  <span className="text-xs font-black font-mono px-2 py-0.5 rounded-full bg-surface-bright text-on-surface">
-                    #{index + 1} Rank
-                  </span>
-                </div>
-
-                <div>
-                  <h4 className="font-heading font-bold text-sm text-on-surface">
-                    {meta.name}
-                  </h4>
-                  <p className="text-lg font-heading font-black text-primary tabular-nums mt-0.5">
-                    {score.toLocaleString()} pts
-                  </p>
-                </div>
-
-                {isMyHouse && (
-                  <span className="mt-2 text-[10px] font-extrabold text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Your Active House
-                  </span>
-                )}
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {sortedHouses.map((house) => (
+            <HouseStatCard
+              key={house}
+              house={house}
+              score={houseDataLoaded ? houseScores[house] : null}
+              memberCount={houseDataLoaded ? houseMemberCounts?.[house] ?? null : null}
+              rank={rankForHouse(house)}
+              isCurrent={house === userHouse}
+            />
+          ))}
         </div>
       </div>
 
@@ -767,6 +978,19 @@ export const SpaceHouseView: React.FC = () => {
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Global House Chat</span>
           <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-mono">Live</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('posts')}
+          className={cn(
+            'flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all',
+            activeTab === 'posts'
+              ? 'bg-primary text-on-primary shadow-xs'
+              : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+          )}
+        >
+          <Radio className="w-3.5 h-3.5" />
+          <span>House Feed</span>
         </button>
       </div>
 
@@ -819,6 +1043,11 @@ export const SpaceHouseView: React.FC = () => {
       {/* TAB 2: MINI-GAMES & BATTLES */}
       {activeTab === 'games' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {activityError && (
+            <p role="alert" className="md:col-span-2 lg:col-span-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-300">
+              {activityError}
+            </p>
+          )}
           
           {/* Game 1: Reactor Power Core Clicker */}
           <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-card flex flex-col justify-between space-y-4">
@@ -944,31 +1173,12 @@ export const SpaceHouseView: React.FC = () => {
       {/* TAB 3: GLOBAL HOUSE CHAT */}
       {activeTab === 'chat' && (
         <div className="h-[520px] rounded-2xl bg-surface-container-lowest border border-outline-variant/60 flex flex-col overflow-hidden shadow-card">
-          {/* Chat Header Channels */}
+          {/* House-scoped chat header */}
           <div className="p-3 bg-surface-container border-b border-outline-variant/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setChatChannel('house_hq')}
-                className={cn(
-                  'px-3 py-1.5 rounded-xl text-xs font-bold transition-all',
-                  chatChannel === 'house_hq'
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-                )}
-              >
+              <span className="px-3 py-1.5 rounded-xl bg-primary text-on-primary text-xs font-bold">
                 # {myHouseMeta.name} HQ
-              </button>
-              <button
-                onClick={() => setChatChannel('global_colosseum')}
-                className={cn(
-                  'px-3 py-1.5 rounded-xl text-xs font-bold transition-all',
-                  chatChannel === 'global_colosseum'
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-                )}
-              >
-                # 4-Houses Colosseum (Inter-House Banter)
-              </button>
+              </span>
             </div>
             <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -978,9 +1188,20 @@ export const SpaceHouseView: React.FC = () => {
 
           {/* Messages Feed */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+            {chatError && (
+              <p role="alert" className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+                {chatError}
+              </p>
+            )}
+            {chatLoading && chatMessages.length === 0 && (
+              <p role="status" className="py-8 text-center text-xs text-on-surface-variant">Loading House messages...</p>
+            )}
+            {!chatLoading && chatMessages.length === 0 && !chatError && (
+              <p className="py-8 text-center text-xs text-on-surface-variant">No House messages yet. Start the conversation.</p>
+            )}
             {chatMessages.map((msg) => {
               const senderMeta = HOUSE_METADATA[msg.house];
-              const isMine = msg.senderName === currentUser.name;
+              const isMine = msg.senderId === currentUser.id;
 
               return (
                 <div
@@ -1023,19 +1244,37 @@ export const SpaceHouseView: React.FC = () => {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder={`Transmit message to ${chatChannel === 'house_hq' ? myHouseMeta.name : '4 Houses Colosseum'}... (+2 House pts)`}
+              placeholder={`Transmit a message to ${myHouseMeta.name}... (+2 House pts)`}
               className="flex-1 bg-surface-container-high rounded-xl px-4 py-2 text-xs text-on-surface placeholder:text-on-surface-variant outline-none border border-outline-variant/40 focus:border-primary"
             />
             <button
               type="submit"
-              disabled={!inputMessage.trim()}
+              disabled={!inputMessage.trim() || chatSending}
               className="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs disabled:opacity-40 transition-all flex items-center gap-1.5 shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>Send</span>
+              <span>{chatSending ? 'Sending...' : 'Send'}</span>
             </button>
           </form>
         </div>
+      )}
+
+      {activeTab === 'posts' && (
+        <section className="space-y-4" aria-label={`${myHouseMeta.name} feed`}>
+          <PostComposer onSuccess={() => { void loadHousePosts(); }} />
+          {housePostsError && (
+            <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+              {housePostsError}
+            </p>
+          )}
+          {housePostsLoading && housePosts.length === 0 ? (
+            <p role="status" className="py-6 text-center text-sm text-on-surface-variant">Loading House posts...</p>
+          ) : housePosts.length === 0 && !housePostsError ? (
+            <div className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-8 text-center text-sm text-on-surface-variant">
+              No posts for {myHouseMeta.name} yet. Share the first update.
+            </div>
+          ) : housePosts.map((post) => <PostCard key={post.id} post={post} />)}
+        </section>
       )}
 
     </div>

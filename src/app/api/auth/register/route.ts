@@ -28,7 +28,7 @@ export async function POST(request: Request) {
           name: 'Akshay Kumar',
           email: cleanEmail,
           role: 'Host Admin',
-          profileRole: existing?.role || 'Community Host & Admin',
+          profileRole: 'Community Host & Admin',
           avatar: existing?.avatar || '/avatar.png',
           bio: existing?.bio ?? "Founder & Community Host at Interstellers. 'Time is never coming back, remember time is never...'",
           house: existing?.house,

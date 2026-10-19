@@ -1,7 +1,6 @@
 'use client';
 
-import React from 'react';
-import Image from 'next/image';
+import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AvatarProps {
@@ -46,6 +45,12 @@ export const Avatar: React.FC<AvatarProps> = ({
   showStatus = false,
   className,
 }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [src]);
+
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -61,17 +66,14 @@ export const Avatar: React.FC<AvatarProps> = ({
           sizeClasses[size]
         )}
       >
-        {src ? (
+        {src && !imageFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={src}
             alt={name}
             className="w-full h-full object-cover"
             loading="lazy"
-            onError={(e) => {
-              // fallback to initials on broken image
-              e.currentTarget.style.display = 'none';
-            }}
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <span>{initials}</span>

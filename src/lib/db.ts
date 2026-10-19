@@ -6,6 +6,10 @@ export interface DbRegistration {
   name: string;
   email: string;
   avatar?: string;
+  bio?: string;
+  role?: string;
+  house?: 'marvel' | 'dc' | 'pokemon' | 'power_rangers';
+  houseAssignedAt?: number;
   isAvatarLocked?: boolean;
   timestamp: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -20,6 +24,7 @@ export interface VerificationCodeEntry {
 
 export interface VisitorSession {
   id: string;
+  userId?: string;
   ip?: string;
   userAgent?: string;
   deviceType: 'Mobile' | 'Desktop' | 'Tablet';

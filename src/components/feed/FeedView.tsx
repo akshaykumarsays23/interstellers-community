@@ -14,7 +14,7 @@ import { Compass, Sparkles, Filter, Bookmark, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const FeedView: React.FC = () => {
-  const { posts, searchQuery } = useApp();
+  const { posts, postsLoadError, searchQuery } = useApp();
   const [activeTab, setActiveTab] = useState<'all' | 'popular' | 'saved'>('all');
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isBriefingExpanded, setIsBriefingExpanded] = useState(true);
@@ -59,6 +59,12 @@ export const FeedView: React.FC = () => {
 
           {/* Post Composer */}
           <PostComposer />
+
+          {postsLoadError && (
+            <p role="alert" className="mb-4 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+              Feed error: {postsLoadError}
+            </p>
+          )}
 
           {/* Feed Filter Tabs */}
           <div className="flex items-center justify-between mb-4 bg-surface-container-low p-1.5 rounded-xl border border-cyan-500/25 shadow-[0_0_15px_rgba(0,240,255,0.08)]">
@@ -114,9 +120,13 @@ export const FeedView: React.FC = () => {
           ) : filteredPosts.length === 0 ? (
             <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/60 p-12 text-center shadow-card">
               <Sparkles className="w-8 h-8 text-primary mx-auto mb-3 animate-bounce" />
-              <h3 className="font-heading font-semibold text-base text-on-surface mb-1">No posts found</h3>
+              <h3 className="font-heading font-semibold text-base text-on-surface mb-1">
+                {postsLoadError ? 'Feed unavailable' : 'No posts found'}
+              </h3>
               <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
-                {searchQuery
+                {postsLoadError
+                  ? 'Posts could not be loaded from the server. Please try again shortly.'
+                  : searchQuery
                   ? `No matches found for "${searchQuery}". Try refining your query.`
                   : 'Be the first to share an update across the galaxy!'}
               </p>
