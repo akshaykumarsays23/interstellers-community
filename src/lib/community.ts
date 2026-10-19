@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db';
 import { isAdminEmail, normalizeEmail, verifySessionToken } from '@/lib/auth';
 
 export type HouseId = 'marvel' | 'dc' | 'pokemon' | 'power_rangers';
-export type PostCategory = 'text' | 'image' | 'theory' | 'singing' | 'dancing';
+export type { PostCategory } from '@/lib/types';
 
 export interface CommunityUser {
   id: string;
@@ -67,6 +67,14 @@ async function createCommunitySchema(
     ON interstellers_point_transactions (house, created_at DESC)
   `;
   await sql`
+    CREATE INDEX IF NOT EXISTS interstellers_points_activity_created_idx
+    ON interstellers_point_transactions (activity_type, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS interstellers_points_related_activity_idx
+    ON interstellers_point_transactions (related_id, activity_type)
+  `;
+  await sql`
     CREATE INDEX IF NOT EXISTS interstellers_comments_post_created_idx
     ON interstellers_post_comments (post_id, created_at)
   `;
@@ -124,6 +132,34 @@ async function createCommunitySchema(
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (post_id, user_id)
     )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS interstellers_house_challenge_attempts (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      house TEXT NOT NULL CHECK (house IN ('marvel', 'dc', 'pokemon', 'power_rangers')),
+      question_ids JSONB NOT NULL,
+      option_order JSONB NOT NULL,
+      draft_answers JSONB NOT NULL DEFAULT '{}'::jsonb,
+      status TEXT NOT NULL CHECK (status IN ('in_progress', 'submitted')),
+      answers JSONB,
+      correct_count INTEGER,
+      points INTEGER,
+      started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      submitted_at TIMESTAMPTZ
+    )
+  `;
+  await sql`
+    ALTER TABLE interstellers_house_challenge_attempts
+    ADD COLUMN IF NOT EXISTS draft_answers JSONB NOT NULL DEFAULT '{}'::jsonb
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS interstellers_house_challenge_user_started_idx
+    ON interstellers_house_challenge_attempts (user_id, started_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS interstellers_house_challenge_house_submitted_idx
+    ON interstellers_house_challenge_attempts (house, submitted_at DESC)
   `;
 }
 

@@ -409,7 +409,7 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
       "deviceType": "Desktop",
       "firstSeen": 1791051620417,
-      "lastSeen": 1792391067151,
+      "lastSeen": 1792398035860,
       "userId": "user_host"
     },
     {
@@ -490,7 +490,7 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.142.0 Chrome/150.0.7871.250 Electron/43.7.7 Safari/537.36",
       "deviceType": "Desktop",
       "firstSeen": 1791984970279,
-      "lastSeen": 1792390930366
+      "lastSeen": 1792397014626
     },
     {
       "id": "dev_501xlf8mv85qatk",
@@ -514,7 +514,8 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
       "deviceType": "Desktop",
       "firstSeen": 1792226270715,
-      "lastSeen": 1792226280697
+      "lastSeen": 1792397838834,
+      "userId": "reg_8rk4xnumutk4gzi"
     },
     {
       "id": "dev_d9oh8e3mvc59c2y",
@@ -1334,14 +1335,14 @@
     ]
   },
   "musicStats": {
-    "totalPlays": 137,
+    "totalPlays": 144,
     "userPlays": {
       "akshaycricketer1230@gmail.com": 32,
       "akshay": 1,
       "vikram": 1,
-      "user_guest": 25
+      "user_guest": 27
     },
-    "lastPlayedAt": 1792345147518
+    "lastPlayedAt": 1792397911486
   },
   "deletedPostIds": [
     "test_post_to_delete_1791723549079",

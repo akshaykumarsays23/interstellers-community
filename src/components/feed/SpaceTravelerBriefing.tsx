@@ -324,7 +324,7 @@ export const SpaceTravelerBriefing: React.FC<SpaceTravelerBriefingProps> = ({ is
                   {revealedDossiers['dos_2'] && (
                     <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
                       <p className="font-bold text-purple-400 mb-1">Galactic Law #44:</p>
-                      The 4 Pillars of Interstellers are <strong>Marvel, DC, Pokemon, and Power Rangers</strong>! You select your single favorite champion upon entering the Space House tab. You are locked in for <strong>exactly 1 month (30 days)</strong> with no house switching. Compete in trivia and power reactors to bring your House to #1 rank!
+                      The 4 Pillars of Interstellers are <strong>Marvel, DC, Pokemon, and Power Rangers</strong>! Choose a House directly from its card when you enter the Space House tab. You are locked in for <strong>exactly 1 month (30 days)</strong> with no house switching. Compete in trivia and power reactors to bring your House to #1 rank!
                     </div>
                   )}
                 </div>

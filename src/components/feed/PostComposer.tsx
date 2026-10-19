@@ -5,6 +5,8 @@ import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
 import { Image as ImageIcon, Sparkles, Send, Tag, Smile, X, Upload, Lock, Search, Grid, Shuffle, Video, Film } from 'lucide-react';
 import { SPACE_IMAGES, SpaceImage } from '@/lib/spaceImages';
+import type { Post } from '@/lib/types';
+import { generateId } from '@/lib/utils';
 
 interface PostComposerProps {
   onSuccess?: () => void;
@@ -15,9 +17,12 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
   const [content, setContent] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+  const [postCategory, setPostCategory] = useState<NonNullable<Post['category']>>('text');
+  const [performanceTitle, setPerformanceTitle] = useState('');
   const [showMediaInput, setShowMediaInput] = useState(false);
   const [selectedTag, setSelectedTag] = useState('#CommunityUpdate');
   const [isPosting, setIsPosting] = useState(false);
+  const postRequestId = useRef<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -41,6 +46,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
       reader.onload = (event) => {
         const rawUrl = event.target?.result as string;
         if (rawUrl) {
+          postRequestId.current = null;
           setMediaUrl(rawUrl);
           setMediaType('video');
         }
@@ -79,10 +85,12 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         const dataUrl = canvas.toDataURL(file.type || 'image/jpeg', 0.85);
+        postRequestId.current = null;
         setMediaUrl(dataUrl);
         setMediaType('image');
       };
       img.onerror = () => {
+        postRequestId.current = null;
         setMediaUrl(rawUrl);
         setMediaType('image');
       };
@@ -94,6 +102,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
 
   const handlePickRandomSpaceImage = () => {
     const randomIdx = Math.floor(Math.random() * SPACE_IMAGES.length);
+    postRequestId.current = null;
     setMediaUrl(SPACE_IMAGES[randomIdx].url);
     setMediaType('image');
   };
@@ -111,15 +120,33 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
         mediaUrl.includes('Video%20Project%201.mp4') ||
         mediaUrl.includes('Video Project 1.mp4');
 
+      if (postCategory === 'image' && (!mediaUrl || isVideo)) {
+        throw new Error('Image posts need an image attachment.');
+      }
+      if ((postCategory === 'singing' || postCategory === 'dancing') &&
+        (!performanceTitle.trim() || !mediaUrl || !isVideo || content.trim().length < 20)) {
+        throw new Error('Performances need a title, at least 20 characters of description, and video media.');
+      }
+      if (postCategory === 'theory' && content.trim().length < 280) {
+        throw new Error('Theory and discussion posts need at least 280 characters.');
+      }
+
+      postRequestId.current ||= generateId();
       await createPost(
         content,
         mediaUrl || undefined,
         mediaUrl ? (isVideo ? 'video' : 'image') : undefined,
-        [selectedTag]
+        [selectedTag],
+        postCategory,
+        performanceTitle.trim() || undefined,
+        postRequestId.current
       );
       setContent('');
       setMediaUrl('');
       setMediaType('image');
+      setPostCategory('text');
+      setPerformanceTitle('');
+      postRequestId.current = null;
       setShowMediaInput(false);
       onSuccess?.();
     } catch (error) {
@@ -152,11 +179,54 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
           <textarea
             id="post-composer-textarea"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value !== content) postRequestId.current = null;
+              setContent(e.target.value);
+            }}
             placeholder="Share an interplanetary update, release note, or space photo..."
             rows={3}
             className="w-full bg-[#060c24]/80 rounded-xl p-3 text-sm text-on-surface placeholder:text-slate-400 border border-cyan-500/30 focus:border-cyan-400 focus:bg-[#081030] focus:ring-2 focus:ring-cyan-400/30 focus:shadow-[0_0_15px_rgba(0,240,255,0.25)] transition-all outline-none resize-none"
           />
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-on-surface-variant">
+              Post type
+              <select
+                value={postCategory}
+                onChange={(event) => {
+                  postRequestId.current = null;
+                  setPostCategory(event.target.value as NonNullable<Post['category']>);
+                }}
+                className="mt-1 block w-full rounded-lg border border-outline-variant/50 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              >
+                <option value="text">Text post (100 points)</option>
+                <option value="image">Image post (200 points)</option>
+                <option value="theory">Substantial theory/discussion (300 points)</option>
+                <option value="singing">Cosmic Singer performance (500 points)</option>
+                <option value="dancing">Cosmic Dancer performance (500 points)</option>
+              </select>
+            </label>
+            {(postCategory === 'singing' || postCategory === 'dancing') && (
+              <label className="text-xs font-semibold text-on-surface-variant">
+                Performance title
+                <input
+                  value={performanceTitle}
+                  onChange={(event) => {
+                    postRequestId.current = null;
+                    setPerformanceTitle(event.target.value);
+                  }}
+                  maxLength={120}
+                  required
+                  className="mt-1 block w-full rounded-lg border border-outline-variant/50 bg-surface-container px-3 py-2 text-sm text-on-surface"
+                  placeholder="Name your performance"
+                />
+              </label>
+            )}
+          </div>
+          {(postCategory === 'singing' || postCategory === 'dancing') && (
+            <p className="mt-2 text-[11px] text-on-surface-variant">
+              Add a video and a description of at least 20 characters. House and engagement points are verified by the server.
+            </p>
+          )}
 
           {/* 100 Space Pictures Media Drawer */}
           {showMediaInput && (
@@ -190,6 +260,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
                 <button
                   type="button"
                   onClick={() => {
+                    postRequestId.current = null;
                     setMediaUrl('/Video Project 1.mp4');
                     setMediaType('video');
                   }}
@@ -209,7 +280,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
                 <input
                   type="url"
                   value={mediaUrl.startsWith('data:') ? '' : mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
+                  onChange={(e) => {
+                    postRequestId.current = null;
+                    setMediaUrl(e.target.value);
+                    setMediaType('image');
+                  }}
                   placeholder="Or paste custom image URL (https://...)"
                   className="flex-1 min-w-[200px] bg-surface-bright rounded-lg px-3 py-1.5 text-xs text-on-surface border border-outline-variant/60 focus:border-primary outline-none"
                 />
@@ -255,7 +330,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
                       <button
                         key={img.id}
                         type="button"
-                        onClick={() => setMediaUrl(img.url)}
+                        onClick={() => {
+                          postRequestId.current = null;
+                          setMediaUrl(img.url);
+                          setMediaType('image');
+                        }}
                         className={`group relative rounded-lg overflow-hidden border aspect-video transition-all ${
                           isSelected
                             ? 'border-primary ring-2 ring-primary/40 scale-95'
@@ -317,7 +396,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setMediaUrl('')}
+                  onClick={() => {
+                    postRequestId.current = null;
+                    setMediaUrl('');
+                  }}
                   className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black transition-colors z-10"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -351,7 +433,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
               <div className="relative">
                 <select
                   value={selectedTag}
-                  onChange={(e) => setSelectedTag(e.target.value)}
+                  onChange={(e) => {
+                    postRequestId.current = null;
+                    setSelectedTag(e.target.value);
+                  }}
                   className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-cyan-200 bg-[#070e28] hover:bg-[#0a1438] border border-cyan-500/30 outline-none transition-colors"
                 >
                   {availableTags.map((tag) => (
@@ -378,4 +463,3 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onSuccess }) => {
     </div>
   );
 };
-

@@ -17,10 +17,14 @@ export interface User {
   houseAssignedAt?: number;
 }
 
+export type PostCategory = 'text' | 'image' | 'theory' | 'singing' | 'dancing';
+
 export interface Post {
   id: string;
   author: User;
   content: string;
+  category?: PostCategory;
+  title?: string;
   createdAt: string;
   timestamp: string;
   likes: number;

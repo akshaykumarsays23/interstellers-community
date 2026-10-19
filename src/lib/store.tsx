@@ -98,11 +98,19 @@ interface AppContextType {
   // Posts Feed Controls
   posts: Post[];
   postsLoadError: string | null;
-  createPost: (content: string, mediaUrl?: string, mediaType?: 'image' | 'video', tags?: string[]) => Promise<void>;
+  createPost: (
+    content: string,
+    mediaUrl?: string,
+    mediaType?: 'image' | 'video',
+    tags?: string[],
+    category?: Post['category'],
+    title?: string,
+    requestId?: string
+  ) => Promise<void>;
   updatePost: (postId: string, newContent?: string, newMediaUrl?: string | null) => Promise<void>;
-  toggleLikePost: (postId: string) => Promise<void>;
+  toggleLikePost: (postId: string, liked: boolean) => Promise<void>;
   toggleBookmarkPost: (postId: string) => void;
-  addCommentToPost: (postId: string, content: string) => Promise<void>;
+  addCommentToPost: (postId: string, content: string, requestId: string) => Promise<void>;
   voteInPoll: (postId: string, optionId: string) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
 
@@ -203,9 +211,9 @@ interface AppContextType {
   houseDataLoaded: boolean;
   assignUserHouse: (house: 'marvel' | 'dc' | 'pokemon' | 'power_rangers', character: string) => Promise<{ success: boolean; error?: string }>;
   addHousePoints: (
-    activity: 'reactor_tap' | 'trivia_answer' | 'arena_duel',
-    details: { activityId?: string; questionIndex?: number; answerIndex?: number }
-  ) => Promise<{ awarded: boolean; points: number; roll?: number; correct?: boolean; error?: string }>;
+    activity: 'reactor_tap' | 'arena_duel',
+    details: { activityId?: string }
+  ) => Promise<{ awarded: boolean; points: number; roll?: number; error?: string }>;
 
   // 15-Question Fellows Compatibility Protocol
   fellowsAnswers: Record<string, string> | null;
@@ -859,9 +867,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addHousePoints = async (
-    activity: 'reactor_tap' | 'trivia_answer' | 'arena_duel',
-    details: { activityId?: string; questionIndex?: number; answerIndex?: number }
-  ): Promise<{ awarded: boolean; points: number; roll?: number; correct?: boolean; error?: string }> => {
+    activity: 'reactor_tap' | 'arena_duel',
+    details: { activityId?: string }
+  ): Promise<{ awarded: boolean; points: number; roll?: number; error?: string }> => {
     try {
       const response = await fetch('/api/houses', {
         method: 'POST',
@@ -1461,7 +1469,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     content: string,
     mediaUrl?: string,
     mediaType?: 'image' | 'video',
-    tags?: string[]
+    tags?: string[],
+    category?: Post['category'],
+    title?: string,
+    requestId?: string
   ) => {
     try {
       const data = await requestPostAction({
@@ -1470,6 +1481,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         mediaUrl,
         mediaType,
         tags: tags && tags.length > 0 ? tags : ['#Interstellers'],
+        category,
+        title,
+        requestId,
       });
       setPosts((previous) => [data.post as Post, ...previous]);
       setPostsLoadError(null);
@@ -1499,8 +1513,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ));
   };
 
-  const toggleLikePost = async (postId: string) => {
-    const data = await requestPostAction({ action: 'like', postId });
+  const toggleLikePost = async (postId: string, liked: boolean) => {
+    const data = await requestPostAction({ action: 'like', postId, liked });
     setPosts((previous) => previous.map((post) =>
       post.id === postId ? { ...post, ...(data.post as Post), isBookmarked: post.isBookmarked } : post
     ));
@@ -1521,8 +1535,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const addCommentToPost = async (postId: string, content: string) => {
-    const data = await requestPostAction({ action: 'comment', postId, content });
+  const addCommentToPost = async (postId: string, content: string, requestId: string) => {
+    const data = await requestPostAction({ action: 'comment', postId, content, requestId });
     setPosts((previous) => previous.map((post) =>
       post.id === postId ? { ...post, ...(data.post as Post), isBookmarked: post.isBookmarked } : post
     ));

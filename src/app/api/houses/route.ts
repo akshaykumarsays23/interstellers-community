@@ -12,7 +12,6 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-const TRIVIA_ANSWERS = [0, 1, 1, 0, 2];
 const HOUSE_IDS: HouseId[] = ['marvel', 'dc', 'pokemon', 'power_rangers'];
 
 export async function GET(request: Request) {
@@ -73,21 +72,6 @@ export async function POST(request: Request) {
       activityType = 'reactor_tap';
       relatedId = body.activityId;
       points = 5;
-    } else if (body.activity === 'trivia_answer') {
-      if (
-        !Number.isInteger(body.questionIndex) ||
-        body.questionIndex < 0 ||
-        body.questionIndex >= TRIVIA_ANSWERS.length ||
-        !Number.isInteger(body.answerIndex)
-      ) {
-        return NextResponse.json({ error: 'A valid trivia answer is required.' }, { status: 400 });
-      }
-      if (body.answerIndex !== TRIVIA_ANSWERS[body.questionIndex]) {
-        return NextResponse.json({ correct: false, awarded: false, points: 0 });
-      }
-      activityType = 'trivia_answer';
-      relatedId = `${today}:${body.questionIndex}`;
-      points = 25;
     } else if (body.activity === 'arena_duel') {
       activityType = 'arena_duel';
       relatedId = today;
@@ -101,7 +85,6 @@ export async function POST(request: Request) {
     const awarded = await awardHousePoints(sql, user, assignment.house, activityType, relatedId, points);
     const scores = await getHouseScores(sql);
     return NextResponse.json({
-      ...(activityType === 'trivia_answer' ? { correct: true } : {}),
       awarded,
       points: awarded ? points : 0,
       scores,

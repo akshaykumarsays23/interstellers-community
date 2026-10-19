@@ -22,11 +22,11 @@ import {
   RotateCcw,
   Star,
   Radio,
-  ChevronRight,
 } from 'lucide-react';
 import { cn, generateId } from '@/lib/utils';
 import { PostComposer } from '@/components/feed/PostComposer';
 import { PostCard } from '@/components/feed/PostCard';
+import { CosmicHouseChallenge } from '@/components/groups/CosmicHouseChallenge';
 import type { Post } from '@/lib/types';
 
 export type HouseId = 'marvel' | 'dc' | 'pokemon' | 'power_rangers';
@@ -307,7 +307,9 @@ interface HouseStatCardProps {
   memberCount: number | null;
   rank: number | null;
   isCurrent?: boolean;
-  onExplore?: () => void;
+  onSelect?: () => void;
+  isSelecting?: boolean;
+  selectionDisabled?: boolean;
 }
 
 const HouseStatCard: React.FC<HouseStatCardProps> = ({
@@ -316,7 +318,9 @@ const HouseStatCard: React.FC<HouseStatCardProps> = ({
   memberCount,
   rank,
   isCurrent = false,
-  onExplore,
+  onSelect,
+  isSelecting = false,
+  selectionDisabled = false,
 }) => {
   const meta = HOUSE_METADATA[house];
 
@@ -376,14 +380,15 @@ const HouseStatCard: React.FC<HouseStatCardProps> = ({
               </p>
             </div>
           </div>
-          {onExplore && (
+          {onSelect && (
             <button
               type="button"
-              onClick={onExplore}
+              onClick={onSelect}
+              disabled={selectionDisabled}
               className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border bg-black/55 px-3 py-2 text-xs font-extrabold text-white transition-colors hover:bg-black/75"
               style={{ borderColor: meta.borderColor }}
             >
-              View champions <ChevronRight className="h-4 w-4" />
+              {isSelecting ? 'Joining House...' : `Join ${meta.name}`}
             </button>
           )}
         </div>
@@ -406,7 +411,6 @@ export const SpaceHouseView: React.FC = () => {
   const {
     currentUser,
     userHouse,
-    userHouseCharacter,
     userHouseAssignedAt,
     houseScores,
     houseMemberCounts,
@@ -416,7 +420,6 @@ export const SpaceHouseView: React.FC = () => {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'hub' | 'games' | 'chat' | 'posts'>('hub');
-  const [selectedCharacterFilter, setSelectedCharacterFilter] = useState<'all' | HouseId>('all');
   const [chatMessages, setChatMessages] = useState<HouseChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -433,9 +436,6 @@ export const SpaceHouseView: React.FC = () => {
 
   // Mini-Games states
   const [reactorPower, setReactorPower] = useState(0);
-  const [triviaStep, setTriviaStep] = useState(0);
-  const [triviaScore, setTriviaScore] = useState(0);
-  const [triviaFinished, setTriviaFinished] = useState(false);
   const [arenaResult, setArenaResult] = useState<string | null>(null);
 
   useEffect(() => {
@@ -450,12 +450,18 @@ export const SpaceHouseView: React.FC = () => {
   const daysLeft = Math.floor(timeRemainingMs / (24 * 60 * 60 * 1000));
   const hoursLeft = Math.floor((timeRemainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
 
-  // Sorting Ceremony selection handler
-  const handleSelectCharacter = async (char: Character) => {
+  // Keep the existing House assignment API contract while letting users select a House directly.
+  const handleSelectHouse = async (house: HouseId) => {
     if (assignmentPending) return;
     setAssignmentPending(true);
     setAssignmentError(null);
-    const result = await assignUserHouse(char.house, char.name);
+    const representative = CHARACTERS_20.find((character) => character.house === house);
+    if (!representative) {
+      setAssignmentPending(false);
+      setAssignmentError('House selection could not be saved.');
+      return;
+    }
+    const result = await assignUserHouse(house, representative.name);
     setAssignmentPending(false);
     if (!result.success) {
       setAssignmentError(result.error || 'House selection could not be saved.');
@@ -466,8 +472,8 @@ export const SpaceHouseView: React.FC = () => {
     // Speak Nova's announcement aloud
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       try {
-        const houseTitle = HOUSE_METADATA[char.house].name;
-        const announcement = `Sorting protocol complete! Because you chose ${char.name}, you are hereby assigned to ${houseTitle}! Galactic law binds you to this house for 1 month. Fight for your house!`;
+        const houseTitle = HOUSE_METADATA[house].name;
+        const announcement = `Your House selection is complete! You are now part of ${houseTitle}. Galactic law binds you to this House for 30 days. Fight for your House!`;
         const utter = new SpeechSynthesisUtterance(announcement);
         utter.rate = 1.05;
         window.speechSynthesis.speak(utter);
@@ -485,60 +491,6 @@ export const SpaceHouseView: React.FC = () => {
       return;
     }
     if (result.awarded) setReactorPower((prev) => prev + 1);
-  };
-
-  // Trivia Questions
-  const triviaQuestions = [
-    {
-      q: 'Which character said "With great power comes great responsibility"?',
-      opts: ['Spider-Man (Uncle Ben)', 'Batman', 'Mewtwo', 'Red Ranger'],
-      ans: 0,
-      house: 'marvel',
-    },
-    {
-      q: 'What is the real identity of Gotham\'s Dark Knight?',
-      opts: ['Clark Kent', 'Bruce Wayne', 'Peter Parker', 'Tommy Oliver'],
-      ans: 1,
-      house: 'dc',
-    },
-    {
-      q: 'Which Pokemon possesses the move "Thunderbolt" as its signature trademark?',
-      opts: ['Charizard', 'Pikachu', 'Gengar', 'Rayquaza'],
-      ans: 1,
-      house: 'pokemon',
-    },
-    {
-      q: 'What giant titan do the Power Rangers summon when uniting their Dinozords?',
-      opts: ['Megazord', 'Dragonzord', 'Optimus', 'Buster Machine'],
-      ans: 0,
-      house: 'power_rangers',
-    },
-    {
-      q: 'How long are travelers required to stay in their Space House in Interstellers?',
-      opts: ['1 Day', '1 Week', '1 Month (30 Days)', '1 Year'],
-      ans: 2,
-      house: 'all',
-    },
-  ];
-
-  const handleAnswerTrivia = async (chosenIdx: number) => {
-    if (!userHouse) return;
-    setActivityError(null);
-    const result = await addHousePoints('trivia_answer', {
-      questionIndex: triviaStep,
-      answerIndex: chosenIdx,
-    });
-    if (result.error) {
-      setActivityError(result.error);
-      return;
-    }
-    if (result.correct) setTriviaScore((prev) => prev + 1);
-
-    if (triviaStep + 1 < triviaQuestions.length) {
-      setTriviaStep((prev) => prev + 1);
-    } else {
-      setTriviaFinished(true);
-    }
   };
 
   const handleArenaDuel = async () => {
@@ -647,67 +599,14 @@ export const SpaceHouseView: React.FC = () => {
       ? 1 + Object.values(houseScores).filter((score) => score > houseScores[house]).length
       : null;
 
-  // If user is not sorted yet, show Nova Sorting Ceremony
+  // If user has not selected a House, show House cards as the selection interface.
   if (!userHouse || isChangingHouse) {
-    const filteredChars =
-      selectedCharacterFilter === 'all'
-        ? CHARACTERS_20
-        : CHARACTERS_20.filter((c) => c.house === selectedCharacterFilter);
-
     return (
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-in fade-in duration-300">
-        {assignmentError && (
-          <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-            {assignmentError}
-          </p>
-        )}
-        {/* Nova Sorting Ceremony Header */}
-        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-purple-950/80 via-slate-900 to-cyan-950/80 border border-cyan-500/40 shadow-2xl overflow-hidden">
-          <div className="absolute -top-16 -left-16 w-48 h-48 bg-purple-500/30 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-cyan-500/25 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 space-y-4 max-w-3xl">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/30">
-                <Bot className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <h1 className="font-heading font-black text-2xl sm:text-3xl text-white tracking-wide flex items-center gap-2">
-                  NOVA&apos;S SPACE HOUSE SORTING CEREMONY
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-cyan-400/20 text-cyan-300 font-mono font-bold border border-cyan-400/40">
-                    4 HOUSES PROTOCOL
-                  </span>
-                </h1>
-                <p className="text-xs sm:text-sm text-cyan-200/90 font-medium">
-                  1 House • 1 Month • Choose Your Favorite Champion
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-black/50 border border-white/10 backdrop-blur-md text-xs sm:text-sm text-slate-200 leading-relaxed space-y-2">
-              <p className="font-bold text-amber-300 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Nova AI Speaking:</span>
-              </p>
-              <p>
-                &ldquo;Welcome, Space Traveler! To enter our <strong>Space House League</strong>, tell me:
-                <strong> Who is your absolute favorite character?</strong>
-              </p>
-              <p className="text-cyan-200 font-semibold">
-                Select 1 character from our 20 legends across the 4 Houses. If you select Batman, you go to <strong>DC House</strong>. If you select Spider-Man, you go to <strong>Marvel House</strong>. If you select Pikachu, you go to <strong>Pokemon House</strong>. If you select Red Ranger, you go to <strong>Power Rangers House</strong>!
-              </p>
-              <div className="p-2.5 rounded-xl bg-purple-950/60 border border-purple-400/30 text-amber-300 font-bold text-xs flex items-center gap-2">
-                <Timer className="w-4 h-4 text-amber-400" />
-                <span>GALACTIC LAW: You are locked into your chosen House for 1 FULL MONTH (30 Days). Choose wisely!</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <div className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-300">
         <section aria-label="Explore the Houses" className="space-y-3">
           <div>
             <h2 className="font-heading text-lg font-black text-white">Explore the Four Houses</h2>
-            <p className="mt-1 text-xs text-slate-300">Compare the live league standings, then choose a champion.</p>
+            <p className="mt-1 text-xs text-slate-300">Explore each House and choose where your cosmic journey begins.</p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {(['marvel', 'dc', 'pokemon', 'power_rangers'] as HouseId[]).map((house) => (
@@ -717,120 +616,60 @@ export const SpaceHouseView: React.FC = () => {
                 score={houseDataLoaded ? houseScores[house] : null}
                 memberCount={houseDataLoaded ? houseMemberCounts?.[house] ?? null : null}
                 rank={rankForHouse(house)}
-                onExplore={() => {
-                  setSelectedCharacterFilter(house);
-                  document.getElementById('house-champions')?.scrollIntoView({ behavior: 'smooth' });
-                }}
+                onSelect={() => void handleSelectHouse(house)}
+                isSelecting={assignmentPending}
+                selectionDisabled={assignmentPending}
               />
             ))}
           </div>
         </section>
 
-        {/* House Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
-          <button
-            onClick={() => setSelectedCharacterFilter('all')}
-            className={cn(
-              'px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0',
-              selectedCharacterFilter === 'all'
-                ? 'bg-primary text-on-primary shadow-xs'
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-            )}
-          >
-            All 20 Champions
-          </button>
-          <button
-            onClick={() => setSelectedCharacterFilter('marvel')}
-            className={cn(
-              'px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5',
-              selectedCharacterFilter === 'marvel'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-surface-container text-rose-400 hover:bg-rose-950/30'
-            )}
-          >
-            <span>🛡️ Marvel House (5)</span>
-          </button>
-          <button
-            onClick={() => setSelectedCharacterFilter('dc')}
-            className={cn(
-              'px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5',
-              selectedCharacterFilter === 'dc'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-surface-container text-cyan-400 hover:bg-blue-950/30'
-            )}
-          >
-            <span>🦇 DC House (5)</span>
-          </button>
-          <button
-            onClick={() => setSelectedCharacterFilter('pokemon')}
-            className={cn(
-              'px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5',
-              selectedCharacterFilter === 'pokemon'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-surface-container text-amber-400 hover:bg-amber-950/30'
-            )}
-          >
-            <span>⚡ Pokémon House (5)</span>
-          </button>
-          <button
-            onClick={() => setSelectedCharacterFilter('power_rangers')}
-            className={cn(
-              'px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5',
-              selectedCharacterFilter === 'power_rangers'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-surface-container text-emerald-400 hover:bg-emerald-950/30'
-            )}
-          >
-            <span>🦖 Power Rangers (5)</span>
-          </button>
-        </div>
+        {assignmentError && (
+          <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            {assignmentError}
+          </p>
+        )}
 
-        {/* 20 Character Selection Cards Grid */}
-        <div id="house-champions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {filteredChars.map((char) => {
-            const hMeta = HOUSE_METADATA[char.house];
-            return (
-              <div
-                key={char.id}
-                className={cn(
-                  'rounded-2xl border p-5 flex flex-col justify-between shadow-card hover:shadow-xl transition-all duration-300 bg-surface-container-lowest group relative overflow-hidden',
-                  hMeta.border
-                )}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-3xl p-2.5 rounded-2xl bg-surface-container shadow-inner border border-outline-variant/30">
-                      {char.avatar}
-                    </span>
-                    <span className={cn('text-[10px] font-extrabold px-2 py-0.5 rounded-full border', hMeta.accent)}>
-                      {hMeta.name}
-                    </span>
-                  </div>
-
-                  <h3 className="font-heading font-black text-base text-on-surface mb-0.5 group-hover:text-primary transition-colors">
-                    {char.name}
-                  </h3>
-                  <p className="text-xs text-on-surface-variant font-medium mb-3">
-                    {char.subtitle}
-                  </p>
-
-                  <p className="text-[11px] text-on-surface-variant/90 italic bg-surface-container-high/40 p-2.5 rounded-xl border border-outline-variant/30 leading-snug mb-4">
-                    &ldquo;{char.quote}&rdquo;
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleSelectCharacter(char)}
-                  disabled={assignmentPending}
-                  className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary text-xs font-black transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 group-hover:shadow-primary/30 disabled:opacity-50 disabled:cursor-wait"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{assignmentPending ? 'Saving House...' : 'Choose As My Champion'}</span>
-                </button>
+        <section className="relative isolate overflow-hidden rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-purple-950/80 via-slate-900 to-cyan-950/80 p-6 shadow-2xl sm:p-8">
+          <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-16 -z-10 h-48 w-48 rounded-full bg-purple-500/30 blur-3xl" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 -right-16 -z-10 h-48 w-48 rounded-full bg-cyan-500/25 blur-3xl" />
+          <div className="relative space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 to-cyan-500 text-white shadow-lg shadow-purple-500/30">
+                <Bot className="h-6 w-6" />
               </div>
-            );
-          })}
-        </div>
+              <div className="min-w-0">
+                <h2 className="font-heading text-xl font-black tracking-wide text-white drop-shadow-[0_0_12px_rgba(34,211,238,0.5)] sm:text-3xl">
+                  FIND YOUR COSMIC HOME
+                </h2>
+                <p className="mt-1 text-xs font-medium leading-relaxed text-cyan-200/90 sm:text-sm">
+                  Every universe has a place for you. Discover yours among the four legendary Houses.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-cyan-400/20 bg-black/50 p-4 text-sm leading-relaxed text-slate-200 shadow-[0_0_24px_rgba(34,211,238,0.08)] sm:p-5">
+              <p className="mb-2 flex items-center gap-2 font-bold text-amber-300">
+                <Sparkles className="h-4 w-4 shrink-0 text-amber-400" />
+                <span>Nova says:</span>
+              </p>
+              <p>
+                Welcome aboard, Space Traveler! Four legendary Houses await you, each with its own spirit, power, and community. Explore them, discover where you belong, and begin your journey with fellow Interstellers!
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-400/35 bg-purple-950/60 p-4 text-sm leading-relaxed text-amber-100 shadow-[0_0_20px_rgba(168,85,247,0.12)] sm:p-5">
+              <h3 className="mb-2 flex items-center gap-2 font-heading text-xs font-black tracking-wide text-amber-300 sm:text-sm">
+                <Timer className="h-4 w-4 shrink-0 text-amber-400" />
+                <span>YOUR COSMIC JOURNEY, YOUR COMMITMENT</span>
+              </h3>
+              <p>
+                Choose your House wisely! Once you join, you&apos;ll remain part of your chosen House for 30 days. Build friendships, earn House points, participate in challenges, and help your House rise to the top!
+              </p>
+            </div>
+          </div>
+        </section>
+
       </div>
     );
   }
@@ -871,7 +710,7 @@ export const SpaceHouseView: React.FC = () => {
               </div>
             </div>
             <p className="text-xs sm:text-sm text-slate-200 font-medium">
-              Champion: <strong className="text-amber-300">{userHouseCharacter}</strong> • {myHouseMeta.tagline}
+              {myHouseMeta.tagline}
             </p>
             {timeRemainingMs === 0 && (
               <button
@@ -1011,7 +850,7 @@ export const SpaceHouseView: React.FC = () => {
                 <p className="font-bold text-amber-400">Rules of the House:</p>
                 <ul className="list-disc list-inside space-y-1 text-on-surface-variant">
                   <li><strong>1 House for 1 Month:</strong> You cannot transfer to another house until the 30-day galactic timer expires.</li>
-                  <li><strong>Contribute Points:</strong> Play the Reactor clicker, complete trivia questions, and win arena duels to climb the leaderboard.</li>
+                  <li><strong>Contribute Points:</strong> Play the Reactor clicker, complete the Cosmic House Challenge, and win arena duels to climb the leaderboard.</li>
                   <li><strong>House Brotherhood:</strong> Support fellow house members and represent your champions with pride!</li>
                 </ul>
               </div>
@@ -1079,62 +918,7 @@ export const SpaceHouseView: React.FC = () => {
             </div>
           </div>
 
-          {/* Game 2: Multiverse Trivia Duel */}
-          <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-card flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono font-bold text-purple-400 uppercase">GAME #2 • TRIVIA DUEL</span>
-                <span className="text-xs font-bold text-purple-400">+25 pts / answer</span>
-              </div>
-              <h3 className="font-heading font-black text-base text-on-surface">
-                Multiverse Trivia Clash
-              </h3>
-              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                Test your knowledge of Marvel, DC, Pokemon, and Power Rangers!
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/40 space-y-3">
-              {!triviaFinished ? (
-                <>
-                  <div className="flex justify-between text-[11px] font-mono text-on-surface-variant">
-                    <span>Question {triviaStep + 1} of {triviaQuestions.length}</span>
-                    <span className="text-primary font-bold">{triviaScore} Correct</span>
-                  </div>
-                  <p className="text-xs font-bold text-on-surface">
-                    {triviaQuestions[triviaStep].q}
-                  </p>
-                  <div className="space-y-1.5">
-                    {triviaQuestions[triviaStep].opts.map((opt, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleAnswerTrivia(i)}
-                        className="w-full text-left p-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-xs font-medium transition-all"
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-4 space-y-2">
-                  <Trophy className="w-8 h-8 text-amber-400 mx-auto" />
-                  <p className="font-bold text-sm text-on-surface">Trivia Completed!</p>
-                  <p className="text-xs text-emerald-400 font-mono">Score: {triviaScore} / {triviaQuestions.length} (+{triviaScore * 25} House Points)</p>
-                  <button
-                    onClick={() => {
-                      setTriviaStep(0);
-                      setTriviaScore(0);
-                      setTriviaFinished(false);
-                    }}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-primary text-on-primary font-bold mt-2"
-                  >
-                    Play Again
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <CosmicHouseChallenge />
 
           {/* Game 3: Hero Arena Clash */}
           <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-card flex flex-col justify-between space-y-4">

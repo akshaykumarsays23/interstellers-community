@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Post } from '@/lib/types';
 import { useApp } from '@/lib/store';
 import { Avatar } from '@/components/common/Avatar';
@@ -26,7 +26,14 @@ import {
   Video,
   Film
 } from 'lucide-react';
-import { cn, formatPostDate, formatMessageDate } from '@/lib/utils';
+import { cn, formatPostDate, formatMessageDate, generateId } from '@/lib/utils';
+
+const HOUSE_LABELS: Record<NonNullable<Post['author']['house']>, string> = {
+  marvel: 'Marvel House',
+  dc: 'DC House',
+  pokemon: 'Pokémon House',
+  power_rangers: 'Power Rangers House',
+};
 
 interface PostCardProps {
   post: Post;
@@ -44,6 +51,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   } = useApp();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const commentRequestId = useRef<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [postActionError, setPostActionError] = useState<string | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -79,21 +88,21 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         // Un-react
         next[emoji] = Math.max(0, (next[emoji] || 0) - 1);
         setMyReaction(null);
-        if (emoji === '❤️' && post.isLiked) {
-          toggleLikePost(post.id).catch((error) => setPostActionError(error.message));
+        if (emoji === '❤️') {
+          toggleLikePost(post.id, false).catch((error) => setPostActionError(error.message));
         }
       } else {
         // Switch from old reaction
         if (myReaction) {
           next[myReaction] = Math.max(0, (next[myReaction] || 0) - 1);
-          if (myReaction === '❤️' && post.isLiked) {
-            toggleLikePost(post.id).catch((error) => setPostActionError(error.message));
+          if (myReaction === '❤️') {
+            toggleLikePost(post.id, false).catch((error) => setPostActionError(error.message));
           }
         }
         next[emoji] = (next[emoji] || 0) + 1;
         setMyReaction(emoji);
-        if (emoji === '❤️' && !post.isLiked) {
-          toggleLikePost(post.id).catch((error) => setPostActionError(error.message));
+        if (emoji === '❤️') {
+          toggleLikePost(post.id, true).catch((error) => setPostActionError(error.message));
         }
       }
       return next;
@@ -118,13 +127,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || isSubmittingComment) return;
+    commentRequestId.current ||= generateId();
+    setIsSubmittingComment(true);
     try {
-      await addCommentToPost(post.id, newComment);
+      await addCommentToPost(post.id, newComment, commentRequestId.current);
       setNewComment('');
+      commentRequestId.current = null;
       setPostActionError(null);
     } catch (error) {
       setPostActionError(error instanceof Error ? error.message : 'Comment could not be saved.');
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -147,6 +161,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
               </h3>
               {post.author.isVerified && (
                 <CheckCircle2 className="w-3.5 h-3.5 text-social-blue fill-social-blue/20" />
+              )}
+              {post.author.house && (
+                <Badge variant="cosmic" size="sm">
+                  {HOUSE_LABELS[post.author.house]}
+                </Badge>
               )}
             </div>
             <p className="text-xs text-on-surface-variant flex items-center gap-1.5">
@@ -212,6 +231,21 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
       {/* Post Body Content */}
       <div className="text-sm sm:text-base text-on-surface leading-relaxed space-y-3 mb-4">
+        {post.title && (
+          <h4 className="font-heading text-base font-bold text-on-surface">{post.title}</h4>
+        )}
+        {post.category && post.category !== 'text' && (
+          <Badge variant="cosmic" size="sm">
+            {post.category === 'image' ? 'Image' :
+              post.category === 'theory' ? 'Theory & Discussion' :
+                post.category === 'singing' ? 'Cosmic Singer' : 'Cosmic Dancer'}
+          </Badge>
+        )}
+        {(post.category === 'singing' || post.category === 'dancing') && (
+          <p className="text-[11px] font-medium text-amber-400">
+            Eligible rewards: 500 base points, one 100-point reward per liker, and one 200-point reward per commenter for a meaningful comment. Self-engagement does not earn points.
+          </p>
+        )}
         <p className="whitespace-pre-line">{post.content}</p>
 
         {/* Tags */}
@@ -456,13 +490,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             <input
               type="text"
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value !== newComment) commentRequestId.current = null;
+                setNewComment(e.target.value);
+              }}
               placeholder="Write a comment..."
               className="flex-1 bg-surface-container rounded-full px-3.5 py-1.5 text-xs text-on-surface border border-outline-variant/40 focus:border-primary outline-none"
             />
             <button
               type="submit"
-              disabled={!newComment.trim()}
+              disabled={!newComment.trim() || isSubmittingComment}
               className="p-1.5 rounded-full bg-primary text-on-primary disabled:opacity-40 hover:bg-primary-hover shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />
