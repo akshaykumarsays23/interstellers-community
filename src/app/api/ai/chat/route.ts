@@ -193,12 +193,22 @@ AUTHENTICATED USER CONTEXT:
     const validHistory = normalizeHistory(history);
 
     // 5. Connect to Real AI Model Provider
-    const geminiKey = process.env.GEMINI_API_KEY?.trim();
     const openaiKey = process.env.OPENAI_API_KEY?.trim();
+    const openaiModel = process.env.OPENAI_MODEL?.trim();
+
+    if (!openaiKey) {
+      return jsonResponse({ error: 'OpenAI is not configured. Set OPENAI_API_KEY on the server.' }, 503);
+    }
+
+    if (!openaiModel) {
+      return jsonResponse({ error: 'OpenAI is not configured. Set OPENAI_MODEL on the server.' }, 503);
+    }
+
+    const geminiKey = process.env.GEMINI_API_KEY?.trim();
     const groqKey = process.env.GROQ_API_KEY?.trim();
 
     // Priority 1: Google Gemini
-    if (geminiKey) {
+    if (geminiKey && !openaiKey) {
       try {
         const geminiModels = [
           'gemini-flash-latest',
@@ -275,7 +285,7 @@ AUTHENTICATED USER CONTEXT:
       }
     }
 
-    // Priority 2: OpenAI (gpt-4o-mini)
+    // Priority 2: OpenAI
     if (openaiKey) {
       try {
         const openaiUrl = 'https://api.openai.com/v1/chat/completions';
@@ -296,7 +306,7 @@ AUTHENTICATED USER CONTEXT:
             Authorization: `Bearer ${openaiKey}`,
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: openaiModel,
             messages,
             temperature: 0.7,
             max_tokens: 1000,
@@ -304,8 +314,13 @@ AUTHENTICATED USER CONTEXT:
         });
 
         if (!response.ok) {
-          const errText = await response.text();
-          console.error('OpenAI API returned error:', response.status, errText);
+          console.error('OpenAI API returned status:', response.status);
+          if ([400, 404, 422].includes(response.status)) {
+            return jsonResponse(
+              { error: 'The configured OpenAI model is invalid or unavailable. Check OPENAI_MODEL and your OpenAI access.' },
+              502
+            );
+          }
           return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
         }
 
@@ -318,7 +333,7 @@ AUTHENTICATED USER CONTEXT:
 
         return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
       } catch (err) {
-        console.error('OpenAI provider error:', err);
+        console.error('OpenAI provider request failed:', err);
         return jsonResponse({ error: 'Nova is temporarily unavailable. Please try again.' }, 502);
       }
     }
