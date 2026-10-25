@@ -12,17 +12,21 @@ interface HistoryMessage {
 
 type ProviderName = 'OpenAI' | 'Gemini' | 'Groq';
 type ProviderFailure =
-  | 'authentication'
+  | 'invalid_credentials'
+  | 'permission'
   | 'invalid_model'
   | 'quota'
+  | 'rate_limited'
   | 'unsupported'
   | 'invalid_request'
-  | 'unavailable';
+  | 'unavailable'
+  | 'network';
 
 class ProviderRequestError extends Error {
   constructor(
     readonly provider: ProviderName,
-    readonly failure: ProviderFailure
+    readonly failure: ProviderFailure,
+    readonly status?: number
   ) {
     super(`${provider} request failed`);
     this.name = 'ProviderRequestError';
@@ -88,21 +92,28 @@ async function fetchWithTimeout(
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } catch {
-    throw new ProviderRequestError(provider, 'unavailable');
+    throw new ProviderRequestError(provider, 'network');
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
 function getFailureForStatus(status: number, details = ''): ProviderFailure {
-  if (status === 401 || status === 403) return 'authentication';
+  if (status === 401) return 'invalid_credentials';
+  if (status === 403) return 'permission';
   if (status === 404) return 'invalid_model';
-  if (status === 429) return 'quota';
+  if (status === 429) {
+    if (/insufficient_quota|quota|billing|billing_hard_limit|resource_exhausted/i.test(details)) {
+      return 'quota';
+    }
+    return 'rate_limited';
+  }
   if (status === 400 || status === 422) {
     if (/model.{0,30}(not found|invalid|unsupported)|(?:invalid|unsupported).{0,30}model|model_not_found/i.test(details)) {
       return 'invalid_model';
     }
-    if (/quota|billing|rate.?limit|resource_exhausted/i.test(details)) return 'quota';
+    if (/insufficient_quota|quota|billing|billing_hard_limit|resource_exhausted/i.test(details)) return 'quota';
+    if (/rate.?limit|too many requests/i.test(details)) return 'rate_limited';
     if (/unsupported|not supported|does not support/i.test(details)) return 'unsupported';
     return 'invalid_request';
   }
@@ -110,10 +121,6 @@ function getFailureForStatus(status: number, details = ''): ProviderFailure {
 }
 
 async function getFailureForResponse(response: Response): Promise<ProviderFailure> {
-  if (response.status !== 400 && response.status !== 422) {
-    return getFailureForStatus(response.status);
-  }
-
   let details = '';
   try {
     const data: unknown = await response.json();
@@ -125,7 +132,7 @@ async function getFailureForResponse(response: Response): Promise<ProviderFailur
         .join(' ');
     }
   } catch {
-    // The status still provides a useful classification when the provider body is malformed.
+    // Use the HTTP status if the provider response body is malformed.
   }
   return getFailureForStatus(response.status, details);
 }
@@ -159,7 +166,7 @@ async function requestOpenAICompatibleProvider(
   );
 
   if (!response.ok) {
-    throw new ProviderRequestError(provider, await getFailureForResponse(response));
+    throw new ProviderRequestError(provider, await getFailureForResponse(response), response.status);
   }
 
   let data: unknown;
@@ -207,7 +214,7 @@ async function requestGemini(
   );
 
   if (!response.ok) {
-    throw new ProviderRequestError(provider, await getFailureForResponse(response));
+    throw new ProviderRequestError(provider, await getFailureForResponse(response), response.status);
   }
 
   let data: unknown;
@@ -310,14 +317,20 @@ function getProviderErrorResponse(errors: ProviderRequestError[]) {
   const failures = new Set(errors.map(({ failure }) => failure));
   const messages: string[] = [];
 
-  if (failures.has('authentication')) {
-    messages.push('Anant could not authenticate with its configured AI services. Check the server-side keys and permissions.');
+  if (failures.has('invalid_credentials')) {
+    messages.push("A configured AI service rejected its credentials. Check that service's server-side API key.");
+  }
+  if (failures.has('permission')) {
+    messages.push("A configured AI service denied access. Check the key's permissions and model access.");
   }
   if (failures.has('invalid_model')) {
     messages.push('Anant could not use its configured AI models. Check the server-side model IDs and access.');
   }
   if (failures.has('quota')) {
-    messages.push("Anant's AI services have reached a usage or rate limit. Please try again later.");
+    messages.push("A configured AI service has exhausted its quota or billing limit. Check that provider's account.");
+  }
+  if (failures.has('rate_limited')) {
+    messages.push("A configured AI service is temporarily rate limiting requests. Please try again later.");
   }
   if (failures.has('unsupported')) {
     messages.push("Anant's AI services could not process this request format.");
@@ -330,7 +343,10 @@ function getProviderErrorResponse(errors: ProviderRequestError[]) {
     return jsonResponse({ error: 'Anant is temporarily unavailable. Please try again.' }, 502);
   }
   if (failures.has('unavailable')) {
-    messages.push('Other configured services are temporarily unavailable.');
+    messages.push('A configured AI service is temporarily unavailable.');
+  }
+  if (failures.has('network')) {
+    messages.push('A configured AI service could not be reached.');
   }
   return jsonResponse({ error: `${messages.join(' ')} Please try again.` }, 502);
 }
@@ -480,7 +496,9 @@ AUTHENTICATED USER CONTEXT:
           error instanceof ProviderRequestError
             ? error
             : new ProviderRequestError(provider, 'unavailable');
-        console.warn(`${providerError.provider} request failed (${providerError.failure}).`);
+        console.warn(
+          `${providerError.provider} request failed (HTTP ${providerError.status ?? 'network'}; ${providerError.failure}).`
+        );
         providerErrors.push(providerError);
       }
     }
