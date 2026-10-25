@@ -11,7 +11,13 @@ interface HistoryMessage {
 }
 
 type ProviderName = 'OpenAI' | 'Gemini' | 'Groq';
-type ProviderFailure = 'authentication' | 'invalid_request' | 'unavailable';
+type ProviderFailure =
+  | 'authentication'
+  | 'invalid_model'
+  | 'quota'
+  | 'unsupported'
+  | 'invalid_request'
+  | 'unavailable';
 
 class ProviderRequestError extends Error {
   constructor(
@@ -64,13 +70,6 @@ function normalizeHistory(history: unknown): HistoryMessage[] {
   }, []);
 }
 
-function isLightweightTask(message: string): boolean {
-  return (
-    message.length <= 300 &&
-    /\b(briefly|in one sentence|quick(?:ly)?|summari[sz]e|translate|define|rewrite|fix (?:the )?grammar)\b/i.test(message)
-  );
-}
-
 function isCurrentInformationQuery(message: string): boolean {
   return /\b(current|currently|today|right now|latest|recent|this week|this month|breaking|news|weather|stock price|exchange rate|score|results|who won|release date|updated|search|research)\b/i.test(
     message
@@ -95,10 +94,40 @@ async function fetchWithTimeout(
   }
 }
 
-function getFailureForStatus(status: number): ProviderFailure {
+function getFailureForStatus(status: number, details = ''): ProviderFailure {
   if (status === 401 || status === 403) return 'authentication';
-  if (status === 400 || status === 404 || status === 422) return 'invalid_request';
+  if (status === 404) return 'invalid_model';
+  if (status === 429) return 'quota';
+  if (status === 400 || status === 422) {
+    if (/model.{0,30}(not found|invalid|unsupported)|(?:invalid|unsupported).{0,30}model|model_not_found/i.test(details)) {
+      return 'invalid_model';
+    }
+    if (/quota|billing|rate.?limit|resource_exhausted/i.test(details)) return 'quota';
+    if (/unsupported|not supported|does not support/i.test(details)) return 'unsupported';
+    return 'invalid_request';
+  }
   return 'unavailable';
+}
+
+async function getFailureForResponse(response: Response): Promise<ProviderFailure> {
+  if (response.status !== 400 && response.status !== 422) {
+    return getFailureForStatus(response.status);
+  }
+
+  let details = '';
+  try {
+    const data: unknown = await response.json();
+    const providerError = isRecord(data) && isRecord(data.error) ? data.error : null;
+    if (providerError) {
+      details = ['code', 'type', 'status', 'message']
+        .map((key) => providerError[key])
+        .filter((value): value is string => typeof value === 'string')
+        .join(' ');
+    }
+  } catch {
+    // The status still provides a useful classification when the provider body is malformed.
+  }
+  return getFailureForStatus(response.status, details);
 }
 
 function getOpenAICompatibleReply(data: unknown): string | null {
@@ -130,7 +159,7 @@ async function requestOpenAICompatibleProvider(
   );
 
   if (!response.ok) {
-    throw new ProviderRequestError(provider, getFailureForStatus(response.status));
+    throw new ProviderRequestError(provider, await getFailureForResponse(response));
   }
 
   let data: unknown;
@@ -178,7 +207,7 @@ async function requestGemini(
   );
 
   if (!response.ok) {
-    throw new ProviderRequestError(provider, getFailureForStatus(response.status));
+    throw new ProviderRequestError(provider, await getFailureForResponse(response));
   }
 
   let data: unknown;
@@ -277,20 +306,33 @@ async function performWebSearch(query: string): Promise<string | null> {
   return null;
 }
 
-function getProviderErrorResponse(error: ProviderRequestError) {
-  if (error.failure === 'authentication') {
-    return jsonResponse(
-      { error: `Anant could not authenticate with ${error.provider}. Check the server-side provider key and permissions.` },
-      502
-    );
+function getProviderErrorResponse(errors: ProviderRequestError[]) {
+  const failures = new Set(errors.map(({ failure }) => failure));
+  const messages: string[] = [];
+
+  if (failures.has('authentication')) {
+    messages.push('Anant could not authenticate with its configured AI services. Check the server-side keys and permissions.');
   }
-  if (error.failure === 'invalid_request') {
-    return jsonResponse(
-      { error: `Anant could not use the configured ${error.provider} model. Check the server-side model setting and access.` },
-      502
-    );
+  if (failures.has('invalid_model')) {
+    messages.push('Anant could not use its configured AI models. Check the server-side model IDs and access.');
   }
-  return jsonResponse({ error: 'Anant is temporarily unavailable. Please try again.' }, 502);
+  if (failures.has('quota')) {
+    messages.push("Anant's AI services have reached a usage or rate limit. Please try again later.");
+  }
+  if (failures.has('unsupported')) {
+    messages.push("Anant's AI services could not process this request format.");
+  }
+  if (failures.has('invalid_request')) {
+    messages.push('Anant could not process the request with its current AI settings.');
+  }
+
+  if (!messages.length) {
+    return jsonResponse({ error: 'Anant is temporarily unavailable. Please try again.' }, 502);
+  }
+  if (failures.has('unavailable')) {
+    messages.push('Other configured services are temporarily unavailable.');
+  }
+  return jsonResponse({ error: `${messages.join(' ')} Please try again.` }, 502);
 }
 
 export async function POST(request: Request) {
@@ -394,11 +436,9 @@ AUTHENTICATED USER CONTEXT:
 
     const validHistory = normalizeHistory(history);
     const providers: ProviderName[] = [];
-    if (isLightweightTask(trimmedMessage) && groqKey) providers.push('Groq');
-    if (openaiKey && !providers.includes('OpenAI')) providers.push('OpenAI');
-    if (!openaiKey && !providers.length && geminiKey) providers.push('Gemini');
-    if (geminiKey && (providers.includes('OpenAI') || providers.includes('Groq'))) providers.push('Gemini');
-    if (!providers.length && groqKey) providers.push('Groq');
+    if (openaiKey) providers.push('OpenAI');
+    if (geminiKey) providers.push('Gemini');
+    if (groqKey) providers.push('Groq');
 
     const messages = [
       { role: 'system' as const, content: systemPrompt },
@@ -409,6 +449,7 @@ AUTHENTICATED USER CONTEXT:
     const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
     const groqModel = process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile';
 
+    const providerErrors: ProviderRequestError[] = [];
     for (const provider of providers) {
       try {
         let reply: string;
@@ -440,11 +481,11 @@ AUTHENTICATED USER CONTEXT:
             ? error
             : new ProviderRequestError(provider, 'unavailable');
         console.warn(`${providerError.provider} request failed (${providerError.failure}).`);
-        if (providerError.failure !== 'unavailable') return getProviderErrorResponse(providerError);
+        providerErrors.push(providerError);
       }
     }
 
-    return jsonResponse({ error: 'Anant is temporarily unavailable. Please try again.' }, 502);
+    return getProviderErrorResponse(providerErrors);
   } catch (error) {
     console.error(
       'Unexpected error in Anant chat route:',
