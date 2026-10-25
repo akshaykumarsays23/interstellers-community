@@ -41,7 +41,7 @@ export const SpaceStationsView: React.FC = () => {
   const [radarPingResult, setRadarPingResult] = useState<string | null>(null);
   const [stationLogs, setStationLogs] = useState<Record<string, StationLogMessage[]>>({
     station_tech: [
-      { id: '1', senderName: 'Nova AI', senderAvatar: '/avatar.png', text: 'Quantum neural compilers operating at 99.98% efficiency.', timestamp: '12m ago' },
+      { id: '1', senderName: 'Anant', senderAvatar: '/avatar.png', text: 'Quantum neural compilers operating at 99.98% efficiency.', timestamp: '12m ago' },
       { id: '2', senderName: 'Akshay Kumar', senderAvatar: '/avatar.png', text: 'Welcome to Tech Station deck! Next-gen software protocols active.', timestamp: '5m ago' },
     ],
     station_gaming: [

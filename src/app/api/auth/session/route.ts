@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb, saveDb } from '@/lib/db';
-import { verifySessionToken, isAdminEmail, normalizeEmail } from '@/lib/auth';
+import { AuthConfigurationError, verifySessionToken, isAdminEmail, normalizeEmail } from '@/lib/auth';
 import { ensureCommunitySchema, ensureHouseAssignment, getCommunitySql } from '@/lib/community';
 
 export const dynamic = 'force-dynamic';
@@ -125,6 +125,12 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof AuthConfigurationError) {
+      return NextResponse.json(
+        { authenticated: false, error: 'Authentication is not configured on the server.' },
+        { status: 503 }
+      );
+    }
     console.error('Session check error:', error);
     return NextResponse.json({ authenticated: false, error: 'Internal server error' }, { status: 500 });
   }

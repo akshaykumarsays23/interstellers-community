@@ -123,9 +123,9 @@ export const AIAssistantPanel: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h2 className="font-heading font-bold text-sm text-on-surface">Interstellar AI</h2>
+              <h2 className="font-heading font-bold text-sm text-on-surface">Anant</h2>
               <span className="px-1.5 py-0.5 text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full">
-                Nova AI
+                Unified
               </span>
             </div>
             <p className="text-[11px] text-on-surface-variant flex items-center gap-1">
@@ -235,7 +235,7 @@ export const AIAssistantPanel: React.FC = () => {
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
             </span>
-            <span className="font-medium text-on-surface-variant">Nova is thinking...</span>
+            <span className="font-medium text-on-surface-variant">Anant is thinking...</span>
           </div>
         )}
 
@@ -265,7 +265,7 @@ export const AIAssistantPanel: React.FC = () => {
             value={inputPrompt}
             onChange={handleTextareaInput}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Nova anything (Enter to send, Shift+Enter for newline)..."
+            placeholder="Ask Anant anything (Enter to send, Shift+Enter for newline)..."
             className="flex-1 bg-transparent border-none text-xs sm:text-sm text-on-surface placeholder:text-on-surface-variant outline-none resize-none max-h-28 custom-scrollbar leading-relaxed"
             disabled={isAITyping}
           />

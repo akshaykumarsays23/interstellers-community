@@ -1,6 +1,6 @@
 import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
 import { getDb } from '@/lib/db';
-import { isAdminEmail, normalizeEmail, verifySessionToken } from '@/lib/auth';
+import { AuthConfigurationError, isAdminEmail, normalizeEmail, verifySessionToken } from '@/lib/auth';
 
 export type HouseId = 'marvel' | 'dc' | 'pokemon' | 'power_rangers';
 export type { PostCategory } from '@/lib/types';
@@ -184,7 +184,14 @@ export function getCommunityUser(request: Request): CommunityUser | null {
     : bearer?.startsWith('Bearer ')
       ? bearer.slice(7)
       : null;
-  const session = verifySessionToken(token);
+  let session: ReturnType<typeof verifySessionToken>;
+  try {
+    session = verifySessionToken(token);
+  } catch (error) {
+    if (!(error instanceof AuthConfigurationError)) throw error;
+    console.error('Authentication configuration error: AUTH_SECRET is missing or invalid.');
+    return null;
+  }
   if (!session.valid || !session.user) return null;
 
   const email = normalizeEmail(session.user.email);

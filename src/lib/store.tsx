@@ -144,7 +144,7 @@ interface AppContextType {
   removeConnection: (userId: string) => void;
   addConnection: (user: User) => void;
 
-  // AI Assistant (Nova)
+  // Anant assistant
   aiMessages: AIMessage[];
   isAITyping: boolean;
   sendAIMessage: (prompt: string) => void;
@@ -599,7 +599,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // 14-Minute Auto Nova Reminder Trigger (Exact 14 Minutes)
+  // 14-minute auto assistant reminder trigger (exactly 14 minutes)
   useEffect(() => {
     if (!currentUser?.handle) return;
 
@@ -628,13 +628,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const currentHandle = currentUser.handle.toLowerCase().trim();
 
-    // 1. Always include Nova AI assistant chat
+    // 1. Always include the Anant assistant chat
     const novaThread: ChatThread = {
       id: 'chat_nova',
       participant: {
         id: 'ai_nova',
-        name: 'Nova AI Assistant',
-        handle: 'nova_ai',
+        name: 'Anant',
+        handle: 'anant',
         avatar: '',
         bio: 'Your autonomous galactic navigator and workspace assistant.',
         role: 'AI Navigator',
@@ -649,7 +649,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         {
           id: 'm_welcome',
           senderId: 'ai_nova',
-          text: 'Welcome to Interstellers! "Time is never coming back, remember time is never..." I\'m Nova, your AI assistant. You can chat with me, invite friends, and create spaces anytime.',
+          text: 'Welcome to Interstellers! "Time is never coming back, remember time is never..." I\'m Anant, your assistant. You can chat with me, invite friends, and create spaces anytime.',
           timestamp: 'Just now',
           time: 'Just now',
           status: 'read',
@@ -667,7 +667,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const threadList: ChatThread[] = [novaThread];
     const processedThreadIds = new Set<string>(['chat_nova']);
-    const processedHandles = new Set<string>([currentHandle, 'nova_ai', 'ai_nova']);
+    const processedHandles = new Set<string>([currentHandle, 'anant', 'nova_ai', 'ai_nova']);
 
     // 2. Build threads for all registered connections / users
     connections.forEach((conn) => {
@@ -1634,7 +1634,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }),
           });
           const data = await res.json();
-          const replyText = res.ok && data.reply ? data.reply : (data.error || data.details || 'Nova is temporarily unavailable. Please try again.');
+          const replyText = res.ok && data.reply ? data.reply : (data.error || data.details || 'Anant is temporarily unavailable. Please try again.');
 
           const replyMsg: Message = {
             id: `msg_${generateId()}`,
@@ -1655,7 +1655,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               messageId: replyMsg.id,
               senderId: 'ai_nova',
               senderHandle: 'nova_ai',
-              senderName: 'Nova AI Assistant',
+              senderName: 'Anant',
               text: replyText,
               timestamp: replyMsg.timestamp,
               time: replyMsg.time,
@@ -1922,7 +1922,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // AI Assistant (Nova) methods
+  // Anant assistant methods
   const sendAIMessage = async (prompt: string) => {
     if (!prompt.trim() || isAITyping) return;
 
@@ -1972,7 +1972,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const errorReply: AIMessage = {
           id: `aim_${generateId()}`,
           sender: 'ai',
-          text: data.error || data.details || 'Nova is temporarily unavailable. Please try again.',
+          text: data.error || data.details || 'Anant is temporarily unavailable. Please try again.',
           timestamp: formatTime(),
           isError: true,
           failedPrompt: trimmedPrompt,
@@ -1983,7 +1983,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const networkErrorReply: AIMessage = {
         id: `aim_${generateId()}`,
         sender: 'ai',
-        text: 'Nova is temporarily unavailable. Please try again.',
+        text: 'Anant is temporarily unavailable. Please try again.',
         timestamp: formatTime(),
         isError: true,
         failedPrompt: trimmedPrompt,

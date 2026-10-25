@@ -189,7 +189,7 @@ export const Sidebar: React.FC = () => {
               <div className="p-1 rounded-lg bg-primary text-on-primary shadow-xs">
                 <Bot className="w-3.5 h-3.5" />
               </div>
-              <span className="font-semibold">Nova Assistant</span>
+              <span className="font-semibold">Anant</span>
             </div>
             <span className="text-[10px] text-primary font-bold">
               {isAIPanelOpen ? 'Active' : 'Open'}
@@ -204,7 +204,7 @@ export const Sidebar: React.FC = () => {
               <div className="p-1 rounded-lg bg-cyan-500 text-black shadow-xs">
                 <Mic className="w-3.5 h-3.5" />
               </div>
-              <span className="font-bold">Nova Voice Live</span>
+              <span className="font-bold">Anant Voice Live</span>
             </div>
             <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 uppercase tracking-widest">
               Live 🎙️

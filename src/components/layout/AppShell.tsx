@@ -72,7 +72,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* Active Audio/Video Call Overlay */}
       <CallModal />
 
-      {/* Nova AI Voice Mode Overlay (ChatGPT & Gemini Live Style) */}
+      {/* Anant voice mode overlay */}
       <NovaVoiceModal />
 
       {/* Share / Invite Friends Modal */}

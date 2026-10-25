@@ -68,7 +68,7 @@ export const SpaceTravelerBriefing: React.FC<SpaceTravelerBriefingProps> = ({ is
       '🛸 Deep Radar Alert: A mysterious craft with DC and Marvel logos was spotted docking at Station Citadel. House competition points just spiked by +100!',
       '🌀 Paradox Sensor: Time dilation detected at 1.04x speed. Remember: "Time is never coming back, remember time is never..."',
       '🧬 Genetic Scan: Pokemon House has synchronized with Power Rangers Megazord reactor! House battle scores are escalating.',
-      '🤖 Nova Core Ping: "All fellows matching protocols are running smoothly. Keep exploring, traveler!"',
+      '🤖 Anant Core Ping: "All fellows matching protocols are running smoothly. Keep exploring, traveler!"',
     ];
     const pick = list[Math.floor(Math.random() * list.length)];
     setRandomAnomalies((prev) => [pick, ...prev.slice(0, 4)]);
@@ -355,7 +355,7 @@ export const SpaceTravelerBriefing: React.FC<SpaceTravelerBriefingProps> = ({ is
                   {revealedDossiers['dos_3'] && (
                     <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
                       <p className="font-bold text-cyan-400 mb-1">The Traveler Paradox:</p>
-                      &ldquo;You can stay, but staying is not traveling. True journey is about getting to know new people, new perspectives, and new things.&rdquo; Every 30 days, Nova refreshes your 15 questions so you discover new compatible fellows across the stars.
+                      &ldquo;You can stay, but staying is not traveling. True journey is about getting to know new people, new perspectives, and new things.&rdquo; Every 30 days, Anant refreshes your 15 questions so you discover new compatible fellows across the stars.
                     </div>
                   )}
                 </div>
@@ -369,7 +369,7 @@ export const SpaceTravelerBriefing: React.FC<SpaceTravelerBriefingProps> = ({ is
                     <Lock className={cn('w-4 h-4', revealedDossiers['dos_4'] ? 'text-emerald-400' : 'text-slate-400')} />
                   </div>
                   <h4 className="font-heading font-bold text-sm text-on-surface">
-                    Nova AI&apos;s Zero Tolerance Failsafe
+                    Anant&apos;s Zero Tolerance Failsafe
                   </h4>
                   <button
                     onClick={() => toggleDossier('dos_4')}
@@ -385,7 +385,7 @@ export const SpaceTravelerBriefing: React.FC<SpaceTravelerBriefingProps> = ({ is
                   </button>
                   {revealedDossiers['dos_4'] && (
                     <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
-                      <p className="font-bold text-rose-400 mb-1">Nova&apos;s Core Guardian Clause:</p>
+                      <p className="font-bold text-rose-400 mb-1">Anant&apos;s Core Guardian Clause:</p>
                       &ldquo;You can follow these fellows! And if you want global friends, I can grant you access... But remember: if you hurt anyone, I&apos;ll make sure you never see me and this beautiful, cool website ever again in your lifetime! 🚀⚡&rdquo;
                     </div>
                   )}
@@ -400,7 +400,7 @@ export const SpaceTravelerBriefing: React.FC<SpaceTravelerBriefingProps> = ({ is
                     <Lock className={cn('w-4 h-4', revealedDossiers['dos_5'] ? 'text-emerald-400' : 'text-slate-400')} />
                   </div>
                   <h4 className="font-heading font-bold text-sm text-on-surface">
-                    Nova&apos;s High-Speed Universal Intelligence
+                    Anant&apos;s Assistant
                   </h4>
                   <button
                     onClick={() => toggleDossier('dos_5')}
@@ -417,7 +417,7 @@ export const SpaceTravelerBriefing: React.FC<SpaceTravelerBriefingProps> = ({ is
                   {revealedDossiers['dos_5'] && (
                     <div className="p-3 bg-surface-container rounded-xl border border-outline-variant/40 text-xs text-on-surface leading-relaxed animate-in fade-in">
                       <p className="font-bold text-blue-400 mb-1">Omniscience Active:</p>
-                      Nova has discarded timid and repetitive phrases! She answers any question on Earth or the cosmos—superheroes, code, science, history, philosophy, and real-time internet questions—with speed and clarity.
+                      Anant can help with questions about the cosmos, coding, science, history, and philosophy. Current online information is available when web search is configured.
                     </div>
                   )}
                 </div>

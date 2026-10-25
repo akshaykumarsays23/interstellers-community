@@ -123,7 +123,7 @@ export const MessagesDashboard: React.FC = () => {
     setIsTyping(false);
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
 
-    // Simulate partner typing response (only for non-Nova chats & non-group threads)
+    // Simulate partner typing response (only for non-assistant chats and non-group threads).
     if (activeChat.id !== 'chat_nova' && !activeChat.isGroup) {
       const delay = 800 + Math.random() * 1200;
       if (partnerTypingTimerRef.current) clearTimeout(partnerTypingTimerRef.current);
@@ -346,7 +346,7 @@ export const MessagesDashboard: React.FC = () => {
         </div>
       </aside>
 
-      {/* Right Pane: Active Chat Conversation or Nova Fellows Protocol */}
+      {/* Right Pane: Active Chat Conversation or Anant fellows protocol */}
       {viewMode === 'fellows_protocol' ? (
         <section
           className={cn(
@@ -428,7 +428,7 @@ export const MessagesDashboard: React.FC = () => {
                 <button
                   onClick={() => setIsNovaVoiceOpen(true)}
                   className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md animate-pulse"
-                  title="Start Gemini Live Voice Mode"
+                  title="Start Anant Voice Mode"
                 >
                   <Mic className="w-4 h-4 text-cyan-300" />
                   <span className="hidden sm:inline">Voice Live</span>
@@ -731,7 +731,7 @@ export const MessagesDashboard: React.FC = () => {
             <Avatar name="Interstellers" size="2xl" className="mx-auto mb-2 ring-4 ring-primary/20 shadow-xl" />
             <h3 className="font-heading font-bold text-xl text-on-surface">Fellows Transmission Deck</h3>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              Select a conversation to transmit secure interstellar messages, or run Nova’s 15-Question Protocol to discover and connect with kindred voyagers across the cosmos.
+              Select a conversation to transmit secure interstellar messages, or run Anant’s 15-Question Protocol to discover and connect with kindred voyagers across the cosmos.
             </p>
             <div className="pt-2">
               <button
@@ -741,7 +741,7 @@ export const MessagesDashboard: React.FC = () => {
                 }}
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 text-white font-bold text-xs shadow-lg hover:shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 mx-auto active:scale-95"
               >
-                <span>✨ Launch Nova’s 15Q Fellow Matcher</span>
+                <span>✨ Launch Anant’s 15Q Fellow Matcher</span>
               </button>
             </div>
           </div>

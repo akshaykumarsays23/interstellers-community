@@ -186,7 +186,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             'p-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all flex items-center gap-1',
             isAIPanelOpen && 'bg-primary-fixed text-primary'
           )}
-          title="Toggle Nova AI Assistant"
+          title="Toggle Anant"
         >
           <Bot className="w-5 h-5" />
         </button>

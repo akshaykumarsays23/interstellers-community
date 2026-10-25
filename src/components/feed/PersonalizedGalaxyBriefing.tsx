@@ -297,7 +297,7 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
         id: 'card_fellows_compatibility',
         category: 'social',
         title: 'Calibrate Compatibility Matrix',
-        description: 'Complete Nova\'s 15-question traveler matching protocol to discover compatible fellows across the galaxy.',
+        description: 'Complete Anant\'s 15-question traveler matching protocol to discover compatible fellows across the galaxy.',
         badge: '15 Questions',
         badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
         icon: <Radio className="w-5 h-5 text-indigo-300" />,
@@ -325,18 +325,18 @@ export const PersonalizedGalaxyBriefing: React.FC = () => {
       });
     }
 
-    // 9. Nova AI Co-Pilot Recommendation (if few other cards exist)
+    // 9. Anant assistant recommendation (if few other cards exist)
     if (cards.length < 3) {
       cards.push({
         id: 'card_nova_ai',
         category: 'ai',
-        title: 'Nova AI Assistant Online',
-        description: 'Need help drafting a discussion, finding code solutions, or exploring cosmic lore? Nova is primed to assist.',
+        title: 'Anant is Online',
+        description: 'Need help drafting a discussion, finding code solutions, or exploring cosmic lore? Anant is ready to assist.',
         badge: 'Omniscient AI',
         badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
         icon: <Bot className="w-5 h-5 text-blue-300" />,
         iconBg: 'bg-blue-500/20 border-blue-400/40',
-        actionLabel: 'Consult Nova',
+        actionLabel: 'Consult Anant',
         onAction: () => setIsAIPanelOpen(true),
         canDismiss: true,
       });

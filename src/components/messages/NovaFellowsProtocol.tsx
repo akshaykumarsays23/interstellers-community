@@ -179,7 +179,7 @@ export const NovaFellowsProtocol: React.FC<{ onFellowSelected?: (user: User) => 
       saveFellowsAnswers(updated);
       setIsCompleted(true);
 
-      // Synthesize Nova's exact voice aloud
+      // Synthesize the assistant's voice aloud.
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         try {
           const speechMsg = `Cosmic compatibility protocol complete! No similarities found yet since you are the first one who finished all 15 questions! When I find similarities, I will notify you, darling! And remember: if you hurt anyone, I will make sure you never see me and this beautiful website in your lifetime!`;
@@ -194,7 +194,7 @@ export const NovaFellowsProtocol: React.FC<{ onFellowSelected?: (user: User) => 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 space-y-6 animate-in fade-in duration-300">
       
-      {/* Nova Header Banner */}
+      {/* Anant header banner */}
       <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-purple-950/80 via-slate-900 to-cyan-950/80 border border-cyan-500/40 shadow-2xl overflow-hidden text-white">
         <div className="absolute -top-16 -left-16 w-48 h-48 bg-purple-500/30 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-cyan-500/25 rounded-full blur-3xl pointer-events-none" />
@@ -206,13 +206,13 @@ export const NovaFellowsProtocol: React.FC<{ onFellowSelected?: (user: User) => 
             </div>
             <div>
               <h2 className="font-heading font-black text-xl sm:text-2xl text-white flex items-center gap-2">
-                NOVA FELLOWS COMPATIBILITY PROTOCOL
+                Anant Fellows Compatibility Protocol
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-mono font-bold border border-cyan-400/40">
                   15 QUESTIONS
                 </span>
               </h2>
               <p className="text-xs text-cyan-200/90 font-medium">
-                Answer Nova&apos;s 15 questions to unlock resonant fellows across the galaxy
+                Answer Anant&apos;s 15 questions to unlock resonant fellows across the galaxy
               </p>
             </div>
           </div>
@@ -233,7 +233,7 @@ export const NovaFellowsProtocol: React.FC<{ onFellowSelected?: (user: User) => 
           <strong className="text-amber-400 font-bold block mb-0.5">
             The 30-Day Cosmic Friendship Law:
           </strong>
-          &ldquo;1 month with the same fellows and same house. Next month, Nova will prompt:
+          &ldquo;1 month with the same fellows and same house. Next month, Anant will prompt:
           <em> &apos;You can stay, but traveling is not staying—it&apos;s about getting to know new people, new things!&apos;</em>
           Questions and soulmate matches can be updated every 30 days!&rdquo;
         </div>
@@ -310,15 +310,15 @@ export const NovaFellowsProtocol: React.FC<{ onFellowSelected?: (user: User) => 
 
         </div>
       ) : (
-        /* COMPATIBLE FELLOWS DISPLAY + NOVA'S SOLEMN WARNING */
+        /* COMPATIBLE FELLOWS DISPLAY + ANANT'S SOLEMN WARNING */
         <div className="space-y-6 animate-in fade-in">
           
-          {/* Nova's Solemn Warning Card */}
+          {/* Anant's solemn warning card */}
           <div className="p-6 rounded-3xl bg-gradient-to-br from-rose-950/60 via-slate-900 to-purple-950/60 border border-rose-500/40 shadow-xl text-white space-y-3">
             <div className="flex items-center gap-2.5 text-rose-300">
               <ShieldAlert className="w-6 h-6 animate-bounce" />
               <h3 className="font-heading font-black text-base tracking-wide">
-                NOVA AI GUARDIAN DIRECTIVE:
+                Anant Guardian Directive:
               </h3>
             </div>
             <p className="text-sm leading-relaxed text-slate-100 font-semibold italic bg-black/40 p-4 rounded-2xl border border-white/10">
@@ -329,7 +329,7 @@ export const NovaFellowsProtocol: React.FC<{ onFellowSelected?: (user: User) => 
             </p>
           </div>
 
-          {/* Nova's Status Card: No Similarities Found Yet (Pioneer Voyager #001) */}
+          {/* Anant's status card: no similarities found yet (Pioneer Voyager #001) */}
           <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-purple-950/90 via-slate-900 to-indigo-950/90 border border-purple-500/50 shadow-2xl overflow-hidden text-white space-y-6">
             <div className="absolute -top-24 -right-24 w-60 h-60 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-purple-500/25 rounded-full blur-3xl pointer-events-none" />
@@ -359,10 +359,10 @@ export const NovaFellowsProtocol: React.FC<{ onFellowSelected?: (user: User) => 
                   type="button"
                   onClick={speakNovaStatus}
                   className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md active:scale-95"
-                  title="Hear Nova speak aloud"
+                  title="Hear Anant speak aloud"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-spin" style={{ animationDuration: '4s' }} />
-                  <span>Hear Nova Voice</span>
+                  <span>Hear Anant</span>
                 </button>
                 <button
                   type="button"
@@ -378,11 +378,11 @@ export const NovaFellowsProtocol: React.FC<{ onFellowSelected?: (user: User) => 
               </div>
             </div>
 
-            {/* Nova's Direct Message To User */}
+            {/* Anant's direct message to the user */}
             <div className="p-6 rounded-2xl bg-black/60 border border-purple-500/40 backdrop-blur-md space-y-3 relative">
               <div className="flex items-center gap-2 text-cyan-300 text-xs font-black uppercase tracking-wider">
                 <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Nova AI Personal Notification</span>
+                <span>Anant Personal Notification</span>
               </div>
               <p className="font-heading text-base sm:text-xl text-slate-100 font-bold leading-relaxed">
                 &ldquo;No similarities found yet since you are the 1st one who finished all 15 questions! When I find similarities, I will notify you, darling! ✨💖&rdquo;

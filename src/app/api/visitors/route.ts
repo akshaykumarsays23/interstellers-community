@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb, saveDb, VisitorSession } from '@/lib/db';
-import { isAdminEmail, normalizeEmail, verifySessionToken } from '@/lib/auth';
+import { AuthConfigurationError, isAdminEmail, normalizeEmail, verifySessionToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,6 +106,12 @@ export async function POST(request: Request) {
       session,
     });
   } catch (error) {
+    if (error instanceof AuthConfigurationError) {
+      return NextResponse.json(
+        { error: 'Authentication is not configured on the server.' },
+        { status: 503 }
+      );
+    }
     console.error('Visitors POST error:', error);
     return NextResponse.json({ error: 'Failed to record device ping' }, { status: 500 });
   }

@@ -9,7 +9,7 @@ export const NovaVoiceModal: React.FC = () => {
   const { isNovaVoiceOpen, setIsNovaVoiceOpen, currentUser } = useApp();
   const [voiceStatus, setVoiceStatus] = useState<'listening' | 'processing' | 'speaking' | 'idle'>('idle');
   const [transcript, setTranscript] = useState('');
-  const [novaResponse, setNovaResponse] = useState('');
+  const [anantResponse, setAnantResponse] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -70,7 +70,7 @@ export const NovaVoiceModal: React.FC = () => {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setNovaResponse("Speech recognition isn't supported in this browser environment, but you can chat with me in text!");
+      setAnantResponse("Speech recognition isn't supported in this browser environment, but you can chat with me in text!");
       return;
     }
 
@@ -132,7 +132,7 @@ export const NovaVoiceModal: React.FC = () => {
     }
   };
 
-  // Process user speech and query real server-side Nova AI Engine
+  // Process user speech and query Anant through the server-side chat route.
   const processUserVoiceInput = async (userText: string) => {
     setVoiceStatus('processing');
     const userEmail = currentUser?.email || (typeof window !== 'undefined' ? localStorage.getItem('user_email') || undefined : undefined);
@@ -146,23 +146,23 @@ export const NovaVoiceModal: React.FC = () => {
         body: JSON.stringify({
           message: userText,
           userEmail,
-          history: novaResponse ? [{ role: 'assistant', content: novaResponse }] : [],
+          history: anantResponse ? [{ role: 'assistant', content: anantResponse }] : [],
         }),
       });
 
       const data = await res.json();
       if (!res.ok || typeof data?.reply !== 'string' || !data.reply.trim()) {
-        throw new Error(data?.error || 'Nova is temporarily unavailable. Please try again.');
+        throw new Error(data?.error || 'Anant is temporarily unavailable. Please try again.');
       }
       reply = data.reply.trim();
     } catch (error) {
-      console.error('Nova voice request failed:', error);
-      reply = error instanceof Error ? error.message : 'Nova is temporarily unavailable. Please try again.';
+      console.error('Anant voice request failed:', error);
+      reply = error instanceof Error ? error.message : 'Anant is temporarily unavailable. Please try again.';
     }
 
-    setNovaResponse(reply);
+    setAnantResponse(reply);
 
-    // Speak Nova's response aloud
+    // Speak Anant's response aloud.
     setTimeout(() => {
       speakNovaResponse(reply);
     }, 300);
@@ -221,13 +221,13 @@ export const NovaVoiceModal: React.FC = () => {
           </div>
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              Nova AI Voice Live
+              Anant Voice Live
               <span className="px-2 py-0.5 text-[10px] uppercase tracking-wider font-extrabold bg-gradient-to-r from-purple-500/30 to-cyan-500/30 text-cyan-300 border border-cyan-500/30 rounded-full flex items-center gap-1">
                 <Radio className="w-2.5 h-2.5 text-cyan-400 animate-ping" />
                 Live Mode
               </span>
             </h2>
-            <p className="text-xs text-zinc-400">Continuous hands-free conversation powered by Gemini Live</p>
+            <p className="text-xs text-zinc-400">Continuous hands-free conversation with Anant</p>
           </div>
         </div>
 
@@ -314,8 +314,8 @@ export const NovaVoiceModal: React.FC = () => {
         <div className="mt-8 text-center">
           <p className="text-sm font-semibold tracking-wide text-zinc-300">
             {voiceStatus === 'listening' && '🎙️ Listening... Speak naturally'}
-            {voiceStatus === 'processing' && '🧠 Nova is processing galaxy telemetry...'}
-            {voiceStatus === 'speaking' && '🔊 Nova is speaking...'}
+            {voiceStatus === 'processing' && '🧠 Anant is processing galaxy telemetry...'}
+            {voiceStatus === 'speaking' && '🔊 Anant is speaking...'}
             {voiceStatus === 'idle' && 'Tap the orb to start speaking'}
           </p>
         </div>
@@ -329,14 +329,14 @@ export const NovaVoiceModal: React.FC = () => {
             </p>
           )}
 
-          {novaResponse && voiceStatus === 'speaking' && (
+          {anantResponse && voiceStatus === 'speaking' && (
             <p className="text-purple-200">
-              <span className="text-xs text-purple-400/70 font-semibold block mb-0.5">NOVA:</span>
-              {novaResponse}
+              <span className="text-xs text-purple-400/70 font-semibold block mb-0.5">Anant:</span>
+              {anantResponse}
             </p>
           )}
 
-          {!transcript && !novaResponse && (
+          {!transcript && !anantResponse && (
             <p className="text-zinc-500 text-xs italic">Subtitles will appear live as you talk...</p>
           )}
         </div>
@@ -374,7 +374,7 @@ export const NovaVoiceModal: React.FC = () => {
               startListening();
             }}
             className="p-3.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 transition-all flex items-center gap-2 text-xs font-semibold shadow-lg"
-            title="Interrupt Nova"
+            title="Interrupt Anant"
           >
             <Square className="w-4 h-4 fill-current" />
             <span>Interrupt</span>

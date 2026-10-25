@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb, saveDb } from '@/lib/db';
 import { sendLoginCodeEmail } from '@/lib/email';
-import { normalizeEmail, createOtpToken } from '@/lib/auth';
+import { AuthConfigurationError, normalizeEmail, createOtpToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +78,12 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
+    if (error instanceof AuthConfigurationError) {
+      return NextResponse.json(
+        { error: 'Authentication is not configured. Set AUTH_SECRET to a random value of at least 32 characters.' },
+        { status: 503 }
+      );
+    }
     console.error('Send code error:', error);
     return NextResponse.json({ error: 'Failed to generate verification code' }, { status: 500 });
   }

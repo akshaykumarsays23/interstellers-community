@@ -102,8 +102,8 @@ export const INITIAL_CHATS: ChatThread[] = [
     id: "chat_nova",
     participant: {
       id: "ai_nova",
-      name: "Nova AI Assistant",
-      handle: "nova_ai",
+      name: "Anant",
+      handle: "anant",
       avatar: "",
       bio: "Your autonomous galactic navigator and workspace assistant.",
       role: "AI Navigator",
@@ -118,7 +118,7 @@ export const INITIAL_CHATS: ChatThread[] = [
       {
         id: "m_welcome",
         senderId: "ai_nova",
-        text: "Welcome to Interstellers! 'Time is never coming back, remember time is never...' I'm Nova, your AI assistant. You can chat with me, invite friends, and create spaces anytime.",
+        text: "Welcome to Interstellers! 'Time is never coming back, remember time is never...' I'm Anant, your assistant. You can chat with me, invite friends, and create spaces anytime.",
         timestamp: "Just now",
         time: "Just now",
         status: "read",
@@ -186,7 +186,7 @@ export const INITIAL_AI_MESSAGES: AIMessage[] = [
   {
     id: "ai_1",
     sender: "ai",
-    text: "Welcome to Interstellers! 'Time is never coming back, remember time is never...' I'm Nova, your AI Community Navigator. How can I assist your mission today?",
+    text: "Welcome to Interstellers! 'Time is never coming back, remember time is never...' I'm Anant, your community navigator. How can I assist your mission today?",
     timestamp: "Just now",
     suggestedActions: [
       "How do I invite my friends to Interstellers?",

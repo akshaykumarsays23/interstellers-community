@@ -4,7 +4,10 @@
 import crypto from 'crypto';
 
 const BASE_URL = 'http://localhost:3001';
-const AUTH_SECRET = 'interstellers-cosmic-secure-secret-key-2026-v1';
+const AUTH_SECRET = process.env.AUTH_SECRET?.trim();
+if (!AUTH_SECRET || AUTH_SECRET.length < 32) {
+  throw new Error('Set AUTH_SECRET to a value of at least 32 characters before running this test suite.');
+}
 
 // Helper to extract cookies from response headers
 function extractCookies(response) {

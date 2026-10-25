@@ -469,7 +469,7 @@ export const SpaceHouseView: React.FC = () => {
     }
     setIsChangingHouse(false);
 
-    // Speak Nova's announcement aloud
+    // Speak Anant's announcement aloud.
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       try {
         const houseTitle = HOUSE_METADATA[house].name;
@@ -651,7 +651,7 @@ export const SpaceHouseView: React.FC = () => {
             <div className="rounded-2xl border border-cyan-400/20 bg-black/50 p-4 text-sm leading-relaxed text-slate-200 shadow-[0_0_24px_rgba(34,211,238,0.08)] sm:p-5">
               <p className="mb-2 flex items-center gap-2 font-bold text-amber-300">
                 <Sparkles className="h-4 w-4 shrink-0 text-amber-400" />
-                <span>Nova says:</span>
+                <span>Anant says:</span>
               </p>
               <p>
                 Welcome aboard, Space Traveler! Four legendary Houses await you, each with its own spirit, power, and community. Explore them, discover where you belong, and begin your journey with fellow Interstellers!

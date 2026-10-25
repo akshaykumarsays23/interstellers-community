@@ -8,12 +8,24 @@ import crypto from 'crypto';
  * invocations without requiring a writable filesystem.
  */
 
-// Secret used to sign OTP tokens and session cookies.
-// Fallback key provided for seamless local development, but AUTH_SECRET can be set in Vercel.
-const AUTH_SECRET =
-  process.env.AUTH_SECRET ||
-  process.env.NEXTAUTH_SECRET ||
-  'interstellers-cosmic-secure-secret-key-2026-v1';
+export class AuthConfigurationError extends Error {
+  constructor() {
+    super('AUTH_SECRET must be configured with at least 32 characters.');
+    this.name = 'AuthConfigurationError';
+  }
+}
+
+function getAuthSecret(): string {
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (!secret || secret.length < 32) {
+    throw new AuthConfigurationError();
+  }
+  return secret;
+}
+
+export function assertAuthSecretConfigured(): void {
+  getAuthSecret();
+}
 
 export const ADMIN_EMAILS = [
   'akshaycricketer1230@gmail.com',
@@ -65,7 +77,7 @@ interface OtpPayload {
  */
 function hashCode(cleanEmail: string, code: string): string {
   return crypto
-    .createHmac('sha256', AUTH_SECRET)
+    .createHmac('sha256', getAuthSecret())
     .update(`${cleanEmail}:${code.trim()}:otp_salt`)
     .digest('hex');
 }
@@ -93,7 +105,7 @@ export function createOtpToken(
 
   const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto
-    .createHmac('sha256', AUTH_SECRET)
+    .createHmac('sha256', getAuthSecret())
     .update(payloadStr)
     .digest('hex');
 
@@ -110,6 +122,7 @@ export function verifyOtpToken(
   email: string,
   code: string
 ): { valid: boolean; error?: string } {
+  const secret = getAuthSecret();
   if (!token || typeof token !== 'string') {
     return { valid: false, error: 'Missing verification token' };
   }
@@ -123,7 +136,7 @@ export function verifyOtpToken(
 
   // 1. Verify cryptographic signature
   const expectedSignature = crypto
-    .createHmac('sha256', AUTH_SECRET)
+    .createHmac('sha256', secret)
     .update(payloadStr)
     .digest('hex');
 
@@ -221,6 +234,7 @@ export function createSessionToken(user: {
   name: string;
   role?: string;
 }): string {
+  const secret = getAuthSecret();
   const cleanEmail = normalizeEmail(user.email);
   const issuedAt = Date.now();
   const expiresAt = issuedAt + 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -235,7 +249,7 @@ export function createSessionToken(user: {
 
   const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto
-    .createHmac('sha256', AUTH_SECRET)
+    .createHmac('sha256', secret)
     .update(payloadStr)
     .digest('hex');
 
@@ -250,6 +264,7 @@ export function verifySessionToken(token: string | null | undefined): {
   user?: SessionPayload;
   error?: string;
 } {
+  const secret = getAuthSecret();
   if (!token || typeof token !== 'string') {
     return { valid: false, error: 'No session token provided' };
   }
@@ -261,7 +276,7 @@ export function verifySessionToken(token: string | null | undefined): {
 
   const [payloadStr, signature] = parts;
   const expectedSignature = crypto
-    .createHmac('sha256', AUTH_SECRET)
+    .createHmac('sha256', secret)
     .update(payloadStr)
     .digest('hex');
 
