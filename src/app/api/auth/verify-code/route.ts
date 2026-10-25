@@ -20,9 +20,9 @@ function getCookieValue(cookieHeader: string | null, name: string): string | nul
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, code, name, otpToken: bodyToken } = body;
+    const { email, code, name } = body;
 
-    if (!email || !code) {
+    if (typeof email !== 'string' || typeof code !== 'string') {
       return NextResponse.json(
         { error: 'Email and verification code are required' },
         { status: 400 }
@@ -32,12 +32,10 @@ export async function POST(request: Request) {
     assertAuthSecretConfigured();
     const cleanEmail = normalizeEmail(email);
     const cleanCode = code.toString().trim();
-    const cleanName = ((name as string) || cleanEmail.split('@')[0]).trim();
+    const cleanName = (typeof name === 'string' ? name : cleanEmail.split('@')[0]).trim();
 
-    // Check OTP token from request body OR cookie header
     const cookieHeader = request.headers.get('cookie');
-    const cookieToken = getCookieValue(cookieHeader, 'interstellers_otp_token');
-    const otpToken = bodyToken || cookieToken;
+    const otpToken = getCookieValue(cookieHeader, 'interstellers_otp_token');
 
     let isCodeValid = false;
     let verificationError = 'Invalid or expired 6-digit verification code. Please check your code or request a new one.';
@@ -52,26 +50,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Secondary fallback check: Local DB verification codes (for local dev / warm lambdas)
     const db = getDb();
-    if (!isCodeValid && db.verificationCodes) {
-      const entry = db.verificationCodes[cleanEmail];
-      if (entry && entry.code === cleanCode && Date.now() < entry.expiresAt) {
-        isCodeValid = true;
-      }
-    }
 
     if (!isCodeValid) {
       return NextResponse.json(
         { error: verificationError },
         { status: 400 }
       );
-    }
-
-    // Clear used code from DB
-    if (db.verificationCodes?.[cleanEmail]) {
-      delete db.verificationCodes[cleanEmail];
-      saveDb(db);
     }
 
     const isHost = isAdminEmail(cleanEmail);

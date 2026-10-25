@@ -1,9 +1,22 @@
 import { NextResponse } from 'next/server';
-import { getDb, saveDb } from '@/lib/db';
 import { sendLoginCodeEmail } from '@/lib/email';
 import { AuthConfigurationError, normalizeEmail, createOtpToken } from '@/lib/auth';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
+
+function clearOtpCookie(response: NextResponse): NextResponse {
+  response.cookies.set({
+    name: 'interstellers_otp_token',
+    value: '',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
+  return response;
+}
 
 export async function POST(request: Request) {
   try {
@@ -15,55 +28,32 @@ export async function POST(request: Request) {
     }
 
     const cleanEmail = normalizeEmail(email);
-    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 });
     }
 
-    const cleanName = ((name as string) || cleanEmail.split('@')[0]).trim();
+    const cleanName = (typeof name === 'string' ? name : cleanEmail.split('@')[0]).trim();
 
-    // Generate secure 6-digit numeric OTP code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 1_000_000).toString();
     const expiresInMinutes = 10;
     const expiresInSeconds = expiresInMinutes * 60;
-    const expiresAt = Date.now() + expiresInSeconds * 1000;
-
-    // Generate cryptographically signed stateless verification token
     const { token: otpToken } = createOtpToken(cleanEmail, code, expiresInMinutes);
 
-    // Save in DB fallback for local dev / memory cache
-    const db = getDb();
-    if (!db.verificationCodes) {
-      db.verificationCodes = {};
+    const emailResult = await sendLoginCodeEmail(cleanEmail, cleanName, code);
+    if (!emailResult.success) {
+      return clearOtpCookie(
+        NextResponse.json(
+          { error: 'Unable to deliver the verification email. Please try again later.' },
+          { status: 502 }
+        )
+      );
     }
 
-    db.verificationCodes[cleanEmail] = {
-      code,
-      expiresAt,
-      name: cleanName,
-      createdAt: Date.now(),
-    };
-
-    saveDb(db);
-
-    // Attempt real email delivery via Nodemailer
-    const emailResult = await sendLoginCodeEmail(cleanEmail, cleanName, code);
-
-    // Safe diagnostic log (without logging raw OTP or secrets)
-    console.log(`[Interstellers Auth] OTP dispatched to ${cleanEmail}. Email delivered: ${emailResult.success}`);
-
-    const isTestSuite = request.headers.get('x-test-suite') === 'true';
-
-    // Set HTTP-only secure cookie containing stateless OTP token
     const response = NextResponse.json({
       success: true,
-      message: `A 6-digit verification code has been dispatched to ${cleanEmail}. Please check your inbox or spam folder.`,
+      message: 'A 6-digit verification code has been sent. Please check your inbox or spam folder.',
       email: cleanEmail,
-      otpToken,
       expiresInSeconds,
-      // If email delivery was not possible (e.g. SMTP not configured in local dev), return code to UI
-      code: isTestSuite ? code : (emailResult.success ? undefined : code),
-      testCode: isTestSuite ? code : undefined,
-      deliveredViaSmtp: emailResult.success,
     });
 
     response.cookies.set({

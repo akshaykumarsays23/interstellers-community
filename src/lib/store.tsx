@@ -77,8 +77,8 @@ interface AppContextType {
   // Auth State
   isAuthenticated: boolean;
   isAdmin: boolean;
-  sendVerificationCode: (email: string, name?: string, type?: 'register' | 'signin') => Promise<{ success: boolean; code?: string; otpToken?: string; message?: string; error?: string }>;
-  verifyLoginCode: (email: string, code: string, name?: string, otpToken?: string) => Promise<{ success: boolean; status?: 'approved'; message?: string; error?: string }>;
+  sendVerificationCode: (email: string, name?: string, type?: 'register' | 'signin') => Promise<{ success: boolean; message?: string; error?: string }>;
+  verifyLoginCode: (email: string, code: string, name?: string) => Promise<{ success: boolean; status?: 'approved'; message?: string; error?: string }>;
   logout: () => void;
 
   // Device & Visitor Analytics
@@ -1245,6 +1245,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const cleanName = (name || cleanEmail.split('@')[0]).trim();
 
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('interstellers_otp_token');
+      }
       const res = await fetch('/api/auth/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1254,26 +1257,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         return { success: false, error: data.error || 'Failed to send verification code' };
       }
-      if (data.otpToken && typeof window !== 'undefined') {
-        localStorage.setItem('interstellers_otp_token', data.otpToken);
-      }
-      return { success: true, code: data.code, otpToken: data.otpToken, message: data.message };
+      return { success: true, message: data.message };
     } catch (err: any) {
       return { success: false, error: err?.message || 'Network error while requesting code' };
     }
   };
 
   // 2. Verify 6-digit Code & Transition
-  const verifyLoginCode = async (email: string, code: string, name?: string, otpToken?: string) => {
+  const verifyLoginCode = async (email: string, code: string, name?: string) => {
     const cleanEmail = email.toLowerCase().trim().replace(/[\.\s]+$/, '').trim();
     const cleanName = (name || cleanEmail.split('@')[0]).trim();
-    const tokenToUse = otpToken || (typeof window !== 'undefined' ? localStorage.getItem('interstellers_otp_token') : null);
 
     try {
       const res = await fetch('/api/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, code, name: cleanName, otpToken: tokenToUse }),
+        body: JSON.stringify({ email: cleanEmail, code, name: cleanName }),
       });
       const data = await res.json();
 

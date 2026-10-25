@@ -1,31 +1,38 @@
 import nodemailer from 'nodemailer';
 
-export async function sendLoginCodeEmail(toEmail: string, name: string, code: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+function escapeHtml(value: string): string {
+  const entities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return value.replace(/[&<>"']/g, (character) => entities[character]);
+}
+
+export async function sendLoginCodeEmail(toEmail: string, name: string, code: string): Promise<{ success: boolean }> {
+  const gmailUser = process.env.GMAIL_USER?.trim();
+  const gmailPass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+
+  if (!gmailUser || !gmailPass) {
+    console.error('[Email Dispatcher] Missing required email configuration: GMAIL_USER and/or GMAIL_APP_PASSWORD.');
+    return { success: false };
+  }
+
   try {
-    const gmailUser = process.env.GMAIL_USER || process.env.EMAIL_USER || 'akshaycricketer1230@gmail.com';
-    const gmailPass = (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || process.env.EMAIL_PASS || '').replace(/\s+/g, '');
-    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const smtpPort = Number(process.env.SMTP_PORT) || 465;
-
-    let transporter: nodemailer.Transporter;
-
-    if (gmailPass) {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: {
-          user: gmailUser,
-          pass: gmailPass,
-        },
-      });
-    } else {
-      console.warn(`[Email Dispatcher] GMAIL_APP_PASSWORD not set in .env.local for ${gmailUser}.`);
-      return { success: false, error: `Google App Password for ${gmailUser} is required in .env.local` };
-    }
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
+      auth: { user: gmailUser, pass: gmailPass },
+    });
 
     const cleanName = name.trim() || toEmail.split('@')[0];
+    const safeName = escapeHtml(cleanName);
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -55,7 +62,7 @@ export async function sendLoginCodeEmail(toEmail: string, name: string, code: st
           <div class="divider"></div>
           
           <div class="greeting">
-            Hello <strong>${cleanName}</strong>,<br><br>
+            Hello <strong>${safeName}</strong>,<br><br>
             Use the 6-digit verification code below to complete your registration:
           </div>
           
@@ -79,9 +86,9 @@ export async function sendLoginCodeEmail(toEmail: string, name: string, code: st
       </html>
     `;
 
-    const plainTextMessage = `Welcome to Interstellers!\n\n"Time is never coming back, remember time is never..."\n\nHello ${cleanName},\n\nUse the 6-digit verification code below to complete your registration:\n\n====================\n    ${code}\n====================\n\n• This verification code expires in 10 minutes.\n• After entering this code on the website, you can access the platform immediately.\n\n— Interstellers Cosmic Network\n© 2026 Interstellers. Professional Networking.\nFrom: Akshay Kumar <${gmailUser}>`;
+    const plainTextMessage = `Welcome to Interstellers!\n\n"Time is never coming back, remember time is never..."\n\nHello ${cleanName},\n\nUse the 6-digit verification code below to complete your registration:\n\n====================\n    ${code}\n====================\n\nThis verification code expires in 10 minutes.\n\nInterstellers Cosmic Network`;
 
-    const info = await transporter.sendMail({
+    await transporter.sendMail({
       from: `"Interstellers Community" <${gmailUser}>`,
       to: toEmail,
       subject: `Your Interstellers Login Code: ${code}`,
@@ -89,10 +96,38 @@ export async function sendLoginCodeEmail(toEmail: string, name: string, code: st
       html: htmlContent,
     });
 
-    console.log(`[Email Dispatcher] REAL Email dispatched from ${gmailUser} to ${toEmail}. Message ID: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (err: any) {
-    console.error(`[Email Dispatcher] Error sending email from ${process.env.GMAIL_USER || 'akshaycricketer1230@gmail.com'}:`, err?.message || err);
-    return { success: false, error: err?.message || 'Failed to send email' };
+    console.info('[Email Dispatcher] Verification email accepted by Gmail SMTP.');
+    return { success: true };
+  } catch (error: unknown) {
+    const smtpError = error as {
+      code?: unknown;
+      command?: unknown;
+      responseCode?: unknown;
+    };
+    const safeCommands = new Set([
+      'CONNECT',
+      'EHLO',
+      'AUTH PLAIN',
+      'AUTH LOGIN',
+      'STARTTLS',
+      'MAIL FROM',
+      'RCPT TO',
+      'DATA',
+      'QUIT',
+    ]);
+    console.error('[Email Dispatcher] Gmail SMTP delivery failed.', {
+      code: typeof smtpError.code === 'string' && /^[A-Z0-9_]+$/.test(smtpError.code)
+        ? smtpError.code
+        : 'UNKNOWN',
+      command: typeof smtpError.command === 'string' && safeCommands.has(smtpError.command)
+        ? smtpError.command
+        : 'OTHER',
+      responseCode: typeof smtpError.responseCode === 'number' &&
+        smtpError.responseCode >= 100 &&
+        smtpError.responseCode <= 599
+        ? smtpError.responseCode
+        : undefined,
+    });
+    return { success: false };
   }
 }
