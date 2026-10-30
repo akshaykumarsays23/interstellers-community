@@ -16,6 +16,7 @@ export const NovaVoiceModal: React.FC = () => {
 
   const recognitionRef = useRef<any>(null);
   const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const transcriptRef = useRef('');
 
   // Initialize Speech Synthesis Voices
   useEffect(() => {
@@ -84,6 +85,7 @@ export const NovaVoiceModal: React.FC = () => {
       recognition.onstart = () => {
         setVoiceStatus('listening');
         setTranscript('');
+        transcriptRef.current = '';
       };
 
       recognition.onresult = (event: any) => {
@@ -92,6 +94,7 @@ export const NovaVoiceModal: React.FC = () => {
           currentTranscript += event.results[i][0].transcript;
         }
         setTranscript(currentTranscript);
+        transcriptRef.current = currentTranscript;
       };
 
       recognition.onerror = (event: any) => {
@@ -102,8 +105,9 @@ export const NovaVoiceModal: React.FC = () => {
       };
 
       recognition.onend = () => {
-        if (transcript.trim()) {
-          processUserVoiceInput(transcript);
+        const finalTranscript = transcriptRef.current.trim();
+        if (finalTranscript) {
+          processUserVoiceInput(finalTranscript);
         } else {
           setVoiceStatus('idle');
         }
